@@ -1,0 +1,12 @@
+name: sentry_flutter
+description: Nimbus no-op compatibility shim for the sentry_flutter API used by the Hiddify fork.
+version: 0.0.1
+publish_to: "none"
+
+environment:
+  sdk: ^3.10.4
+  flutter: ^3.38.5
+
+dependencies:
+  flutter:
+    sdk: flutter

@@ -1,4 +1,3 @@
-import 'package:circle_flags/circle_flags.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hiddify/core/haptic/haptic_service.dart';
@@ -9,15 +8,24 @@ import 'package:hiddify/utils/riverpod_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import "package:simple_icons/simple_icons.dart";
 
-final _showIp = StateProvider.autoDispose((ref) {
-  ref.disposeDelay(const Duration(seconds: 20));
-  ref.listenSelf((previous, next) {
-    if (previous == false && next == true) {
-      ref.read(hapticServiceProvider.notifier).mediumImpact();
-    }
-  });
-  return false;
-});
+final _showIp = NotifierProvider.autoDispose<_ShowIpNotifier, bool>(_ShowIpNotifier.new);
+
+class _ShowIpNotifier extends AutoDisposeNotifier<bool> {
+  @override
+  bool build() {
+    ref.disposeDelay(const Duration(seconds: 20));
+    listenSelf((previous, next) {
+      if (previous == false && next == true) {
+        ref.read(hapticServiceProvider.notifier).mediumImpact();
+      }
+    });
+    return false;
+  }
+
+  void toggle() {
+    state = !state;
+  }
+}
 
 class IPText extends HookConsumerWidget {
   const IPText({required this.ip, required this.onLongPress, this.constrained = false, super.key});
@@ -39,7 +47,7 @@ class IPText extends HookConsumerWidget {
       label: t.pages.proxies.ipInfo.address,
       child: InkWell(
         onTap: () {
-          ref.read(_showIp.notifier).state = !isVisible;
+          ref.read(_showIp.notifier).toggle();
         },
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(12),
@@ -125,12 +133,28 @@ class IPCountryFlag extends HookConsumerWidget {
                   textDirection: Directionality.of(context),
                   alignment: Alignment.center,
                   children: [
-                    CircleFlag(
-                      // key: ValueKey(countryCode),
-                      countryCode!.toLowerCase() == "ir" ? "ir-shir" : countryCode!,
-                      size: size - 8,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8), // Rounded effect
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                      ),
+                      child: SizedBox.expand(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              countryCode!.toUpperCase(),
+                              maxLines: 1,
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                fontSize: size < 22 ? 8 : 10,
+                                fontWeight: FontWeight.w700,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     if (organization != null)

@@ -52,8 +52,8 @@ dependencies:
   url_launcher: ^6.2.5
   vclibs: ^0.1.2
   launch_at_startup: ^0.5.1
-  sentry_flutter: ^8.14.0
-  sentry_dart_plugin: ^2.4.1
+  sentry_flutter:
+    path: packages/sentry_flutter_stub
   sqlite3_flutter_libs: ^0.5.28
 
   path: ^1.9.0
@@ -86,9 +86,6 @@ dependencies:
   # flutter_easy_permission:
   #   git: https://github.com/MichaelStH/flutter_easy_permission.git
   in_app_review: ^2.0.10
-  # circle_flags: ^4.0.2
-  circle_flags:
-    git: https://github.com/hiddify-com/flutter_circle_flags.git
   fixnum: ^1.1.0
   # # for using protobuf install protoc from this link -> https://github.com/protocolbuffers/protobuf/releases
   # # then add path to "environment variable" e.g. -> C:\src\protoc-28.3-win64\bin
@@ -126,14 +123,14 @@ dev_dependencies:
   #   sdk: flutter
   lint: ^2.3.0
   build_web_compilers: ^4.0.11
-  build_runner: ^2.4.13
+  build_runner: 2.5.4
   json_serializable: ^6.7.1
   freezed: ^2.4.7
   riverpod_generator: ^2.4.3
   drift_dev: ^2.21.0
   ffigen: ^19.1.0
   slang_build_runner: ^4.4.0
-  flutter_gen_runner: ^5.4.0
+  flutter_gen_runner: 5.9.0
   dart_mappable_builder: ^4.2.1
   # protoc_builder: ^0.4.1
   # google_protobuf: ^3.20.1;
@@ -188,10 +185,3 @@ ffigen:
   headers:
     entry-points:
       - "hiddify-core/bin/desktop.h"
-
-sentry:
-  upload_debug_symbols: true
-  upload_source_maps: true
-  upload_sources: true
-  log_level: info
-  ignore_missing: true

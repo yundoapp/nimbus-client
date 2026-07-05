@@ -304,7 +304,7 @@
 			);
 			mainGroup = 33CC10E42044A3C60003C045;
 			packageReferences = (
-				414949DA2CCE3D370069D5BA /* XCRemoteSwiftPackageReference "LaunchAtLogin-Legacy" */,
+				414949DA2CCE3D370069D5BA /* XCLocalSwiftPackageReference "LaunchAtLogin-Legacy" */,
 			);
 			productRefGroup = 33CC10EE2044A3C60003C045 /* Products */;
 			projectDirPath = "";
@@ -827,21 +827,17 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		414949DA2CCE3D370069D5BA /* XCRemoteSwiftPackageReference "LaunchAtLogin-Legacy" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sindresorhus/LaunchAtLogin-Legacy";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		414949DA2CCE3D370069D5BA /* XCLocalSwiftPackageReference "LaunchAtLogin-Legacy" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "Packages/LaunchAtLogin-Legacy";
 		};
-/* End XCRemoteSwiftPackageReference section */
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		414949DB2CCE3D370069D5BA /* LaunchAtLogin */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 414949DA2CCE3D370069D5BA /* XCRemoteSwiftPackageReference "LaunchAtLogin-Legacy" */;
+			package = 414949DA2CCE3D370069D5BA /* XCLocalSwiftPackageReference "LaunchAtLogin-Legacy" */;
 			productName = LaunchAtLogin;
 		};
 /* End XCSwiftPackageProductDependency section */
