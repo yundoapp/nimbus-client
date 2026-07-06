@@ -1,5 +1,7 @@
 import 'package:dartx/dartx.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
@@ -18,6 +20,11 @@ class HomePage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final authState = ref.watch(nimbusAuthControllerProvider);
+    final hasActivePlan = authState.me?.subscription.hasActivePlan ?? false;
+
+    Future<void> showActivationDialog() async {
+      await showDialog<void>(context: context, builder: (_) => const _ActivationDialog());
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -99,11 +106,14 @@ class HomePage extends HookConsumerWidget {
                       ),
                     ),
                     const Gap(18),
-                    const ConnectionButton(),
+                    if (hasActivePlan)
+                      const ConnectionButton()
+                    else
+                      _ActivationConnectionButton(onTap: showActivationDialog),
                     const Gap(6),
                     const ActiveProxyDelayIndicator(),
                     const Spacer(),
-                    _NimbusStatusPanel(theme: theme, me: authState.me),
+                    _NimbusStatusPanel(theme: theme, me: authState.me, onActivate: showActivationDialog),
                     const Gap(16),
                   ],
                 ),
@@ -117,10 +127,11 @@ class HomePage extends HookConsumerWidget {
 }
 
 class _NimbusStatusPanel extends StatelessWidget {
-  const _NimbusStatusPanel({required this.theme, required this.me});
+  const _NimbusStatusPanel({required this.theme, required this.me, required this.onActivate});
 
   final ThemeData theme;
   final NimbusMe? me;
+  final VoidCallback onActivate;
 
   @override
   Widget build(BuildContext context) {
@@ -135,8 +146,10 @@ class _NimbusStatusPanel extends StatelessWidget {
       'expired' => '套餐已过期',
       _ => '暂无可用套餐',
     };
+    final expiresText = _formatDate(subscription?.expiresAt);
     final remainingText = remainingBytes == null ? '--' : _formatBytes(remainingBytes);
     final rulesVersion = me?.rules.publicRulesVersion ?? '--';
+    final hasActivePlan = subscription?.hasActivePlan ?? false;
 
     return Column(
       children: [
@@ -161,12 +174,133 @@ class _NimbusStatusPanel extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _StatusText(label: "位置", value: "自动", color: muted),
+              child: _StatusText(label: "到期", value: expiresText, color: muted),
             ),
             Expanded(
               child: _StatusText(label: "规则", value: rulesVersion, color: muted, alignEnd: true),
             ),
           ],
+        ),
+        const Gap(12),
+        Row(
+          children: [
+            Expanded(
+              child: _StatusText(label: "位置", value: "自动", color: muted),
+            ),
+            if (!hasActivePlan)
+              FilledButton.tonalIcon(
+                onPressed: onActivate,
+                icon: const Icon(Icons.key_rounded),
+                label: const Text('激活'),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ActivationConnectionButton extends StatelessWidget {
+  const _ActivationConnectionButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.primary;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Semantics(
+          button: true,
+          label: '启用',
+          child: SizedBox(
+            width: 168,
+            height: 168,
+            child: Material(
+              color: color,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onTap,
+                child: Icon(Icons.power_settings_new_rounded, size: 56, color: theme.colorScheme.onPrimary),
+              ),
+            ),
+          ),
+        ),
+        const Gap(16),
+        Text('启用', style: theme.textTheme.titleMedium),
+      ],
+    );
+  }
+}
+
+class _ActivationDialog extends HookConsumerWidget {
+  const _ActivationDialog();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = useTextEditingController();
+    final errorMessage = useState<String?>(null);
+    final authState = ref.watch(nimbusAuthControllerProvider);
+
+    Future<void> submit() async {
+      final code = controller.text.replaceAll(RegExp('[\\s-]'), '').toUpperCase();
+      if (code.length != 16) {
+        errorMessage.value = '请输入 16 位激活码';
+        return;
+      }
+      final success = await ref.read(nimbusAuthControllerProvider.notifier).redeemActivationCode(code);
+      if (!context.mounted) return;
+      if (success) {
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.of(context).pop();
+        messenger.showSnackBar(const SnackBar(content: Text('套餐已激活')));
+      } else {
+        errorMessage.value = ref.read(nimbusAuthControllerProvider).errorMessage ?? '激活失败，请稍后重试';
+      }
+    }
+
+    return AlertDialog(
+      title: const Text('激活套餐'),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: controller,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              textInputAction: TextInputAction.done,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9 -]')),
+                LengthLimitingTextInputFormatter(19),
+              ],
+              decoration: const InputDecoration(labelText: '激活码', prefixIcon: Icon(Icons.key_rounded)),
+              onChanged: (_) => errorMessage.value = null,
+              onSubmitted: (_) => submit(),
+            ),
+            if (errorMessage.value != null) ...[
+              const Gap(10),
+              Text(
+                errorMessage.value!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: authState.isLoading ? null : () => Navigator.of(context).pop(), child: const Text('取消')),
+        FilledButton(
+          onPressed: authState.isLoading ? null : submit,
+          child: authState.isLoading
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('激活'),
         ),
       ],
     );
@@ -184,6 +318,13 @@ String _formatBytes(int bytes) {
   final fractionDigits = unitIndex <= 1 || value >= 100 ? 0 : 1;
   return '${value.toStringAsFixed(fractionDigits)} ${units[unitIndex]}';
 }
+
+String _formatDate(DateTime? value) {
+  if (value == null) return '--';
+  return '${value.year}-${_twoDigits(value.month)}-${_twoDigits(value.day)}';
+}
+
+String _twoDigits(int value) => value.toString().padLeft(2, '0');
 
 class _StatusText extends StatelessWidget {
   const _StatusText({required this.label, required this.value, required this.color, this.alignEnd = false});

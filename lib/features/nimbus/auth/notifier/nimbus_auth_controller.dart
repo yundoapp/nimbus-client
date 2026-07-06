@@ -130,6 +130,32 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
     }
   }
 
+  Future<bool> redeemActivationCode(String code) async {
+    final session = state.session;
+    if (session == null) {
+      state = const NimbusAuthState.unauthenticated();
+      return false;
+    }
+    state = NimbusAuthState.authenticated(session: session, me: state.me, isLoading: true);
+    try {
+      await _repository.redeemActivationCode(session: session, code: code);
+      final me = await _repository.fetchMe(session.accessToken);
+      state = NimbusAuthState.authenticated(session: session, me: me);
+      return true;
+    } catch (error) {
+      if (_repository.isUnauthorized(error)) {
+        await restore();
+      } else {
+        state = NimbusAuthState.authenticated(
+          session: session,
+          me: state.me,
+          errorMessage: _repository.describeError(error),
+        );
+      }
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     final session = state.session;
     state = NimbusAuthState(

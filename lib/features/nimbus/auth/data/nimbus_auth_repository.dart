@@ -101,6 +101,14 @@ class NimbusAuthRepository {
     return NimbusMe.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
   }
 
+  Future<void> redeemActivationCode({required NimbusAuthSession session, required String code}) async {
+    await _dio.post<void>(
+      'activation/redeem',
+      data: {'code': code},
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+  }
+
   Future<void> logout(NimbusAuthSession session) async {
     try {
       await _dio.post<void>(
