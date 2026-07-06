@@ -1,9 +1,12 @@
 import 'package:dartx/dartx.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_delay_indicator.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -14,6 +17,7 @@ class HomePage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final authState = ref.watch(nimbusAuthControllerProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -33,6 +37,36 @@ class HomePage extends HookConsumerWidget {
             ),
           ],
         ),
+        actions: [
+          MenuAnchor(
+            menuChildren: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Text(authState.session?.user.username ?? '已登录', style: theme.textTheme.labelLarge),
+              ),
+              MenuItemButton(
+                leadingIcon: const Icon(Icons.logout_rounded),
+                onPressed: () async {
+                  await ref.read(nimbusAuthControllerProvider.notifier).logout();
+                  if (context.mounted) context.go('/auth/login');
+                },
+                child: const Text('退出登录'),
+              ),
+            ],
+            builder: (context, controller, child) => IconButton(
+              tooltip: '账号',
+              onPressed: () {
+                if (controller.isOpen) {
+                  controller.close();
+                } else {
+                  controller.open();
+                }
+              },
+              icon: const Icon(Icons.account_circle_outlined),
+            ),
+          ),
+          const Gap(8),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -69,7 +103,7 @@ class HomePage extends HookConsumerWidget {
                     const Gap(6),
                     const ActiveProxyDelayIndicator(),
                     const Spacer(),
-                    _NimbusStatusPanel(theme: theme),
+                    _NimbusStatusPanel(theme: theme, me: authState.me),
                     const Gap(16),
                   ],
                 ),
@@ -83,18 +117,31 @@ class HomePage extends HookConsumerWidget {
 }
 
 class _NimbusStatusPanel extends StatelessWidget {
-  const _NimbusStatusPanel({required this.theme});
+  const _NimbusStatusPanel({required this.theme, required this.me});
 
   final ThemeData theme;
+  final NimbusMe? me;
 
   @override
   Widget build(BuildContext context) {
     final muted = theme.colorScheme.onSurfaceVariant;
+    final subscription = me?.subscription;
+    final quotaBytes = subscription?.quotaBytes;
+    final usedBytes = subscription?.usedBytes ?? 0;
+    final remainingBytes = subscription?.remainingBytes;
+    final progress = quotaBytes == null || quotaBytes <= 0 ? 0.0 : (usedBytes / quotaBytes).clamp(0.0, 1.0);
+    final planName = switch (subscription?.status) {
+      'active' => subscription?.planName ?? '已开通',
+      'expired' => '套餐已过期',
+      _ => '暂无可用套餐',
+    };
+    final remainingText = remainingBytes == null ? '--' : _formatBytes(remainingBytes);
+    final rulesVersion = me?.rules.publicRulesVersion ?? '--';
 
     return Column(
       children: [
         LinearProgressIndicator(
-          value: .0,
+          value: progress,
           minHeight: 8,
           borderRadius: BorderRadius.circular(999),
           backgroundColor: theme.colorScheme.surfaceContainerHighest,
@@ -103,10 +150,10 @@ class _NimbusStatusPanel extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _StatusText(label: "套餐", value: "暂无可用套餐", color: muted),
+              child: _StatusText(label: "套餐", value: planName, color: muted),
             ),
             Expanded(
-              child: _StatusText(label: "剩余流量", value: "--", color: muted, alignEnd: true),
+              child: _StatusText(label: "剩余流量", value: remainingText, color: muted, alignEnd: true),
             ),
           ],
         ),
@@ -117,13 +164,25 @@ class _NimbusStatusPanel extends StatelessWidget {
               child: _StatusText(label: "位置", value: "自动", color: muted),
             ),
             Expanded(
-              child: _StatusText(label: "规则", value: "public-rules-dev-v1", color: muted, alignEnd: true),
+              child: _StatusText(label: "规则", value: rulesVersion, color: muted, alignEnd: true),
             ),
           ],
         ),
       ],
     );
   }
+}
+
+String _formatBytes(int bytes) {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  var value = bytes.toDouble();
+  var unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  final fractionDigits = unitIndex <= 1 || value >= 100 ? 0 : 1;
+  return '${value.toStringAsFixed(fractionDigits)} ${units[unitIndex]}';
 }
 
 class _StatusText extends StatelessWidget {

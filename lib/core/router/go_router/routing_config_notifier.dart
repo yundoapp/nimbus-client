@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
-import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/core/router/adaptive_layout/my_adaptive_layout.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
@@ -12,6 +11,8 @@ import 'package:hiddify/features/about/widget/about_page.dart';
 import 'package:hiddify/features/home/widget/home_page.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
 import 'package:hiddify/features/log/overview/logs_page.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_auth_page.dart';
 import 'package:hiddify/features/per_app_proxy/overview/per_app_proxy_page.dart';
 import 'package:hiddify/features/profile/details/profile_details_page.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
@@ -66,6 +67,7 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
       showProfilesAction = ref.watch(hasAnyProfileProvider).value ?? false;
     }
     if (isMobileBreakpoint == null) return loadingConfig;
+    final authState = ref.watch(nimbusAuthControllerProvider);
     return RoutingConfig(
       redirect: (context, state) {
         // fix path-parameters for deep link
@@ -82,26 +84,22 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
           url = state.uri.queryParameters['url'];
         }
 
-        if (!ref.read(Preferences.introCompleted)) {
-          // Intro is not completed
-          return url != null ? '/intro?url=$url' : '/intro';
-        } else if (state.matchedLocation == '/intro') {
-          // Intro is completed
-          // Current page in '/intro'
-          if (url != null && Uri.parse(url).host == 'import') {
-            WidgetsBinding.instance.addPostFrameCallback(
-              (_) =>
-                  ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile(url: url, triggeredByDeepLink: true),
-            );
-          }
+        final isAuthRoute = state.matchedLocation.startsWith('/auth/');
+        if (!authState.isAuthenticated && !isAuthRoute) {
+          return '/auth/login';
+        }
+        if (authState.isAuthenticated && isAuthRoute) {
           return '/home';
-        } else if (url != null && Uri.parse(url).host == 'import') {
+        }
+        if (state.matchedLocation == '/intro') {
+          return '/home';
+        } else if (authState.isAuthenticated && url != null && Uri.parse(url).host == 'import') {
           // Auto import profile from url
           WidgetsBinding.instance.addPostFrameCallback(
             (_) => ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile(url: url, triggeredByDeepLink: true),
           );
           return '/home';
-        } else if (url != null) {
+        } else if (authState.isAuthenticated && url != null) {
           final uri = Uri.parse(url);
           final path = uri.path + (uri.hasQuery ? "?${uri.query}" : "");
           return path;
@@ -113,6 +111,16 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
         return null;
       },
       routes: <RouteBase>[
+        GoRoute(
+          name: 'nimbusLogin',
+          path: '/auth/login',
+          builder: (_, _) => const NimbusAuthPage(initialMode: NimbusAuthMode.login),
+        ),
+        GoRoute(
+          name: 'nimbusRegister',
+          path: '/auth/register',
+          builder: (_, _) => const NimbusAuthPage(initialMode: NimbusAuthMode.register),
+        ),
         StatefulShellRoute.indexedStack(
           builder: (_, _, navigationShell) => MyAdaptiveLayout(
             navigationShell: navigationShell,
