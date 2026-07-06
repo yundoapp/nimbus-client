@@ -317,6 +317,32 @@ class NimbusRoutePreferencesList {
   int get used => items.length;
 }
 
+class NimbusIssueReport {
+  const NimbusIssueReport({
+    required this.id,
+    required this.status,
+    required this.message,
+    required this.createdAt,
+    this.resolvedAt,
+  });
+
+  factory NimbusIssueReport.fromJson(Map<String, dynamic> json) {
+    return NimbusIssueReport(
+      id: json['id'] as String? ?? '',
+      status: json['status'] as String? ?? 'open',
+      message: json['message'] as String? ?? '',
+      createdAt: _dateTime(json['createdAt']),
+      resolvedAt: _dateTime(json['resolvedAt']),
+    );
+  }
+
+  final String id;
+  final String status;
+  final String message;
+  final DateTime? createdAt;
+  final DateTime? resolvedAt;
+}
+
 DateTime? _dateTime(Object? value) {
   if (value is! String || value.isEmpty) return null;
   return DateTime.tryParse(value)?.toLocal();

@@ -161,7 +161,8 @@ class NimbusAuthRepository {
       data: {'type': type, 'input': input},
       options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
     );
-    return NimbusRoutePreference.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
+    final data = Map<String, dynamic>.from(response.data ?? const {});
+    return NimbusRoutePreference.fromJson(Map<String, dynamic>.from(data['item'] as Map? ?? const {}));
   }
 
   Future<void> deleteRoutePreference({required NimbusAuthSession session, required String id}) async {
@@ -169,6 +170,20 @@ class NimbusAuthRepository {
       'route-preferences/${Uri.encodeComponent(id)}',
       options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
     );
+  }
+
+  Future<NimbusIssueReport> submitIssueReport({
+    required NimbusAuthSession session,
+    required String description,
+    required Map<String, Object?> diagnostics,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      'issue-reports',
+      data: {'description': description, 'diagnostics': diagnostics},
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+    final data = Map<String, dynamic>.from(response.data ?? const {});
+    return NimbusIssueReport.fromJson(Map<String, dynamic>.from(data['item'] as Map? ?? const {}));
   }
 
   Future<void> logout(NimbusAuthSession session) async {
