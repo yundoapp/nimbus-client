@@ -81,6 +81,8 @@ abstract class Preferences {
 
   static final silentStart = PreferencesNotifier.create<bool, bool>("silent_start", false);
 
+  static final nimbusAutoConnect = PreferencesNotifier.create<bool, bool>("nimbus_auto_connect", true);
+
   static final disableMemoryLimit = PreferencesNotifier.create<bool, bool>(
     "disable_memory_limit",
     // disable memory limit on desktop by default

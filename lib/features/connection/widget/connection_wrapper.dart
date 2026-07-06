@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_desktop_behavior_controller.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
+import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class ConnectionWrapper extends StatefulHookConsumerWidget {
@@ -16,10 +18,13 @@ class ConnectionWrapper extends StatefulHookConsumerWidget {
   ConsumerState<ConsumerStatefulWidget> createState() => _ConnectionWrapperState();
 }
 
-class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with AppLogger {
+class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with WidgetsBindingObserver, AppLogger {
   @override
   Widget build(BuildContext context) {
     ref.listen(connectionNotifierProvider, (_, _) {});
+    if (PlatformUtils.isDesktop) {
+      ref.listen(nimbusDesktopBehaviorControllerProvider, (_, _) {});
+    }
 
     ref.listen(configOptionNotifierProvider, (previous, next) async {
       if (next case AsyncData(value: true)) {
@@ -45,15 +50,26 @@ class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with AppL
   @override
   void initState() {
     super.initState();
-    // remove for now...
-    //
-    // Future.delayed(const Duration(seconds: 2)).then(
-    //   (_) async {
-    //     if (ref.read(startedByUserProvider) && PlatformUtils.isDesktop) {
-    //       loggy.debug("previously started by user, trying to connect");
-    //       return ref.read(connectionNotifierProvider.notifier).mayConnect();
-    //     }
-    //   },
-    // );
+    WidgetsBinding.instance.addObserver(this);
+    if (PlatformUtils.isDesktop) {
+      Future.delayed(const Duration(seconds: 2)).then((_) async {
+        if (!mounted) return;
+        await ref
+            .read(nimbusDesktopBehaviorControllerProvider.notifier)
+            .tryAutoConnect(reason: 'connection wrapper ready');
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!PlatformUtils.isDesktop || state != AppLifecycleState.resumed) return;
+    ref.read(nimbusDesktopBehaviorControllerProvider.notifier).scheduleAutoConnect(reason: 'app resumed');
   }
 }

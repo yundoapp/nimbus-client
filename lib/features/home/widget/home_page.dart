@@ -11,12 +11,14 @@ import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_desktop_settings_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_devices_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_route_preferences_dialog.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_delay_indicator.dart';
 import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
 import 'package:hiddify/gen/assets.gen.dart';
+import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class HomePage extends HookConsumerWidget {
@@ -95,6 +97,14 @@ class HomePage extends HookConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Text(authState.session?.user.username ?? '已登录', style: theme.textTheme.labelLarge),
               ),
+              if (PlatformUtils.isDesktop)
+                MenuItemButton(
+                  leadingIcon: const Icon(Icons.desktop_mac_rounded),
+                  onPressed: () {
+                    showDialog<void>(context: context, builder: (_) => const NimbusDesktopSettingsDialog());
+                  },
+                  child: const Text('桌面设置'),
+                ),
               MenuItemButton(
                 leadingIcon: const Icon(Icons.tune_rounded),
                 onPressed: () {

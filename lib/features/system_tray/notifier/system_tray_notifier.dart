@@ -1,16 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_desktop_behavior_controller.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
-import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/window/notifier/window_notifier.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
-import 'package:hiddify/singbox/model/singbox_config_enum.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tray_manager/tray_manager.dart';
@@ -32,7 +30,6 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
   }
 
   Future<void> _initializeTray() async {
-    final t = await ref.watch(translationsProvider.future);
     final urlTestDelay = await ref
         .watch(activeProxyNotifierProvider.future)
         .catchError((e) {
@@ -47,39 +44,28 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
           return const ConnectionStatus.disconnected();
         })
         .then((connection) => _modifyConnectionStatus(connection, urlTestDelay));
-    final serviceMode = ref.watch(ConfigOptions.serviceMode);
 
     await trayManager.setIcon(_trayIconPath(connection), isTemplate: PlatformUtils.isMacOS);
-    if (!PlatformUtils.isLinux) await trayManager.setToolTip(_trayTooltip(connection, urlTestDelay, t));
-    await trayManager.setContextMenu(_trayMenu(connection, serviceMode, t));
+    if (!PlatformUtils.isLinux) await trayManager.setToolTip(_trayTooltip(connection, urlTestDelay));
+    await trayManager.setContextMenu(_trayMenu(connection));
   }
 
-  Menu _trayMenu(ConnectionStatus connection, ServiceMode serviceMode, Translations t) => Menu(
+  Menu _trayMenu(ConnectionStatus connection) => Menu(
     items: [
-      if (PlatformUtils.isLinux) ...[MenuItem(key: 'dashboard', label: t.common.dashboard), MenuItem.separator()],
+      MenuItem(key: 'open', label: '打开主窗口'),
+      MenuItem.separator(),
       MenuItem(
         key: 'connection',
         label: switch (connection) {
-          Disconnected() => t.connection.connect,
-          Connecting() => t.connection.connecting,
-          Connected() => t.connection.disconnect,
-          Disconnecting() => t.connection.disconnecting,
+          Disconnected() => '连接',
+          Connecting() => '连接中',
+          Connected() => '断开',
+          Disconnecting() => '断开中',
         },
         disabled: connection.isSwitching,
       ),
-      MenuItem.submenu(
-        label: t.pages.settings.inbound.serviceMode,
-        icon: Assets.images.trayIconIco,
-        submenu: Menu(
-          items: [
-            ...ServiceMode.values.map(
-              (e) => MenuItem.checkbox(checked: e == serviceMode, key: e.name, label: e.present(t)),
-            ),
-          ],
-        ),
-      ),
       MenuItem.separator(),
-      MenuItem(key: 'quit', label: t.common.quit),
+      MenuItem(key: 'quit', label: '退出'),
     ],
   );
 
@@ -104,16 +90,23 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
     }
   }
 
-  String _trayTooltip(ConnectionStatus connection, int urlTestDelay, Translations t) {
-    final r = "${Constants.appName} - ${connection.present(t)}";
+  String _trayTooltip(ConnectionStatus connection, int urlTestDelay) {
+    final r = "${Constants.appName} - ${_statusText(connection)}";
     if (connection is Connected) {
       if (Platform.isMacOS) windowManager.setBadgeLabel("${urlTestDelay}ms");
-      return '$r : ${urlTestDelay}ms"';
+      return '$r : ${urlTestDelay}ms';
     } else {
       if (Platform.isMacOS) windowManager.setBadgeLabel("-ms");
       return r;
     }
   }
+
+  String _statusText(ConnectionStatus connection) => switch (connection) {
+    Disconnected() => '未连接',
+    Connecting() => '连接中',
+    Connected() => '已连接',
+    Disconnecting() => '断开中',
+  };
 
   ConnectionStatus _modifyConnectionStatus(ConnectionStatus connection, int urlTestDelay) {
     if (connection is Connected) {
@@ -125,19 +118,12 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
 
   @override
   Future<void> onTrayMenuItemClick(MenuItem menuItem) async {
-    // if (menuItem.key == 'dashboard') {
-    //   await ref.read(windowNotifierProvider.notifier).open();
-    // }
-    if (menuItem.key == 'dashboard') {
+    if (menuItem.key == 'open') {
       await ref.read(windowNotifierProvider.notifier).show();
     } else if (menuItem.key == 'connection') {
-      await ref.read(connectionNotifierProvider.notifier).toggleConnection();
+      await ref.read(nimbusDesktopBehaviorControllerProvider.notifier).toggleConnectionFromTray();
     } else if (menuItem.key == 'quit') {
       await ref.read(windowNotifierProvider.notifier).exit();
-    } else {
-      final newMode = ServiceMode.values.byName(menuItem.key!);
-      loggy.debug("switching service mode: [$newMode]");
-      await ref.read(ConfigOptions.serviceMode.notifier).update(newMode);
     }
   }
 
