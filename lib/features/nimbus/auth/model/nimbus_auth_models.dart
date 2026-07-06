@@ -343,6 +343,41 @@ class NimbusIssueReport {
   final DateTime? resolvedAt;
 }
 
+class NimbusAppVersionCheck {
+  const NimbusAppVersionCheck({
+    required this.platform,
+    required this.currentVersion,
+    required this.latestVersion,
+    required this.minimumVersion,
+    required this.updateAvailable,
+    required this.forceUpdate,
+    this.downloadUrl,
+    this.releaseNotes,
+  });
+
+  factory NimbusAppVersionCheck.fromJson(Map<String, dynamic> json) {
+    return NimbusAppVersionCheck(
+      platform: json['platform'] as String? ?? '',
+      currentVersion: json['currentVersion'] as String? ?? '',
+      latestVersion: json['latestVersion'] as String? ?? '',
+      minimumVersion: json['minimumVersion'] as String? ?? '',
+      updateAvailable: json['updateAvailable'] as bool? ?? false,
+      forceUpdate: json['forceUpdate'] as bool? ?? false,
+      downloadUrl: json['downloadUrl'] as String?,
+      releaseNotes: json['releaseNotes'] as String?,
+    );
+  }
+
+  final String platform;
+  final String currentVersion;
+  final String latestVersion;
+  final String minimumVersion;
+  final bool updateAvailable;
+  final bool forceUpdate;
+  final String? downloadUrl;
+  final String? releaseNotes;
+}
+
 DateTime? _dateTime(Object? value) {
   if (value is! String || value.isEmpty) return null;
   return DateTime.tryParse(value)?.toLocal();

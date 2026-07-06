@@ -8,7 +8,9 @@ import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_devices_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_route_preferences_dialog.dart';
@@ -24,6 +26,7 @@ class HomePage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final authState = ref.watch(nimbusAuthControllerProvider);
+    final versionState = ref.watch(nimbusAppVersionControllerProvider);
     final stats = ref.watch(statsNotifierProvider).asData?.value;
     final hasActivePlan = authState.me?.subscription.hasActivePlan ?? false;
     final uplinkSpeed = _formatSpeed(stats?.uplink.toInt() ?? 0);
@@ -40,6 +43,32 @@ class HomePage extends HookConsumerWidget {
     Future<void> showActivationDialog() async {
       await showDialog<void>(context: context, builder: (_) => const _ActivationDialog());
     }
+
+    Future<void> showVersionDialog(NimbusAppVersionCheck version) async {
+      await showDialog<void>(
+        context: context,
+        builder: (_) => NimbusAppVersionDialog(version: version),
+      );
+    }
+
+    Future<void> checkForUpdate({bool manual = false}) async {
+      final result = await ref.read(nimbusAppVersionControllerProvider.notifier).check(force: manual);
+      if (!context.mounted) return;
+      final latestState = ref.read(nimbusAppVersionControllerProvider);
+      if (result != null && (result.updateAvailable || result.forceUpdate)) {
+        await showVersionDialog(result);
+      } else if (manual) {
+        final message = latestState.errorMessage ?? '已是最新版本';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+    }
+
+    useEffect(() {
+      if (authState.isAuthenticated) {
+        Future.microtask(checkForUpdate);
+      }
+      return null;
+    }, [authState.isAuthenticated]);
 
     return Scaffold(
       appBar: AppBar(
@@ -79,6 +108,11 @@ class HomePage extends HookConsumerWidget {
                   showDialog<void>(context: context, builder: (_) => const NimbusIssueReportDialog());
                 },
                 child: const Text('上报问题'),
+              ),
+              MenuItemButton(
+                leadingIcon: const Icon(Icons.system_update_alt_rounded),
+                onPressed: versionState.isChecking ? null : () => checkForUpdate(manual: true),
+                child: Text(versionState.isChecking ? '检查中' : '检查更新'),
               ),
               MenuItemButton(
                 leadingIcon: const Icon(Icons.devices_rounded),
@@ -137,7 +171,14 @@ class HomePage extends HookConsumerWidget {
                     const _LocationSelector(),
                     const Gap(18),
                     if (hasActivePlan)
-                      const ConnectionButton()
+                      versionState.forceUpdate
+                          ? _UpdateRequiredConnectionButton(
+                              onTap: () {
+                                final version = versionState.result;
+                                if (version != null) showVersionDialog(version);
+                              },
+                            )
+                          : const ConnectionButton()
                     else
                       _ActivationConnectionButton(onTap: showActivationDialog),
                     const Gap(6),
@@ -341,6 +382,43 @@ class _ActivationConnectionButton extends StatelessWidget {
         ),
         const Gap(16),
         Text('启用', style: theme.textTheme.titleMedium),
+      ],
+    );
+  }
+}
+
+class _UpdateRequiredConnectionButton extends StatelessWidget {
+  const _UpdateRequiredConnectionButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.error;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Semantics(
+          button: true,
+          label: '需要更新',
+          child: SizedBox(
+            width: 168,
+            height: 168,
+            child: Material(
+              color: color,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onTap,
+                child: Icon(Icons.system_update_alt_rounded, size: 56, color: theme.colorScheme.onError),
+              ),
+            ),
+          ),
+        ),
+        const Gap(16),
+        Text('需要更新', style: theme.textTheme.titleMedium),
       ],
     );
   }

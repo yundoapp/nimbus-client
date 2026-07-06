@@ -186,6 +186,14 @@ class NimbusAuthRepository {
     return NimbusIssueReport.fromJson(Map<String, dynamic>.from(data['item'] as Map? ?? const {}));
   }
 
+  Future<NimbusAppVersionCheck> checkAppVersion({required String platform, required String version}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      'app-version/check',
+      queryParameters: {'platform': platform, 'version': version},
+    );
+    return NimbusAppVersionCheck.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
+  }
+
   Future<void> logout(NimbusAuthSession session) async {
     try {
       await _dio.post<void>(
