@@ -10,6 +10,7 @@ import 'package:hiddify/features/home/widget/connection_button.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_delay_indicator.dart';
+import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -20,7 +21,10 @@ class HomePage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final authState = ref.watch(nimbusAuthControllerProvider);
+    final stats = ref.watch(statsNotifierProvider).asData?.value;
     final hasActivePlan = authState.me?.subscription.hasActivePlan ?? false;
+    final uplinkSpeed = _formatSpeed(stats?.uplink.toInt() ?? 0);
+    final downlinkSpeed = _formatSpeed(stats?.downlink.toInt() ?? 0);
 
     Future<void> showActivationDialog() async {
       await showDialog<void>(context: context, builder: (_) => const _ActivationDialog());
@@ -113,7 +117,13 @@ class HomePage extends HookConsumerWidget {
                     const Gap(6),
                     const ActiveProxyDelayIndicator(),
                     const Spacer(),
-                    _NimbusStatusPanel(theme: theme, me: authState.me, onActivate: showActivationDialog),
+                    _NimbusStatusPanel(
+                      theme: theme,
+                      me: authState.me,
+                      uplinkSpeed: uplinkSpeed,
+                      downlinkSpeed: downlinkSpeed,
+                      onActivate: showActivationDialog,
+                    ),
                     const Gap(16),
                   ],
                 ),
@@ -127,10 +137,18 @@ class HomePage extends HookConsumerWidget {
 }
 
 class _NimbusStatusPanel extends StatelessWidget {
-  const _NimbusStatusPanel({required this.theme, required this.me, required this.onActivate});
+  const _NimbusStatusPanel({
+    required this.theme,
+    required this.me,
+    required this.uplinkSpeed,
+    required this.downlinkSpeed,
+    required this.onActivate,
+  });
 
   final ThemeData theme;
   final NimbusMe? me;
+  final String uplinkSpeed;
+  final String downlinkSpeed;
   final VoidCallback onActivate;
 
   @override
@@ -147,7 +165,9 @@ class _NimbusStatusPanel extends StatelessWidget {
       _ => '暂无可用套餐',
     };
     final expiresText = _formatDate(subscription?.expiresAt);
+    final usedText = _formatBytes(usedBytes);
     final remainingText = remainingBytes == null ? '--' : _formatBytes(remainingBytes);
+    final totalText = quotaBytes == null ? '--' : _formatBytes(quotaBytes);
     final rulesVersion = me?.rules.publicRulesVersion ?? '--';
     final hasActivePlan = subscription?.hasActivePlan ?? false;
 
@@ -166,7 +186,7 @@ class _NimbusStatusPanel extends StatelessWidget {
               child: _StatusText(label: "套餐", value: planName, color: muted),
             ),
             Expanded(
-              child: _StatusText(label: "剩余流量", value: remainingText, color: muted, alignEnd: true),
+              child: _StatusText(label: "到期", value: expiresText, color: muted, alignEnd: true),
             ),
           ],
         ),
@@ -174,10 +194,32 @@ class _NimbusStatusPanel extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _StatusText(label: "到期", value: expiresText, color: muted),
+              child: _StatusText(label: "已用", value: usedText, color: muted),
+            ),
+            Expanded(
+              child: _StatusText(label: "剩余", value: remainingText, color: muted, alignEnd: true),
+            ),
+          ],
+        ),
+        const Gap(12),
+        Row(
+          children: [
+            Expanded(
+              child: _StatusText(label: "总量", value: totalText, color: muted),
             ),
             Expanded(
               child: _StatusText(label: "规则", value: rulesVersion, color: muted, alignEnd: true),
+            ),
+          ],
+        ),
+        const Gap(12),
+        Row(
+          children: [
+            Expanded(
+              child: _StatusText(label: "上传", value: uplinkSpeed, color: muted),
+            ),
+            Expanded(
+              child: _StatusText(label: "下载", value: downlinkSpeed, color: muted, alignEnd: true),
             ),
           ],
         ),
@@ -318,6 +360,8 @@ String _formatBytes(int bytes) {
   final fractionDigits = unitIndex <= 1 || value >= 100 ? 0 : 1;
   return '${value.toStringAsFixed(fractionDigits)} ${units[unitIndex]}';
 }
+
+String _formatSpeed(int bytesPerSecond) => '${_formatBytes(bytesPerSecond)}/s';
 
 String _formatDate(DateTime? value) {
   if (value == null) return '--';
