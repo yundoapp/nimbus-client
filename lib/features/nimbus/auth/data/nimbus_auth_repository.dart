@@ -109,6 +109,22 @@ class NimbusAuthRepository {
     );
   }
 
+  Future<NimbusDevicesList> fetchDevices(NimbusAuthSession session) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      'devices',
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+    return NimbusDevicesList.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
+  }
+
+  Future<NimbusDeviceRemoveResult> removeDevice({required NimbusAuthSession session, required String deviceId}) async {
+    final response = await _dio.delete<Map<String, dynamic>>(
+      'devices/$deviceId',
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+    return NimbusDeviceRemoveResult.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
+  }
+
   Future<void> logout(NimbusAuthSession session) async {
     try {
       await _dio.post<void>(

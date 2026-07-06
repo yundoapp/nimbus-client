@@ -162,6 +162,79 @@ class NimbusMe {
   final NimbusRulesInfo rules;
 }
 
+class NimbusRegisteredDevice {
+  const NimbusRegisteredDevice({
+    required this.id,
+    required this.deviceId,
+    required this.platform,
+    required this.deviceName,
+    required this.appVersion,
+    required this.status,
+    required this.isCurrent,
+    required this.firstLoginAt,
+    this.lastActiveAt,
+  });
+
+  factory NimbusRegisteredDevice.fromJson(Map<String, dynamic> json) {
+    return NimbusRegisteredDevice(
+      id: json['id'] as String? ?? '',
+      deviceId: json['deviceId'] as String? ?? '',
+      platform: json['platform'] as String? ?? 'unknown',
+      deviceName: json['deviceName'] as String? ?? '',
+      appVersion: json['appVersion'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      isCurrent: json['isCurrent'] as bool? ?? false,
+      firstLoginAt: _dateTime(json['firstLoginAt']),
+      lastActiveAt: _dateTime(json['lastActiveAt']),
+    );
+  }
+
+  final String id;
+  final String deviceId;
+  final String platform;
+  final String deviceName;
+  final String appVersion;
+  final String status;
+  final bool isCurrent;
+  final DateTime? firstLoginAt;
+  final DateTime? lastActiveAt;
+}
+
+class NimbusDevicesList {
+  const NimbusDevicesList({required this.limit, required this.items});
+
+  factory NimbusDevicesList.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'];
+    return NimbusDevicesList(
+      limit: _int(json['limit']) ?? 0,
+      items: rawItems is List
+          ? rawItems
+                .map((item) => NimbusRegisteredDevice.fromJson(Map<String, dynamic>.from(item as Map? ?? const {})))
+                .toList()
+          : const [],
+    );
+  }
+
+  final int limit;
+  final List<NimbusRegisteredDevice> items;
+
+  int get used => items.length;
+}
+
+class NimbusDeviceRemoveResult {
+  const NimbusDeviceRemoveResult({required this.success, required this.deletedCurrentDevice});
+
+  factory NimbusDeviceRemoveResult.fromJson(Map<String, dynamic> json) {
+    return NimbusDeviceRemoveResult(
+      success: json['success'] as bool? ?? false,
+      deletedCurrentDevice: json['deletedCurrentDevice'] as bool? ?? false,
+    );
+  }
+
+  final bool success;
+  final bool deletedCurrentDevice;
+}
+
 DateTime? _dateTime(Object? value) {
   if (value is! String || value.isEmpty) return null;
   return DateTime.tryParse(value)?.toLocal();

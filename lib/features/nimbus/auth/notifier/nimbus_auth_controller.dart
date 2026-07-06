@@ -11,6 +11,7 @@ class NimbusAuthState {
     this.isRestoring = false,
     this.session,
     this.me,
+    this.devices,
     this.errorMessage,
   });
 
@@ -20,11 +21,13 @@ class NimbusAuthState {
       isRestoring = false,
       session = null,
       me = null,
+      devices = null,
       errorMessage = null;
 
   const NimbusAuthState.authenticated({
     required NimbusAuthSession this.session,
     this.me,
+    this.devices,
     this.isLoading = false,
     this.isRestoring = false,
     this.errorMessage,
@@ -35,6 +38,7 @@ class NimbusAuthState {
   final bool isRestoring;
   final NimbusAuthSession? session;
   final NimbusMe? me;
+  final NimbusDevicesList? devices;
   final String? errorMessage;
 }
 
@@ -58,10 +62,14 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
 
     try {
       final me = await _repository.fetchMe(session.accessToken);
-      state = NimbusAuthState.authenticated(session: session, me: me);
+      state = NimbusAuthState.authenticated(session: session, me: me, devices: state.devices);
     } catch (error) {
       if (!_repository.isUnauthorized(error)) {
-        state = NimbusAuthState.authenticated(session: session, errorMessage: _repository.describeError(error));
+        state = NimbusAuthState.authenticated(
+          session: session,
+          devices: state.devices,
+          errorMessage: _repository.describeError(error),
+        );
         return;
       }
 
@@ -69,7 +77,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
         final refreshedSession = await _repository.refresh(session);
         await _repository.saveSession(refreshedSession);
         final me = await _repository.fetchMe(refreshedSession.accessToken);
-        state = NimbusAuthState.authenticated(session: refreshedSession, me: me);
+        state = NimbusAuthState.authenticated(session: refreshedSession, me: me, devices: state.devices);
       } catch (_) {
         await _repository.clearSession();
         state = const NimbusAuthState.unauthenticated();
@@ -82,6 +90,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       isAuthenticated: state.isAuthenticated,
       session: state.session,
       me: state.me,
+      devices: state.devices,
       isLoading: true,
     );
     try {
@@ -99,6 +108,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       isAuthenticated: state.isAuthenticated,
       session: state.session,
       me: state.me,
+      devices: state.devices,
       isLoading: true,
     );
     try {
@@ -116,7 +126,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
     if (session == null) return;
     try {
       final me = await _repository.fetchMe(session.accessToken);
-      state = NimbusAuthState.authenticated(session: session, me: me);
+      state = NimbusAuthState.authenticated(session: session, me: me, devices: state.devices);
     } catch (error) {
       if (_repository.isUnauthorized(error)) {
         await restore();
@@ -125,8 +135,59 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       state = NimbusAuthState.authenticated(
         session: session,
         me: state.me,
+        devices: state.devices,
         errorMessage: _repository.describeError(error),
       );
+    }
+  }
+
+  Future<void> loadDevices() async {
+    final session = state.session;
+    if (session == null) return;
+    state = NimbusAuthState.authenticated(session: session, me: state.me, devices: state.devices, isLoading: true);
+    try {
+      final devices = await _repository.fetchDevices(session);
+      state = NimbusAuthState.authenticated(session: session, me: state.me, devices: devices);
+    } catch (error) {
+      if (_repository.isUnauthorized(error)) {
+        await restore();
+        return;
+      }
+      state = NimbusAuthState.authenticated(
+        session: session,
+        me: state.me,
+        devices: state.devices,
+        errorMessage: _repository.describeError(error),
+      );
+    }
+  }
+
+  Future<bool> removeDevice(String deviceId) async {
+    final session = state.session;
+    if (session == null) return false;
+    state = NimbusAuthState.authenticated(session: session, me: state.me, devices: state.devices, isLoading: true);
+    try {
+      final result = await _repository.removeDevice(session: session, deviceId: deviceId);
+      if (result.deletedCurrentDevice) {
+        await _repository.clearSession();
+        state = const NimbusAuthState.unauthenticated();
+      } else {
+        final devices = await _repository.fetchDevices(session);
+        state = NimbusAuthState.authenticated(session: session, me: state.me, devices: devices);
+      }
+      return result.success;
+    } catch (error) {
+      if (_repository.isUnauthorized(error)) {
+        await restore();
+      } else {
+        state = NimbusAuthState.authenticated(
+          session: session,
+          me: state.me,
+          devices: state.devices,
+          errorMessage: _repository.describeError(error),
+        );
+      }
+      return false;
     }
   }
 
@@ -136,11 +197,11 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       state = const NimbusAuthState.unauthenticated();
       return false;
     }
-    state = NimbusAuthState.authenticated(session: session, me: state.me, isLoading: true);
+    state = NimbusAuthState.authenticated(session: session, me: state.me, devices: state.devices, isLoading: true);
     try {
       await _repository.redeemActivationCode(session: session, code: code);
       final me = await _repository.fetchMe(session.accessToken);
-      state = NimbusAuthState.authenticated(session: session, me: me);
+      state = NimbusAuthState.authenticated(session: session, me: me, devices: state.devices);
       return true;
     } catch (error) {
       if (_repository.isUnauthorized(error)) {
@@ -149,6 +210,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
         state = NimbusAuthState.authenticated(
           session: session,
           me: state.me,
+          devices: state.devices,
           errorMessage: _repository.describeError(error),
         );
       }
@@ -162,6 +224,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       isAuthenticated: state.isAuthenticated,
       session: state.session,
       me: state.me,
+      devices: state.devices,
       isLoading: true,
     );
     if (session != null) {
@@ -181,6 +244,6 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
     } catch (error) {
       errorMessage = _repository.describeError(error);
     }
-    state = NimbusAuthState.authenticated(session: session, me: me, errorMessage: errorMessage);
+    state = NimbusAuthState.authenticated(session: session, me: me, devices: state.devices, errorMessage: errorMessage);
   }
 }
