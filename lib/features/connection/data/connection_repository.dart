@@ -80,7 +80,12 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
   @override
   TaskEither<ConnectionFailure, Unit> connect(ProfileEntity activeProfile, bool disableMemoryLimit) => setup().flatMap(
     (_) => applyConfigOption(activeProfile).flatMap(
-      (_) => singbox.start(profilePathResolver.file(activeProfile.id).path, activeProfile.name, disableMemoryLimit),
+      (_) => singbox.start(
+        profilePathResolver.file(activeProfile.id).path,
+        activeProfile.name,
+        disableMemoryLimit,
+        enableRawConfig: _isNimbusRawProfile(activeProfile),
+      ),
       // .mapLeft(UnexpectedConnectionFailure.new),
     ),
   );
@@ -92,9 +97,18 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
   TaskEither<ConnectionFailure, Unit> reconnect(ProfileEntity activeProfile, bool disableMemoryLimit) =>
       applyConfigOption(activeProfile).flatMap(
         (_) => singbox
-            .restart(profilePathResolver.file(activeProfile.id).path, activeProfile.name, disableMemoryLimit)
+            .restart(
+              profilePathResolver.file(activeProfile.id).path,
+              activeProfile.name,
+              disableMemoryLimit,
+              enableRawConfig: _isNimbusRawProfile(activeProfile),
+            )
             .mapLeft(UnexpectedConnectionFailure.new),
       );
+
+  bool _isNimbusRawProfile(ProfileEntity profile) {
+    return profile.populatedHeaders?['nimbus-managed'] == true;
+  }
 
   @visibleForTesting
   TaskEither<ConnectionFailure, Unit> applyConfigOption(ProfileEntity prof) =>

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_desktop_behavior_controller.dart';
-import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 import 'package:hiddify/utils/platform_utils.dart';
@@ -40,7 +40,7 @@ class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with Widg
               //       .reconnect(await ref.read(activeProfileProvider.future));
               // },
             );
-        await ref.read(connectionNotifierProvider.notifier).reconnect(await ref.read(activeProfileProvider.future));
+        await ref.read(nimbusConnectionControllerProvider.notifier).reconnect();
       }
     });
 

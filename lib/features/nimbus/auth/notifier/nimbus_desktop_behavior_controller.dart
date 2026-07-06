@@ -5,7 +5,7 @@ import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
-import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/window/notifier/window_notifier.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -55,14 +55,8 @@ class NimbusDesktopBehaviorController extends Notifier<void> with AppLogger {
     final connection = ref.read(connectionNotifierProvider).valueOrNull;
     if (connection is Connected || connection is Connecting || connection is Disconnecting) return;
 
-    final activeProfile = ref.read(activeProfileProvider).valueOrNull;
-    if (activeProfile == null) {
-      loggy.debug('skip auto connect: no active profile [$reason]');
-      return;
-    }
-
     loggy.info('auto connect [$reason]');
-    await ref.read(connectionNotifierProvider.notifier).mayConnect();
+    await ref.read(nimbusConnectionControllerProvider.notifier).connect(showErrors: false);
   }
 
   Future<void> toggleConnectionFromTray() async {
@@ -74,6 +68,6 @@ class NimbusDesktopBehaviorController extends Notifier<void> with AppLogger {
       await ref.read(windowNotifierProvider.notifier).show();
       return;
     }
-    await ref.read(connectionNotifierProvider.notifier).toggleConnection();
+    await ref.read(nimbusConnectionControllerProvider.notifier).toggle();
   }
 }

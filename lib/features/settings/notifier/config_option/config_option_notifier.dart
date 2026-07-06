@@ -8,7 +8,7 @@ import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/features/connection/data/connection_data_providers.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
-import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 import 'package:hiddify/utils/platform_utils.dart';
@@ -31,11 +31,9 @@ class ConfigOptionNotifier extends _$ConfigOptionNotifier with AppLogger {
           _lastUpdate = DateTime.now();
           if (serviceSingboxOptions?.enableTun != next.enableTun) {
             loggy.debug("tun option changed, reconnecting");
-            await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-            await ref.read(connectionNotifierProvider.notifier).toggleConnection();
+            await ref.read(nimbusConnectionControllerProvider.notifier).reconnect();
           } else {
-            final activeProfile = await ref.read(activeProfileProvider.future);
-            return await ref.read(connectionNotifierProvider.notifier).reconnect(activeProfile);
+            return await ref.read(nimbusConnectionControllerProvider.notifier).reconnect();
           }
           state = const AsyncData(false);
         }

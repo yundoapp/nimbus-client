@@ -378,6 +378,80 @@ class NimbusAppVersionCheck {
   final String? releaseNotes;
 }
 
+class NimbusConnectTraffic {
+  const NimbusConnectTraffic({required this.usedBytes, required this.remainingBytes, required this.quotaBytes});
+
+  factory NimbusConnectTraffic.fromJson(Map<String, dynamic> json) {
+    return NimbusConnectTraffic(
+      usedBytes: _int(json['usedBytes']) ?? 0,
+      remainingBytes: _int(json['remainingBytes']) ?? 0,
+      quotaBytes: _int(json['quotaBytes']) ?? 0,
+    );
+  }
+
+  final int usedBytes;
+  final int remainingBytes;
+  final int quotaBytes;
+}
+
+class NimbusConnectPlan {
+  const NimbusConnectPlan({
+    required this.planId,
+    required this.sessionId,
+    required this.expiresAt,
+    required this.locationLabel,
+    required this.heartbeatIntervalSeconds,
+    required this.traffic,
+    required this.singBoxConfigPatch,
+    this.publicRulesVersion,
+  });
+
+  factory NimbusConnectPlan.fromJson(Map<String, dynamic> json) {
+    return NimbusConnectPlan(
+      planId: json['planId'] as String? ?? '',
+      sessionId: json['sessionId'] as String? ?? '',
+      expiresAt: _dateTime(json['expiresAt']),
+      locationLabel: json['locationLabel'] as String? ?? '自动',
+      publicRulesVersion: json['publicRulesVersion'] as String?,
+      heartbeatIntervalSeconds: _int(json['heartbeatIntervalSeconds']) ?? 60,
+      traffic: NimbusConnectTraffic.fromJson(Map<String, dynamic>.from(json['traffic'] as Map? ?? const {})),
+      singBoxConfigPatch: Map<String, dynamic>.from(json['singBoxConfigPatch'] as Map? ?? const {}),
+    );
+  }
+
+  final String planId;
+  final String sessionId;
+  final DateTime? expiresAt;
+  final String locationLabel;
+  final String? publicRulesVersion;
+  final int heartbeatIntervalSeconds;
+  final NimbusConnectTraffic traffic;
+  final Map<String, dynamic> singBoxConfigPatch;
+}
+
+class NimbusConnectHeartbeat {
+  const NimbusConnectHeartbeat({
+    required this.ok,
+    required this.disconnectRequired,
+    required this.traffic,
+    this.reason,
+  });
+
+  factory NimbusConnectHeartbeat.fromJson(Map<String, dynamic> json) {
+    return NimbusConnectHeartbeat(
+      ok: json['ok'] as bool? ?? false,
+      disconnectRequired: json['disconnectRequired'] as bool? ?? false,
+      reason: json['reason'] as String?,
+      traffic: NimbusConnectTraffic.fromJson(Map<String, dynamic>.from(json['traffic'] as Map? ?? const {})),
+    );
+  }
+
+  final bool ok;
+  final bool disconnectRequired;
+  final String? reason;
+  final NimbusConnectTraffic traffic;
+}
+
 DateTime? _dateTime(Object? value) {
   if (value is! String || value.isEmpty) return null;
   return DateTime.tryParse(value)?.toLocal();

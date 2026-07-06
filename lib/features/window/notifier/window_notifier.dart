@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
-import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:screen_retriever/screen_retriever.dart';
@@ -120,8 +120,8 @@ class WindowNotifier extends _$WindowNotifier with AppLogger {
 
   Future<void> exit() async {
     await ref
-        .read(connectionNotifierProvider.notifier)
-        .abortConnection()
+        .read(nimbusConnectionControllerProvider.notifier)
+        .disconnect(reason: 'APP_QUIT')
         .timeout(const Duration(seconds: 2))
         .catchError((e) {
           loggy.warning("error aborting connection on quit", e);

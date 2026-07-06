@@ -194,6 +194,81 @@ class NimbusAuthRepository {
     return NimbusAppVersionCheck.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
   }
 
+  Future<NimbusConnectPlan> createConnectPlan({
+    required NimbusAuthSession session,
+    required String selectedLocation,
+    required String appVersion,
+    String? rulesVersion,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      'connect/plan',
+      data: {
+        'deviceId': session.device.deviceId,
+        'selectedLocation': selectedLocation,
+        'appVersion': appVersion,
+        'rulesVersion': rulesVersion,
+      },
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+    return NimbusConnectPlan.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
+  }
+
+  Future<void> reportConnectResult({
+    required NimbusAuthSession session,
+    required NimbusConnectPlan plan,
+    required String status,
+    String? failureCode,
+  }) async {
+    await _dio.post<void>(
+      'connect/result',
+      data: {
+        'sessionId': plan.sessionId,
+        'planId': plan.planId,
+        'status': status,
+        if (failureCode != null) 'failureCode': failureCode,
+      },
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+  }
+
+  Future<NimbusConnectHeartbeat> sendConnectHeartbeat({
+    required NimbusAuthSession session,
+    required NimbusConnectPlan plan,
+    required String status,
+    required int uploadBytesDelta,
+    required int downloadBytesDelta,
+    required String appVersion,
+    String? rulesVersion,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      'connect/heartbeat',
+      data: {
+        'sessionId': plan.sessionId,
+        'planId': plan.planId,
+        'deviceId': session.device.deviceId,
+        'status': status,
+        'uploadBytesDelta': uploadBytesDelta,
+        'downloadBytesDelta': downloadBytesDelta,
+        'appVersion': appVersion,
+        'rulesVersion': rulesVersion,
+      },
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+    return NimbusConnectHeartbeat.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
+  }
+
+  Future<void> reportConnectDisconnect({
+    required NimbusAuthSession session,
+    required NimbusConnectPlan plan,
+    required String reason,
+  }) async {
+    await _dio.post<void>(
+      'connect/disconnect',
+      data: {'sessionId': plan.sessionId, 'planId': plan.planId, 'reason': reason},
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+  }
+
   Future<void> logout(NimbusAuthSession session) async {
     try {
       await _dio.post<void>(
