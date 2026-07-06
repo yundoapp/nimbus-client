@@ -38,6 +38,7 @@ class NimbusAuthRepository {
 
   static const _sessionKey = 'nimbus.auth.session';
   static const _deviceIdKey = 'nimbus.auth.device_id';
+  static const _selectedLocationKey = 'nimbus.connect.selected_location';
 
   final SharedPreferences _preferences;
   final AppInfoEntity _appInfo;
@@ -123,6 +124,23 @@ class NimbusAuthRepository {
       options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
     );
     return NimbusDeviceRemoveResult.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
+  }
+
+  String readSelectedLocationCode() {
+    final code = _preferences.getString(_selectedLocationKey);
+    return code == null || code.isEmpty ? 'auto' : code;
+  }
+
+  Future<void> saveSelectedLocationCode(String code) async {
+    await _preferences.setString(_selectedLocationKey, code.isEmpty ? 'auto' : code);
+  }
+
+  Future<NimbusLocationsList> fetchLocations(NimbusAuthSession session) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      'locations',
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+    return NimbusLocationsList.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
   }
 
   Future<void> logout(NimbusAuthSession session) async {

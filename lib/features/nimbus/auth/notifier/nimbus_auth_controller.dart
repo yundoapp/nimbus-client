@@ -12,6 +12,8 @@ class NimbusAuthState {
     this.session,
     this.me,
     this.devices,
+    this.locations,
+    this.selectedLocationCode = 'auto',
     this.errorMessage,
   });
 
@@ -22,12 +24,16 @@ class NimbusAuthState {
       session = null,
       me = null,
       devices = null,
+      locations = null,
+      selectedLocationCode = 'auto',
       errorMessage = null;
 
   const NimbusAuthState.authenticated({
     required NimbusAuthSession this.session,
     this.me,
     this.devices,
+    this.locations,
+    this.selectedLocationCode = 'auto',
     this.isLoading = false,
     this.isRestoring = false,
     this.errorMessage,
@@ -39,6 +45,8 @@ class NimbusAuthState {
   final NimbusAuthSession? session;
   final NimbusMe? me;
   final NimbusDevicesList? devices;
+  final NimbusLocationsList? locations;
+  final String selectedLocationCode;
   final String? errorMessage;
 }
 
@@ -48,9 +56,14 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
   @override
   NimbusAuthState build() {
     final session = _repository.readSession();
+    final selectedLocationCode = _repository.readSelectedLocationCode();
     if (session == null) return const NimbusAuthState.unauthenticated();
     Future.microtask(restore);
-    return NimbusAuthState.authenticated(session: session, isRestoring: true);
+    return NimbusAuthState.authenticated(
+      session: session,
+      selectedLocationCode: selectedLocationCode,
+      isRestoring: true,
+    );
   }
 
   Future<void> restore() async {
@@ -62,12 +75,20 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
 
     try {
       final me = await _repository.fetchMe(session.accessToken);
-      state = NimbusAuthState.authenticated(session: session, me: me, devices: state.devices);
+      state = NimbusAuthState.authenticated(
+        session: session,
+        me: me,
+        devices: state.devices,
+        locations: state.locations,
+        selectedLocationCode: state.selectedLocationCode,
+      );
     } catch (error) {
       if (!_repository.isUnauthorized(error)) {
         state = NimbusAuthState.authenticated(
           session: session,
           devices: state.devices,
+          locations: state.locations,
+          selectedLocationCode: state.selectedLocationCode,
           errorMessage: _repository.describeError(error),
         );
         return;
@@ -77,7 +98,13 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
         final refreshedSession = await _repository.refresh(session);
         await _repository.saveSession(refreshedSession);
         final me = await _repository.fetchMe(refreshedSession.accessToken);
-        state = NimbusAuthState.authenticated(session: refreshedSession, me: me, devices: state.devices);
+        state = NimbusAuthState.authenticated(
+          session: refreshedSession,
+          me: me,
+          devices: state.devices,
+          locations: state.locations,
+          selectedLocationCode: state.selectedLocationCode,
+        );
       } catch (_) {
         await _repository.clearSession();
         state = const NimbusAuthState.unauthenticated();
@@ -91,6 +118,8 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       session: state.session,
       me: state.me,
       devices: state.devices,
+      locations: state.locations,
+      selectedLocationCode: state.selectedLocationCode,
       isLoading: true,
     );
     try {
@@ -109,6 +138,8 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       session: state.session,
       me: state.me,
       devices: state.devices,
+      locations: state.locations,
+      selectedLocationCode: state.selectedLocationCode,
       isLoading: true,
     );
     try {
@@ -126,7 +157,13 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
     if (session == null) return;
     try {
       final me = await _repository.fetchMe(session.accessToken);
-      state = NimbusAuthState.authenticated(session: session, me: me, devices: state.devices);
+      state = NimbusAuthState.authenticated(
+        session: session,
+        me: me,
+        devices: state.devices,
+        locations: state.locations,
+        selectedLocationCode: state.selectedLocationCode,
+      );
     } catch (error) {
       if (_repository.isUnauthorized(error)) {
         await restore();
@@ -136,6 +173,8 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
         session: session,
         me: state.me,
         devices: state.devices,
+        locations: state.locations,
+        selectedLocationCode: state.selectedLocationCode,
         errorMessage: _repository.describeError(error),
       );
     }
@@ -144,10 +183,23 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
   Future<void> loadDevices() async {
     final session = state.session;
     if (session == null) return;
-    state = NimbusAuthState.authenticated(session: session, me: state.me, devices: state.devices, isLoading: true);
+    state = NimbusAuthState.authenticated(
+      session: session,
+      me: state.me,
+      devices: state.devices,
+      locations: state.locations,
+      selectedLocationCode: state.selectedLocationCode,
+      isLoading: true,
+    );
     try {
       final devices = await _repository.fetchDevices(session);
-      state = NimbusAuthState.authenticated(session: session, me: state.me, devices: devices);
+      state = NimbusAuthState.authenticated(
+        session: session,
+        me: state.me,
+        devices: devices,
+        locations: state.locations,
+        selectedLocationCode: state.selectedLocationCode,
+      );
     } catch (error) {
       if (_repository.isUnauthorized(error)) {
         await restore();
@@ -157,15 +209,79 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
         session: session,
         me: state.me,
         devices: state.devices,
+        locations: state.locations,
+        selectedLocationCode: state.selectedLocationCode,
         errorMessage: _repository.describeError(error),
       );
     }
   }
 
+  Future<void> loadLocations() async {
+    final session = state.session;
+    if (session == null) return;
+    state = NimbusAuthState.authenticated(
+      session: session,
+      me: state.me,
+      devices: state.devices,
+      locations: state.locations,
+      selectedLocationCode: state.selectedLocationCode,
+      isLoading: true,
+    );
+    try {
+      final locations = await _repository.fetchLocations(session);
+      final hasSelected = locations.items.any((item) => item.code == state.selectedLocationCode);
+      final selectedLocationCode = hasSelected ? state.selectedLocationCode : 'auto';
+      if (!hasSelected) await _repository.saveSelectedLocationCode(selectedLocationCode);
+      state = NimbusAuthState.authenticated(
+        session: session,
+        me: state.me,
+        devices: state.devices,
+        locations: locations,
+        selectedLocationCode: selectedLocationCode,
+      );
+    } catch (error) {
+      if (_repository.isUnauthorized(error)) {
+        await restore();
+        return;
+      }
+      state = NimbusAuthState.authenticated(
+        session: session,
+        me: state.me,
+        devices: state.devices,
+        locations: state.locations,
+        selectedLocationCode: state.selectedLocationCode,
+        errorMessage: _repository.describeError(error),
+      );
+    }
+  }
+
+  Future<void> selectLocation(NimbusLocation location) async {
+    await _repository.saveSelectedLocationCode(location.code);
+    final session = state.session;
+    if (session == null) {
+      state = NimbusAuthState(isAuthenticated: false, selectedLocationCode: location.code);
+      return;
+    }
+    state = NimbusAuthState.authenticated(
+      session: session,
+      me: state.me,
+      devices: state.devices,
+      locations: state.locations,
+      selectedLocationCode: location.code,
+    );
+  }
+
   Future<bool> removeDevice(String deviceId) async {
     final session = state.session;
     if (session == null) return false;
-    state = NimbusAuthState.authenticated(session: session, me: state.me, devices: state.devices, isLoading: true);
+    state = NimbusAuthState.authenticated(
+      session: session,
+      me: state.me,
+      devices: state.devices,
+      locations: state.locations,
+      selectedLocationCode: state.selectedLocationCode,
+      isLoading: true,
+    );
     try {
       final result = await _repository.removeDevice(session: session, deviceId: deviceId);
       if (result.deletedCurrentDevice) {
@@ -173,7 +289,13 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
         state = const NimbusAuthState.unauthenticated();
       } else {
         final devices = await _repository.fetchDevices(session);
-        state = NimbusAuthState.authenticated(session: session, me: state.me, devices: devices);
+        state = NimbusAuthState.authenticated(
+          session: session,
+          me: state.me,
+          devices: devices,
+          locations: state.locations,
+          selectedLocationCode: state.selectedLocationCode,
+        );
       }
       return result.success;
     } catch (error) {
@@ -184,6 +306,8 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
           session: session,
           me: state.me,
           devices: state.devices,
+          locations: state.locations,
+          selectedLocationCode: state.selectedLocationCode,
           errorMessage: _repository.describeError(error),
         );
       }
@@ -197,11 +321,24 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       state = const NimbusAuthState.unauthenticated();
       return false;
     }
-    state = NimbusAuthState.authenticated(session: session, me: state.me, devices: state.devices, isLoading: true);
+    state = NimbusAuthState.authenticated(
+      session: session,
+      me: state.me,
+      devices: state.devices,
+      locations: state.locations,
+      selectedLocationCode: state.selectedLocationCode,
+      isLoading: true,
+    );
     try {
       await _repository.redeemActivationCode(session: session, code: code);
       final me = await _repository.fetchMe(session.accessToken);
-      state = NimbusAuthState.authenticated(session: session, me: me, devices: state.devices);
+      state = NimbusAuthState.authenticated(
+        session: session,
+        me: me,
+        devices: state.devices,
+        locations: state.locations,
+        selectedLocationCode: state.selectedLocationCode,
+      );
       return true;
     } catch (error) {
       if (_repository.isUnauthorized(error)) {
@@ -211,6 +348,8 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
           session: session,
           me: state.me,
           devices: state.devices,
+          locations: state.locations,
+          selectedLocationCode: state.selectedLocationCode,
           errorMessage: _repository.describeError(error),
         );
       }
@@ -225,6 +364,8 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       session: state.session,
       me: state.me,
       devices: state.devices,
+      locations: state.locations,
+      selectedLocationCode: state.selectedLocationCode,
       isLoading: true,
     );
     if (session != null) {
@@ -244,6 +385,13 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
     } catch (error) {
       errorMessage = _repository.describeError(error);
     }
-    state = NimbusAuthState.authenticated(session: session, me: me, devices: state.devices, errorMessage: errorMessage);
+    state = NimbusAuthState.authenticated(
+      session: session,
+      me: me,
+      devices: state.devices,
+      locations: state.locations,
+      selectedLocationCode: state.selectedLocationCode,
+      errorMessage: errorMessage,
+    );
   }
 }

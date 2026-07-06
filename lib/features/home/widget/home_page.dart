@@ -26,6 +26,14 @@ class HomePage extends HookConsumerWidget {
     final hasActivePlan = authState.me?.subscription.hasActivePlan ?? false;
     final uplinkSpeed = _formatSpeed(stats?.uplink.toInt() ?? 0);
     final downlinkSpeed = _formatSpeed(stats?.downlink.toInt() ?? 0);
+    final selectedLocation = _selectedLocation(authState);
+
+    useEffect(() {
+      if (authState.isAuthenticated && authState.locations == null) {
+        Future.microtask(() => ref.read(nimbusAuthControllerProvider.notifier).loadLocations());
+      }
+      return null;
+    }, [authState.isAuthenticated]);
 
     Future<void> showActivationDialog() async {
       await showDialog<void>(context: context, builder: (_) => const _ActivationDialog());
@@ -110,13 +118,7 @@ class HomePage extends HookConsumerWidget {
                 child: Column(
                   children: [
                     const Spacer(),
-                    Text(
-                      "自动",
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    const _LocationSelector(),
                     const Gap(18),
                     if (hasActivePlan)
                       const ConnectionButton()
@@ -130,6 +132,7 @@ class HomePage extends HookConsumerWidget {
                       me: authState.me,
                       uplinkSpeed: uplinkSpeed,
                       downlinkSpeed: downlinkSpeed,
+                      locationName: selectedLocation.displayName,
                       onActivate: showActivationDialog,
                     ),
                     const Gap(16),
@@ -150,6 +153,7 @@ class _NimbusStatusPanel extends StatelessWidget {
     required this.me,
     required this.uplinkSpeed,
     required this.downlinkSpeed,
+    required this.locationName,
     required this.onActivate,
   });
 
@@ -157,6 +161,7 @@ class _NimbusStatusPanel extends StatelessWidget {
   final NimbusMe? me;
   final String uplinkSpeed;
   final String downlinkSpeed;
+  final String locationName;
   final VoidCallback onActivate;
 
   @override
@@ -235,7 +240,7 @@ class _NimbusStatusPanel extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _StatusText(label: "位置", value: "自动", color: muted),
+              child: _StatusText(label: "位置", value: locationName, color: muted),
             ),
             if (!hasActivePlan)
               FilledButton.tonalIcon(
@@ -246,6 +251,44 @@ class _NimbusStatusPanel extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _LocationSelector extends HookConsumerWidget {
+  const _LocationSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(nimbusAuthControllerProvider);
+    final selectedLocation = _selectedLocation(authState);
+    final locations = authState.locations?.items ?? [selectedLocation];
+
+    return MenuAnchor(
+      menuChildren: locations
+          .map(
+            (location) => MenuItemButton(
+              leadingIcon: location.code == authState.selectedLocationCode
+                  ? const Icon(Icons.check_rounded)
+                  : const SizedBox(width: 24),
+              onPressed: () => ref.read(nimbusAuthControllerProvider.notifier).selectLocation(location),
+              child: Text(location.displayName),
+            ),
+          )
+          .toList(),
+      builder: (context, controller, child) => TextButton.icon(
+        onPressed: () async {
+          await ref.read(nimbusAuthControllerProvider.notifier).loadLocations();
+          if (!context.mounted) return;
+          if (controller.isOpen) {
+            controller.close();
+          } else {
+            controller.open();
+          }
+        },
+        icon: const Icon(Icons.public_rounded, size: 18),
+        label: Text(selectedLocation.displayName),
+      ),
     );
   }
 }
@@ -355,6 +398,14 @@ class _ActivationDialog extends HookConsumerWidget {
       ],
     );
   }
+}
+
+NimbusLocation _selectedLocation(NimbusAuthState authState) {
+  final locations = authState.locations?.items ?? const [NimbusLocation(code: 'auto', displayName: '自动')];
+  return locations.firstWhere(
+    (location) => location.code == authState.selectedLocationCode,
+    orElse: () => const NimbusLocation(code: 'auto', displayName: '自动'),
+  );
 }
 
 String _formatBytes(int bytes) {

@@ -235,6 +235,39 @@ class NimbusDeviceRemoveResult {
   final bool deletedCurrentDevice;
 }
 
+class NimbusLocation {
+  const NimbusLocation({required this.code, required this.displayName});
+
+  factory NimbusLocation.fromJson(Map<String, dynamic> json) {
+    return NimbusLocation(code: json['code'] as String? ?? 'auto', displayName: json['displayName'] as String? ?? '自动');
+  }
+
+  final String code;
+  final String displayName;
+}
+
+class NimbusLocationsList {
+  const NimbusLocationsList({required this.items});
+
+  factory NimbusLocationsList.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'];
+    return NimbusLocationsList(
+      items: rawItems is List
+          ? rawItems
+                .map((item) => NimbusLocation.fromJson(Map<String, dynamic>.from(item as Map? ?? const {})))
+                .toList()
+          : const [NimbusLocation(code: 'auto', displayName: '自动')],
+    );
+  }
+
+  final List<NimbusLocation> items;
+
+  NimbusLocation get fallback => items.firstWhere(
+    (item) => item.code == 'auto',
+    orElse: () => const NimbusLocation(code: 'auto', displayName: '自动'),
+  );
+}
+
 DateTime? _dateTime(Object? value) {
   if (value is! String || value.isEmpty) return null;
   return DateTime.tryParse(value)?.toLocal();
