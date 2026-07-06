@@ -268,6 +268,55 @@ class NimbusLocationsList {
   );
 }
 
+class NimbusRoutePreference {
+  const NimbusRoutePreference({
+    required this.id,
+    required this.type,
+    required this.targetType,
+    required this.value,
+    required this.createdAt,
+  });
+
+  factory NimbusRoutePreference.fromJson(Map<String, dynamic> json) {
+    return NimbusRoutePreference(
+      id: json['id'] as String? ?? '',
+      type: json['type'] as String? ?? 'accelerate',
+      targetType: json['targetType'] as String? ?? 'domain',
+      value: json['value'] as String? ?? '',
+      createdAt: _dateTime(json['createdAt']),
+    );
+  }
+
+  final String id;
+  final String type;
+  final String targetType;
+  final String value;
+  final DateTime? createdAt;
+
+  bool get requiresConnection => type == 'accelerate';
+}
+
+class NimbusRoutePreferencesList {
+  const NimbusRoutePreferencesList({required this.limit, required this.items});
+
+  factory NimbusRoutePreferencesList.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'];
+    return NimbusRoutePreferencesList(
+      limit: _int(json['limit']) ?? 0,
+      items: rawItems is List
+          ? rawItems
+                .map((item) => NimbusRoutePreference.fromJson(Map<String, dynamic>.from(item as Map? ?? const {})))
+                .toList()
+          : const [],
+    );
+  }
+
+  final int limit;
+  final List<NimbusRoutePreference> items;
+
+  int get used => items.length;
+}
+
 DateTime? _dateTime(Object? value) {
   if (value is! String || value.isEmpty) return null;
   return DateTime.tryParse(value)?.toLocal();

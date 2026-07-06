@@ -143,6 +143,34 @@ class NimbusAuthRepository {
     return NimbusLocationsList.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
   }
 
+  Future<NimbusRoutePreferencesList> fetchRoutePreferences(NimbusAuthSession session) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      'route-preferences',
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+    return NimbusRoutePreferencesList.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
+  }
+
+  Future<NimbusRoutePreference> createRoutePreference({
+    required NimbusAuthSession session,
+    required String type,
+    required String input,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      'route-preferences',
+      data: {'type': type, 'input': input},
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+    return NimbusRoutePreference.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
+  }
+
+  Future<void> deleteRoutePreference({required NimbusAuthSession session, required String id}) async {
+    await _dio.delete<void>(
+      'route-preferences/${Uri.encodeComponent(id)}',
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+  }
+
   Future<void> logout(NimbusAuthSession session) async {
     try {
       await _dio.post<void>(
