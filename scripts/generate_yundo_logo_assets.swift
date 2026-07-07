@@ -4,44 +4,52 @@ import Foundation
 struct IconOutput {
   let path: String
   let size: Int
-  let opaque: Bool
+  let kind: IconKind
+}
+
+enum IconKind {
+  case appIcon
+  case trayTemplate
 }
 
 let repoURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
 
 let outputs: [IconOutput] = [
-  .init(path: "assets/images/brand/yundo-app-icon-source.png", size: 1024, opaque: false),
-  .init(path: "assets/images/app_icon.png", size: 1024, opaque: false),
-  .init(path: "assets/images/brand/yundo-app-icon.png", size: 1024, opaque: false),
-  .init(path: "assets/images/source/ic_launcher_border.png", size: 1024, opaque: false),
-  .init(path: "assets/images/source/ic_launcher_splash.png", size: 512, opaque: false),
-  .init(path: "assets/images/source/ic_launcher_foreground.png", size: 512, opaque: false),
-  .init(path: "android/app/src/main/ic_launcher-playstore.png", size: 512, opaque: false),
-  .init(path: "android/app/src/main/res/drawable-xxxhdpi/splash.png", size: 324, opaque: false),
-  .init(path: "android/app/src/main/res/mipmap-mdpi/ic_launcher.png", size: 48, opaque: false),
-  .init(path: "android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png", size: 48, opaque: false),
-  .init(path: "android/app/src/main/res/mipmap-hdpi/ic_launcher.png", size: 72, opaque: false),
-  .init(path: "android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png", size: 72, opaque: false),
-  .init(path: "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png", size: 96, opaque: false),
-  .init(path: "android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png", size: 96, opaque: false),
-  .init(path: "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png", size: 144, opaque: false),
-  .init(path: "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png", size: 144, opaque: false),
-  .init(path: "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png", size: 192, opaque: false),
-  .init(path: "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png", size: 192, opaque: false),
-  .init(path: "assets/images/tray_icon.png", size: 256, opaque: false),
-  .init(path: "assets/images/tray_icon_dark.png", size: 256, opaque: false),
-  .init(path: "assets/images/tray_icon_connected.png", size: 256, opaque: false),
-  .init(path: "assets/images/tray_icon_disconnected.png", size: 256, opaque: false),
-  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_16x16.png", size: 16, opaque: true),
-  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_16x16@2x.png", size: 32, opaque: true),
-  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_32x32.png", size: 32, opaque: true),
-  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_32x32@2x.png", size: 64, opaque: true),
-  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_128x128.png", size: 128, opaque: true),
-  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png", size: 256, opaque: true),
-  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_256x256.png", size: 256, opaque: true),
-  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_256x256@2x.png", size: 512, opaque: true),
-  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_512x512.png", size: 512, opaque: true),
-  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png", size: 1024, opaque: true),
+  .init(path: "assets/images/brand/yundo-app-icon-source.png", size: 1024, kind: .appIcon),
+  .init(path: "assets/images/app_icon.png", size: 1024, kind: .appIcon),
+  .init(path: "assets/images/brand/yundo-app-icon.png", size: 1024, kind: .appIcon),
+  .init(path: "assets/images/source/ic_launcher_border.png", size: 1024, kind: .appIcon),
+  .init(path: "assets/images/source/ic_launcher_splash.png", size: 512, kind: .appIcon),
+  .init(path: "assets/images/source/ic_launcher_foreground.png", size: 512, kind: .appIcon),
+  .init(path: "android/app/src/main/ic_launcher-playstore.png", size: 512, kind: .appIcon),
+  .init(path: "android/app/src/main/res/drawable-xxxhdpi/splash.png", size: 324, kind: .appIcon),
+  .init(path: "android/app/src/main/res/mipmap-mdpi/ic_launcher.png", size: 48, kind: .appIcon),
+  .init(path: "android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png", size: 48, kind: .appIcon),
+  .init(path: "android/app/src/main/res/mipmap-hdpi/ic_launcher.png", size: 72, kind: .appIcon),
+  .init(path: "android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png", size: 72, kind: .appIcon),
+  .init(path: "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png", size: 96, kind: .appIcon),
+  .init(path: "android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png", size: 96, kind: .appIcon),
+  .init(path: "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png", size: 144, kind: .appIcon),
+  .init(path: "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png", size: 144, kind: .appIcon),
+  .init(path: "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png", size: 192, kind: .appIcon),
+  .init(path: "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png", size: 192, kind: .appIcon),
+  .init(path: "assets/images/source/tray_icon.png", size: 2048, kind: .trayTemplate),
+  .init(path: "assets/images/source/tray_icon_connected.png", size: 2048, kind: .trayTemplate),
+  .init(path: "assets/images/source/tray_icon_disconnected.png", size: 2048, kind: .trayTemplate),
+  .init(path: "assets/images/tray_icon.png", size: 256, kind: .trayTemplate),
+  .init(path: "assets/images/tray_icon_dark.png", size: 256, kind: .trayTemplate),
+  .init(path: "assets/images/tray_icon_connected.png", size: 256, kind: .trayTemplate),
+  .init(path: "assets/images/tray_icon_disconnected.png", size: 256, kind: .trayTemplate),
+  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_16x16.png", size: 16, kind: .appIcon),
+  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_16x16@2x.png", size: 32, kind: .appIcon),
+  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_32x32.png", size: 32, kind: .appIcon),
+  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_32x32@2x.png", size: 64, kind: .appIcon),
+  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_128x128.png", size: 128, kind: .appIcon),
+  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png", size: 256, kind: .appIcon),
+  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_256x256.png", size: 256, kind: .appIcon),
+  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_256x256@2x.png", size: 512, kind: .appIcon),
+  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_512x512.png", size: 512, kind: .appIcon),
+  .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png", size: 1024, kind: .appIcon),
 ]
 
 func fail(_ message: String) -> Never {
@@ -116,24 +124,26 @@ func cloudBottomPath(in rect: NSRect) -> NSBezierPath {
   return path
 }
 
-func drawCloud(in rect: NSRect, lineWidth: CGFloat) {
+func drawCloud(in rect: NSRect, lineWidth: CGFloat, strokeColor: NSColor = color(0xffffff), shadowEnabled: Bool = true) {
   let paths = [cloudTopPath(in: rect), cloudBottomPath(in: rect)]
-  let shadow = NSShadow()
-  shadow.shadowColor = color(0x1f2f63, alpha: 0.28)
-  shadow.shadowBlurRadius = rect.width * 0.035
-  shadow.shadowOffset = NSSize(width: 0, height: -rect.height * 0.018)
-  shadow.set()
+  if shadowEnabled {
+    let shadow = NSShadow()
+    shadow.shadowColor = color(0x1f2f63, alpha: 0.28)
+    shadow.shadowBlurRadius = rect.width * 0.035
+    shadow.shadowOffset = NSSize(width: 0, height: -rect.height * 0.018)
+    shadow.set()
+  }
 
   for path in paths {
     path.lineWidth = lineWidth
     path.lineCapStyle = .round
     path.lineJoinStyle = .round
-    color(0xffffff).setStroke()
+    strokeColor.setStroke()
     path.stroke()
   }
 }
 
-func renderedIcon(size: Int, opaque: Bool) -> NSImage {
+func renderedImage(size: Int, draw: (NSRect) -> Void) -> NSImage {
   guard let bitmap = NSBitmapImageRep(
     bitmapDataPlanes: nil,
     pixelsWide: size,
@@ -158,36 +168,53 @@ func renderedIcon(size: Int, opaque: Bool) -> NSImage {
   context.cgContext.setShouldAntialias(true)
 
   let canvas = NSRect(x: 0, y: 0, width: size, height: size)
-  if opaque {
-    color(0x293ca0).setFill()
-  } else {
-    NSColor.clear.setFill()
-  }
+  NSColor.clear.setFill()
   canvas.fill()
+  draw(canvas)
 
-  let inset = CGFloat(size) * (opaque ? 0 : 0.035)
+  let image = NSImage(size: NSSize(width: size, height: size))
+  image.addRepresentation(bitmap)
+  return image
+}
+
+func renderedAppIcon(size: Int) -> NSImage {
+  renderedImage(size: size) { canvas in
+  let inset = CGFloat(size) * 0.035
   let iconRect = canvas.insetBy(dx: inset, dy: inset)
   let cornerRadius = CGFloat(size) * 0.22
   let backgroundPath = NSBezierPath(roundedRect: iconRect, xRadius: cornerRadius, yRadius: cornerRadius)
   backgroundPath.addClip()
 
-  let gradient = NSGradient(colors: [color(0x6379b8), color(0x4f67aa), color(0x293ca0)])!
+  let gradient = NSGradient(colors: [color(0x6b7fbc), color(0x4f67aa), color(0x2e4296)])!
   gradient.draw(in: iconRect, angle: 255)
 
-  color(0xffffff, alpha: 0.13).setStroke()
-  let highlight = NSBezierPath(roundedRect: iconRect.insetBy(dx: CGFloat(size) * 0.035, dy: CGFloat(size) * 0.035), xRadius: cornerRadius * 0.78, yRadius: cornerRadius * 0.78)
+  color(0xffffff, alpha: 0.16).setStroke()
+  let highlight = NSBezierPath(
+    roundedRect: iconRect.insetBy(dx: CGFloat(size) * 0.035, dy: CGFloat(size) * 0.035),
+    xRadius: cornerRadius * 0.78,
+    yRadius: cornerRadius * 0.78
+  )
   highlight.lineWidth = max(1, CGFloat(size) * 0.012)
   highlight.stroke()
 
   NSGraphicsContext.saveGraphicsState()
-  let cloudRect = iconRect.insetBy(dx: CGFloat(size) * 0.17, dy: CGFloat(size) * 0.19)
-  drawCloud(in: cloudRect, lineWidth: max(2, CGFloat(size) * 0.068))
+  let cloudRect = iconRect.insetBy(dx: CGFloat(size) * 0.13, dy: CGFloat(size) * 0.18)
+  drawCloud(in: cloudRect, lineWidth: max(2, CGFloat(size) * 0.078))
 
   NSGraphicsContext.restoreGraphicsState()
+  }
+}
 
-  let image = NSImage(size: NSSize(width: size, height: size))
-  image.addRepresentation(bitmap)
-  return image
+func renderedTrayTemplateIcon(size: Int) -> NSImage {
+  renderedImage(size: size) { canvas in
+    let iconRect = canvas.insetBy(dx: CGFloat(size) * 0.12, dy: CGFloat(size) * 0.2)
+    drawCloud(
+      in: iconRect,
+      lineWidth: max(2, CGFloat(size) * 0.075),
+      strokeColor: color(0xffffff),
+      shadowEnabled: false
+    )
+  }
 }
 
 func writePNG(_ image: NSImage, to url: URL) {
@@ -209,7 +236,13 @@ func writePNG(_ image: NSImage, to url: URL) {
 }
 
 for output in outputs {
-  writePNG(renderedIcon(size: output.size, opaque: output.opaque), to: repoURL.appendingPathComponent(output.path))
+  let image = switch output.kind {
+  case .appIcon:
+    renderedAppIcon(size: output.size)
+  case .trayTemplate:
+    renderedTrayTemplateIcon(size: output.size)
+  }
+  writePNG(image, to: repoURL.appendingPathComponent(output.path))
 }
 
 print("Generated \(outputs.count) Yundo logo assets")
