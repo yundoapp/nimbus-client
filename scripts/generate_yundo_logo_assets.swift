@@ -13,9 +13,10 @@ enum IconKind {
 }
 
 let repoURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+let appIconSourceURL = repoURL.appendingPathComponent("assets/images/brand/yundo-app-icon-source.png")
+let trayIconSourceURL = repoURL.appendingPathComponent("assets/images/brand/yundo-tray-icon-source.png")
 
 let outputs: [IconOutput] = [
-  .init(path: "assets/images/brand/yundo-app-icon-source.png", size: 1024, kind: .appIcon),
   .init(path: "assets/images/app_icon.png", size: 1024, kind: .appIcon),
   .init(path: "assets/images/brand/yundo-app-icon.png", size: 1024, kind: .appIcon),
   .init(path: "assets/images/source/ic_launcher_border.png", size: 1024, kind: .appIcon),
@@ -33,6 +34,7 @@ let outputs: [IconOutput] = [
   .init(path: "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png", size: 144, kind: .appIcon),
   .init(path: "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png", size: 192, kind: .appIcon),
   .init(path: "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png", size: 192, kind: .appIcon),
+  .init(path: "assets/images/brand/yundo-tray-icon.png", size: 1024, kind: .trayTemplate),
   .init(path: "assets/images/source/tray_icon.png", size: 2048, kind: .trayTemplate),
   .init(path: "assets/images/source/tray_icon_connected.png", size: 2048, kind: .trayTemplate),
   .init(path: "assets/images/source/tray_icon_disconnected.png", size: 2048, kind: .trayTemplate),
@@ -57,16 +59,14 @@ func fail(_ message: String) -> Never {
   exit(1)
 }
 
-func color(_ hex: Int, alpha: CGFloat = 1) -> NSColor {
-  NSColor(
-    deviceRed: CGFloat((hex >> 16) & 0xff) / 255,
-    green: CGFloat((hex >> 8) & 0xff) / 255,
-    blue: CGFloat(hex & 0xff) / 255,
-    alpha: alpha
-  )
+func loadImage(_ url: URL) -> NSImage {
+  guard let image = NSImage(contentsOf: url) else {
+    fail("Missing image source: \(url.path)")
+  }
+  return image
 }
 
-func renderedImage(size: Int, draw: (NSRect) -> Void) -> NSImage {
+func resizedImage(_ source: NSImage, size: Int) -> NSImage {
   guard let bitmap = NSBitmapImageRep(
     bitmapDataPlanes: nil,
     pixelsWide: size,
@@ -89,100 +89,17 @@ func renderedImage(size: Int, draw: (NSRect) -> Void) -> NSImage {
   NSGraphicsContext.current = context
   context.cgContext.setAllowsAntialiasing(true)
   context.cgContext.setShouldAntialias(true)
+  context.cgContext.interpolationQuality = .high
 
   let canvas = NSRect(x: 0, y: 0, width: size, height: size)
   NSColor.clear.setFill()
   canvas.fill()
-  draw(canvas)
-
+  source.draw(in: canvas, from: .zero, operation: .sourceOver, fraction: 1)
   NSGraphicsContext.restoreGraphicsState()
 
   let image = NSImage(size: NSSize(width: size, height: size))
   image.addRepresentation(bitmap)
   return image
-}
-
-func roundedPill(center: NSPoint, length: CGFloat, thickness: CGFloat, angle: CGFloat) -> NSBezierPath {
-  let rect = NSRect(
-    x: center.x - length / 2,
-    y: center.y - thickness / 2,
-    width: length,
-    height: thickness
-  )
-  let path = NSBezierPath(roundedRect: rect, xRadius: thickness / 2, yRadius: thickness / 2)
-  var transform = AffineTransform()
-  transform.translate(x: center.x, y: center.y)
-  transform.rotate(byDegrees: angle)
-  transform.translate(x: -center.x, y: -center.y)
-  path.transform(using: transform)
-  return path
-}
-
-func drawYMark(in rect: NSRect, fill: NSColor, shadowEnabled: Bool) {
-  if shadowEnabled {
-    let shadow = NSShadow()
-    shadow.shadowColor = color(0x11245f, alpha: 0.25)
-    shadow.shadowBlurRadius = rect.width * 0.036
-    shadow.shadowOffset = NSSize(width: 0, height: -rect.height * 0.018)
-    shadow.set()
-  }
-
-  let scale = rect.width / 64
-  let thickness = rect.width * 0.098
-  let armLength = rect.width * 0.255
-  let stemLength = rect.width * 0.245
-
-  fill.setFill()
-  roundedPill(
-    center: NSPoint(x: rect.minX + 24.0 * scale, y: rect.maxY - 24.0 * scale),
-    length: armLength,
-    thickness: thickness,
-    angle: -45
-  ).fill()
-  roundedPill(
-    center: NSPoint(x: rect.minX + 40.0 * scale, y: rect.maxY - 24.0 * scale),
-    length: armLength,
-    thickness: thickness,
-    angle: 45
-  ).fill()
-  roundedPill(
-    center: NSPoint(x: rect.minX + 32.0 * scale, y: rect.maxY - 40.0 * scale),
-    length: stemLength,
-    thickness: thickness,
-    angle: 90
-  ).fill()
-}
-
-func renderedAppIcon(size: Int) -> NSImage {
-  renderedImage(size: size) { canvas in
-    let inset = CGFloat(size) * 0.045
-    let iconRect = canvas.insetBy(dx: inset, dy: inset)
-    let cornerRadius = CGFloat(size) * 0.18
-    let backgroundPath = NSBezierPath(roundedRect: iconRect, xRadius: cornerRadius, yRadius: cornerRadius)
-    backgroundPath.addClip()
-
-    let gradient = NSGradient(colors: [color(0x7689dc), color(0x4f67aa), color(0x244cc4)])!
-    gradient.draw(in: iconRect, angle: 250)
-
-    color(0xffffff, alpha: 0.09).setStroke()
-    let highlight = NSBezierPath(
-      roundedRect: iconRect.insetBy(dx: CGFloat(size) * 0.03, dy: CGFloat(size) * 0.03),
-      xRadius: cornerRadius * 0.76,
-      yRadius: cornerRadius * 0.76
-    )
-    highlight.lineWidth = max(1, CGFloat(size) * 0.007)
-    highlight.stroke()
-
-    let markRect = iconRect.insetBy(dx: CGFloat(size) * 0.01, dy: CGFloat(size) * 0.065)
-    drawYMark(in: markRect, fill: color(0xffffff), shadowEnabled: true)
-  }
-}
-
-func renderedTrayTemplateIcon(size: Int) -> NSImage {
-  renderedImage(size: size) { canvas in
-    let markRect = canvas
-    drawYMark(in: markRect, fill: color(0xffffff), shadowEnabled: false)
-  }
 }
 
 func writePNG(_ image: NSImage, to url: URL) {
@@ -203,14 +120,17 @@ func writePNG(_ image: NSImage, to url: URL) {
   }
 }
 
+let appIconSource = loadImage(appIconSourceURL)
+let trayIconSource = loadImage(trayIconSourceURL)
+
 for output in outputs {
-  let image = switch output.kind {
+  let source = switch output.kind {
   case .appIcon:
-    renderedAppIcon(size: output.size)
+    appIconSource
   case .trayTemplate:
-    renderedTrayTemplateIcon(size: output.size)
+    trayIconSource
   }
-  writePNG(image, to: repoURL.appendingPathComponent(output.path))
+  writePNG(resizedImage(source, size: output.size), to: repoURL.appendingPathComponent(output.path))
 }
 
-print("Generated \(outputs.count) Yundo logo assets")
+print("Generated \(outputs.count) Yundo logo assets from selected sources")

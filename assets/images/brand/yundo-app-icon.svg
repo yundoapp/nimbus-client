@@ -1,21 +1,20 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <title>Yundo app icon source</title>
-  <desc>Editable source for the Yundo app icon. Change the yundo-bg gradient stops to update the background color.</desc>
+  <title>Yundo app icon editable reference</title>
+  <desc>Editable vector reference aligned to the selected option 1 visual. Production PNG assets are generated from yundo-app-icon-source.png.</desc>
   <defs>
-    <linearGradient id="yundo-bg" x1="244" y1="82" x2="760" y2="956" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#7689DC"/>
-      <stop offset="0.48" stop-color="#4F67AA"/>
-      <stop offset="1" stop-color="#244CC4"/>
+    <linearGradient id="yundo-bg" x1="512" y1="40" x2="512" y2="984" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7D98E9"/>
+      <stop offset="0.46" stop-color="#4771DE"/>
+      <stop offset="1" stop-color="#174ACB"/>
     </linearGradient>
-    <filter id="mark-shadow" x="190" y="220" width="650" height="570" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#11245F" flood-opacity="0.25"/>
+    <filter id="mark-shadow" x="240" y="260" width="560" height="560" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#10245F" flood-opacity="0.28"/>
     </filter>
   </defs>
-  <rect x="46" y="46" width="932" height="932" rx="184" fill="url(#yundo-bg)"/>
-  <rect x="76" y="76" width="872" height="872" rx="140" stroke="white" stroke-opacity="0.09" stroke-width="7"/>
-  <g filter="url(#mark-shadow)" fill="white">
-    <rect x="197.4" y="178.5" width="250" height="96.8" rx="48.4" transform="rotate(45 197.4 178.5)"/>
-    <rect x="549.6" y="354.6" width="250" height="96.8" rx="48.4" transform="rotate(-45 549.6 354.6)"/>
-    <rect x="450.2" y="365.8" width="96.8" height="241" rx="48.4"/>
+  <rect x="52" y="52" width="920" height="920" rx="172" fill="url(#yundo-bg)"/>
+  <g filter="url(#mark-shadow)" stroke="white" stroke-width="94" stroke-linecap="round">
+    <path d="M338 364L476 502"/>
+    <path d="M686 364L548 502"/>
+    <path d="M512 584V760"/>
   </g>
 </svg>
