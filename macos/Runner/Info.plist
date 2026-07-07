@@ -16,6 +16,10 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Yundo</string>
+	<key>LSHasLocalizedDisplayName</key>
+	<true/>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -60,8 +64,12 @@
 		<string>pt-BR</string>
 		<string>ru</string>
 		<string>tr</string>
+		<string>zh-Hans</string>
+		<string>zh-Hant</string>
 		<string>zh-CN</string>
 		<string>zh-TW</string>
+		<string>zh_CN</string>
+		<string>zh_TW</string>
 	</array>
 </dict>
 </plist>
