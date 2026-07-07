@@ -76,7 +76,7 @@ class ServiceNotification(private val status: MutableLiveData<Status>, private v
                 .setOngoing(true)
                 .setContentTitle(service.getString(R.string.app_name))
                 .setOnlyAlertOnce(true)
-                .setSmallIcon(R.drawable.ic_stat_logo)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
                 .setContentIntent(
                         PendingIntent.getActivity(
