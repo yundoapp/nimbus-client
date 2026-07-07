@@ -1,20 +1,21 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
   <title>Yundo app icon source</title>
-  <desc>Editable source for the Yundo app icon. Change the gradient stops to update the background color.</desc>
+  <desc>Editable source for the Yundo app icon. Change the yundo-bg gradient stops to update the background color.</desc>
   <defs>
-    <linearGradient id="yundo-bg" x1="217.4" y1="73.7" x2="776.8" y2="958.5" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#7184CF"/>
+    <linearGradient id="yundo-bg" x1="244" y1="82" x2="760" y2="956" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7689DC"/>
       <stop offset="0.48" stop-color="#4F67AA"/>
-      <stop offset="1" stop-color="#2D45A5"/>
+      <stop offset="1" stop-color="#244CC4"/>
     </linearGradient>
-    <filter id="cloud-shadow" x="70" y="180" width="884" height="650" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#1F2F63" flood-opacity="0.26"/>
+    <filter id="mark-shadow" x="190" y="220" width="650" height="570" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#11245F" flood-opacity="0.25"/>
     </filter>
   </defs>
-  <rect x="41" y="41" width="942" height="942" rx="195" fill="url(#yundo-bg)"/>
-  <rect x="72" y="72" width="880" height="880" rx="152" stroke="white" stroke-opacity="0.08" stroke-width="8"/>
-  <g transform="translate(173 815) scale(10.15 -10.15)" filter="url(#cloud-shadow)" fill="none" stroke="white" stroke-width="7.15" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M14.5 38.1C14.6 32.4 19.2 27.9 25.2 27.9C28 18.2 40.1 14.2 47.4 21.5C50.1 24.2 51.5 27.6 51.5 31.5C56.2 32.4 60.5 36.4 60.5 42.1C60.5 48.4 55.4 53.5 49 53.5H43.7"/>
-    <path d="M14.5 38.1C10.6 38.8 7.9 42 7.9 45.8C7.9 50.1 11.5 53.5 16 53.5H27C36.2 53.5 42.6 50.9 49.5 45.5"/>
+  <rect x="46" y="46" width="932" height="932" rx="184" fill="url(#yundo-bg)"/>
+  <rect x="76" y="76" width="872" height="872" rx="140" stroke="white" stroke-opacity="0.09" stroke-width="7"/>
+  <g filter="url(#mark-shadow)" fill="white">
+    <rect x="252.6" y="219.5" width="203" height="78.5" rx="39.25" transform="rotate(45 252.6 219.5)"/>
+    <rect x="538.4" y="362.4" width="203" height="78.5" rx="39.25" transform="rotate(-45 538.4 362.4)"/>
+    <rect x="457.7" y="371.5" width="78.5" height="195.7" rx="39.25"/>
   </g>
 </svg>
