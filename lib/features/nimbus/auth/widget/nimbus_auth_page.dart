@@ -57,7 +57,7 @@ class NimbusAuthPage extends HookConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(Icons.cloud_done_rounded, size: 44, color: theme.colorScheme.primary),
+                    Image.asset('assets/images/app_icon.png', width: 56, height: 56),
                     const Gap(16),
                     Text(
                       isRegister ? '注册 $appTitle' : '登录 $appTitle',
