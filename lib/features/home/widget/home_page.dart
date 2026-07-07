@@ -5,6 +5,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
@@ -23,7 +24,6 @@ class HomePage extends HookConsumerWidget {
     final versionState = ref.watch(nimbusAppVersionControllerProvider);
     final appTitle = ref.watch(translationsProvider).requireValue.common.appTitle;
     final hasActivePlan = authState.me?.subscription.hasActivePlan ?? false;
-    final selectedLocation = _selectedLocation(authState);
 
     useEffect(() {
       if (authState.isAuthenticated && authState.locations == null) {
@@ -34,6 +34,26 @@ class HomePage extends HookConsumerWidget {
 
     Future<void> showActivationDialog() async {
       await showDialog<void>(context: context, builder: (_) => const _ActivationDialog());
+    }
+
+    Future<void> showNoPlanDialog() async {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('暂无可用套餐'),
+          content: const Text('您当前尚无可用套餐，请先激活或者购买套餐后再连接。'),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('稍后')),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                showActivationDialog();
+              },
+              child: const Text('激活套餐'),
+            ),
+          ],
+        ),
+      );
     }
 
     Future<void> showVersionDialog(NimbusAppVersionCheck version) async {
@@ -104,8 +124,6 @@ class HomePage extends HookConsumerWidget {
                 child: Column(
                   children: [
                     const Spacer(),
-                    const _LocationSelector(),
-                    const Gap(18),
                     if (hasActivePlan)
                       versionState.forceUpdate
                           ? _UpdateRequiredConnectionButton(
@@ -116,16 +134,13 @@ class HomePage extends HookConsumerWidget {
                             )
                           : const ConnectionButton()
                     else
-                      _ActivationConnectionButton(onTap: showActivationDialog),
-                    const Gap(6),
+                      _ActivationConnectionButton(onTap: showNoPlanDialog),
+                    const Gap(16),
+                    _HomeQuickControls(rulesVersion: authState.me?.rules.publicRulesVersion),
+                    const Gap(8),
                     const ActiveProxyDelayIndicator(),
                     const Spacer(),
-                    _NimbusStatusPanel(
-                      theme: theme,
-                      me: authState.me,
-                      locationName: selectedLocation.displayName,
-                      onActivate: showActivationDialog,
-                    ),
+                    _NimbusStatusPanel(theme: theme, me: authState.me, onActivate: showActivationDialog),
                     const Gap(16),
                   ],
                 ),
@@ -139,16 +154,10 @@ class HomePage extends HookConsumerWidget {
 }
 
 class _NimbusStatusPanel extends StatelessWidget {
-  const _NimbusStatusPanel({
-    required this.theme,
-    required this.me,
-    required this.locationName,
-    required this.onActivate,
-  });
+  const _NimbusStatusPanel({required this.theme, required this.me, required this.onActivate});
 
   final ThemeData theme;
   final NimbusMe? me;
-  final String locationName;
   final VoidCallback onActivate;
 
   @override
@@ -159,20 +168,46 @@ class _NimbusStatusPanel extends StatelessWidget {
     final usedBytes = subscription?.usedBytes ?? 0;
     final remainingBytes = subscription?.remainingBytes;
     final progress = quotaBytes == null || quotaBytes <= 0 ? 0.0 : (usedBytes / quotaBytes).clamp(0.0, 1.0);
-    final planName = switch (subscription?.status) {
-      'active' => subscription?.planName ?? '已开通',
-      'expired' => '套餐已过期',
-      _ => '暂无可用套餐',
-    };
     final expiresText = _formatDate(subscription?.expiresAt);
-    final usedText = _formatBytes(usedBytes);
-    final remainingText = remainingBytes == null ? '--' : _formatBytes(remainingBytes);
-    final totalText = quotaBytes == null ? '--' : _formatBytes(quotaBytes);
-    final rulesVersion = me?.rules.publicRulesVersion ?? '--';
+    final usedText = _formatPlanBytes(usedBytes);
+    final remainingText = _formatPlanBytes(remainingBytes);
     final hasActivePlan = subscription?.hasActivePlan ?? false;
 
+    if (!hasActivePlan) {
+      return Column(
+        children: [
+          Text(
+            subscription?.status == 'expired' ? '套餐已过期' : '当前暂无可用套餐',
+            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const Gap(4),
+          Text(
+            '请先激活或者购买套餐。',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(color: muted),
+          ),
+          const Gap(10),
+          FilledButton.tonalIcon(onPressed: onActivate, icon: const Icon(Icons.key_rounded), label: const Text('激活套餐')),
+        ],
+      );
+    }
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '本月套餐使用情况',
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
+            Text('到期 $expiresText', style: theme.textTheme.bodySmall?.copyWith(color: muted)),
+          ],
+        ),
+        const Gap(8),
         LinearProgressIndicator(
           value: progress,
           minHeight: 8,
@@ -183,47 +218,11 @@ class _NimbusStatusPanel extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _StatusText(label: "套餐", value: planName, color: muted),
+              child: _StatusText(label: "已使用", value: usedText, color: muted),
             ),
             Expanded(
-              child: _StatusText(label: "到期", value: expiresText, color: muted, alignEnd: true),
+              child: _StatusText(label: "未使用", value: remainingText, color: muted, alignEnd: true),
             ),
-          ],
-        ),
-        const Gap(12),
-        Row(
-          children: [
-            Expanded(
-              child: _StatusText(label: "已用", value: usedText, color: muted),
-            ),
-            Expanded(
-              child: _StatusText(label: "剩余", value: remainingText, color: muted, alignEnd: true),
-            ),
-          ],
-        ),
-        const Gap(12),
-        Row(
-          children: [
-            Expanded(
-              child: _StatusText(label: "总量", value: totalText, color: muted),
-            ),
-            Expanded(
-              child: _StatusText(label: "规则", value: rulesVersion, color: muted, alignEnd: true),
-            ),
-          ],
-        ),
-        const Gap(12),
-        Row(
-          children: [
-            Expanded(
-              child: _StatusText(label: "位置", value: locationName, color: muted),
-            ),
-            if (!hasActivePlan)
-              FilledButton.tonalIcon(
-                onPressed: onActivate,
-                icon: const Icon(Icons.key_rounded),
-                label: const Text('激活'),
-              ),
           ],
         ),
       ],
@@ -231,13 +230,63 @@ class _NimbusStatusPanel extends StatelessWidget {
   }
 }
 
-class _LocationSelector extends HookConsumerWidget {
-  const _LocationSelector();
+class _HomeQuickControls extends HookConsumerWidget {
+  const _HomeQuickControls({required this.rulesVersion});
+
+  final String? rulesVersion;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final proxyMode = ref.watch(Preferences.nimbusProxyMode);
+    final authState = ref.watch(nimbusAuthControllerProvider);
+    final selectedLocation = _selectedLocation(authState);
+    final rulesText = rulesVersion == null || rulesVersion!.isEmpty ? '--' : rulesVersion!;
+
+    Widget proxyCard() => _HomeControlCard(
+      icon: Icons.route_rounded,
+      title: '代理模式',
+      value: proxyMode.label,
+      detail: '规则 $rulesText',
+      onTap: () => _showProxyModeDialog(context),
+    );
+
+    Widget locationCard() => _LocationControlCard(selectedLocation: selectedLocation);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 420) {
+          return Column(
+            children: [
+              SizedBox(height: 86, child: proxyCard()),
+              const Gap(10),
+              SizedBox(height: 86, child: locationCard()),
+            ],
+          );
+        }
+
+        return SizedBox(
+          height: 86,
+          child: Row(
+            children: [
+              Expanded(child: proxyCard()),
+              const Gap(12),
+              Expanded(child: locationCard()),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _LocationControlCard extends HookConsumerWidget {
+  const _LocationControlCard({required this.selectedLocation});
+
+  final NimbusLocation selectedLocation;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(nimbusAuthControllerProvider);
-    final selectedLocation = _selectedLocation(authState);
     final locations = authState.locations?.items ?? [selectedLocation];
 
     return MenuAnchor(
@@ -252,21 +301,118 @@ class _LocationSelector extends HookConsumerWidget {
             ),
           )
           .toList(),
-      builder: (context, controller, child) => TextButton.icon(
-        onPressed: () async {
+      builder: (context, controller, child) => _HomeControlCard(
+        icon: Icons.public_rounded,
+        title: '节点选择',
+        value: selectedLocation.displayName,
+        detail: '按国家选择',
+        onTap: () async {
           await ref.read(nimbusAuthControllerProvider.notifier).loadLocations();
           if (!context.mounted) return;
-          if (controller.isOpen) {
-            controller.close();
-          } else {
-            controller.open();
-          }
+          controller.isOpen ? controller.close() : controller.open();
         },
-        icon: const Icon(Icons.public_rounded, size: 18),
-        label: Text(selectedLocation.displayName),
       ),
     );
   }
+}
+
+class _HomeControlCard extends StatelessWidget {
+  const _HomeControlCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.detail,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+  final String detail;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.66),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Icon(icon, color: theme.colorScheme.primary),
+              const Gap(10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    const Gap(2),
+                    Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const Gap(2),
+                    Text(
+                      detail,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.expand_more_rounded, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _showProxyModeDialog(BuildContext context) async {
+  await showDialog<void>(
+    context: context,
+    builder: (context) => Consumer(
+      builder: (context, ref, _) {
+        final selected = ref.watch(Preferences.nimbusProxyMode);
+        return AlertDialog(
+          title: const Text('代理模式'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: NimbusProxyMode.values
+                .map(
+                  (mode) => ListTile(
+                    leading: Icon(
+                      mode == selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                      color: mode == selected ? Theme.of(context).colorScheme.primary : null,
+                    ),
+                    title: Text(mode.label),
+                    subtitle: Text(mode.description),
+                    onTap: () async {
+                      await ref.read(Preferences.nimbusProxyMode.notifier).update(mode);
+                      if (context.mounted) Navigator.of(context).pop();
+                    },
+                  ),
+                )
+                .toList(),
+          ),
+          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('关闭'))],
+        );
+      },
+    ),
+  );
 }
 
 class _ActivationConnectionButton extends StatelessWidget {
@@ -421,16 +567,17 @@ NimbusLocation _selectedLocation(NimbusAuthState authState) {
   );
 }
 
-String _formatBytes(int bytes) {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  var value = bytes.toDouble();
-  var unitIndex = 0;
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex += 1;
+String _formatPlanBytes(int? bytes) {
+  if (bytes == null) return '--';
+  if (bytes <= 0) return '0 MB';
+  const mb = 1024 * 1024;
+  const gb = 1024 * mb;
+  if (bytes >= gb) {
+    final value = bytes / gb;
+    return '${value.toStringAsFixed(value >= 100 ? 0 : 1)} GB';
   }
-  final fractionDigits = unitIndex <= 1 || value >= 100 ? 0 : 1;
-  return '${value.toStringAsFixed(fractionDigits)} ${units[unitIndex]}';
+  final value = (bytes / mb).clamp(0.1, double.infinity);
+  return '${value.toStringAsFixed(value >= 100 ? 0 : 1)} MB';
 }
 
 String _formatDate(DateTime? value) {

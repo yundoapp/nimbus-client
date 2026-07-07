@@ -160,7 +160,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       return;
     }
     if (!(authState.me?.subscription.hasActivePlan ?? false)) {
-      await _fail('当前账号暂无可用套餐，请先激活。', showErrors: showErrors);
+      await _fail('您当前尚无可用套餐，请先激活或者购买套餐后再连接。', showErrors: showErrors);
       return;
     }
 
@@ -377,12 +377,18 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     final patch = plan.singBoxConfigPatch;
     final outbounds = _normalizeOutbounds(patch['outbounds']);
     final routePatch = _asMap(patch['route']);
-    final finalTag = _finalOutboundTag(routePatch, outbounds);
-    final routeRules = _normalizeRules(routePatch['rules']);
 
     if (!outbounds.any((outbound) => outbound['tag'] == 'nimbus-direct')) {
       outbounds.add({'type': 'direct', 'tag': 'nimbus-direct'});
     }
+
+    final proxyMode = ref.read(Preferences.nimbusProxyMode);
+    final routeRules = proxyMode == NimbusProxyMode.global
+        ? <Map<String, dynamic>>[]
+        : _normalizeRules(routePatch['rules']);
+    final finalTag = proxyMode == NimbusProxyMode.global
+        ? _proxyOutboundTag(routePatch, outbounds)
+        : _finalOutboundTag(routePatch, outbounds);
 
     return {
       'log': {'level': 'warn'},
@@ -453,6 +459,15 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     final firstTag = outbounds.isEmpty ? null : outbounds.first['tag'];
     if (firstTag is String && firstTag.isNotEmpty) return firstTag;
     return 'nimbus-direct';
+  }
+
+  String _proxyOutboundTag(Map<String, dynamic> route, List<Map<String, dynamic>> outbounds) {
+    for (final outbound in outbounds) {
+      final type = outbound['type'];
+      final tag = outbound['tag'];
+      if (tag is String && tag.isNotEmpty && type != 'direct' && type != 'block' && type != 'dns') return tag;
+    }
+    return _finalOutboundTag(route, outbounds);
   }
 
   void _primeTrafficBaseline() {

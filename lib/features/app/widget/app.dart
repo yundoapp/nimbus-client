@@ -8,7 +8,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hiddify/core/localization/locale_extensions.dart';
 import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
-import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/core/router/go_router/go_router_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/theme/app_theme.dart';
@@ -25,6 +24,7 @@ import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:toastification/toastification.dart';
 import 'package:upgrader/upgrader.dart';
+import 'package:window_manager/window_manager.dart';
 
 bool _debugAccessibility = false;
 bool isOnPauseCalled = false;
@@ -61,6 +61,7 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
     final theme = AppTheme(themeMode, locale.preferredFontFamily);
     final upgrader = ref.watch(upgraderProvider);
     final activeBreakpoint = Breakpoint(context).activeBreakpoint;
+    final appTitle = ref.watch(translationsProvider).requireValue.common.appTitle;
 
     ref.listen(foregroundProfilesUpdateNotifierProvider, (_, _) {});
     if (PlatformUtils.isAndroid) ref.listen(perAppProxyServiceProvider, (_, _) {});
@@ -73,6 +74,14 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
       });
       return null;
     }, [activeBreakpoint]);
+
+    useEffect(() {
+      if (PlatformUtils.isDesktop) {
+        Future.microtask(() => windowManager.setTitle(appTitle));
+      }
+      return null;
+    }, [appTitle]);
+
     return WindowWrapper(
       ShortcutWrapper(
         ToastificationWrapper(
@@ -88,7 +97,7 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
                   themeMode: themeMode.flutterThemeMode,
                   theme: theme.lightTheme(lightColorScheme),
                   darkTheme: theme.darkTheme(darkColorScheme),
-                  title: Constants.appName,
+                  title: appTitle,
                   builder: (context, child) {
                     final theme = Theme.of(context);
                     child = UpgradeAlert(
