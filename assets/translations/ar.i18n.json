@@ -1,6 +1,6 @@
 {
   "common": {
-    "appTitle": "Hiddify",
+    "appTitle": "Yundo",
     "start": "ابدأ",
     "version": "الإصدار",
     "ok": "موافق",
@@ -101,7 +101,7 @@
   "intro": {
     "banner": "كل ما تحتاجه لإنترنت بلا قيود",
     "termsAndPolicyCaution(rich)": "بالاستمرار، أنت توافق على ${tap(@:pages.about.termsAndConditions)}",
-    "info(rich)": "صُنع بـ ❤️ بواسطة Hiddify - ${tap_source(مفتوح المصدر)} (${tap_license(الرخصة)})"
+    "info(rich)": "Yundo - ${tap_source(مفتوح المصدر)} (${tap_license(الرخصة)})"
   },
   "pages": {
     "home": {
@@ -649,7 +649,7 @@
       "msg": "للبدء، قم بإضافة ملف اتصال يحتوي على تفاصيل اتصال VPN الخاصة بك.\n\nأليس لديك خادم VPN بعد؟ لا تقلق، اتبع الدليل أدناه لإعداد واحد بسرعة ومجانًا.",
       "helpBtn": {
         "label": "أرني كيف",
-        "url": "https://hiddify.com/manager/"
+        "url": "https://github.com/wintion/nimbus-platform"
       }
     },
     "unknownDomainsWarning": {

@@ -30,6 +30,7 @@ class HomePage extends HookConsumerWidget {
     final authState = ref.watch(nimbusAuthControllerProvider);
     final versionState = ref.watch(nimbusAppVersionControllerProvider);
     final stats = ref.watch(statsNotifierProvider).asData?.value;
+    final appTitle = ref.watch(translationsProvider).requireValue.common.appTitle;
     final hasActivePlan = authState.me?.subscription.hasActivePlan ?? false;
     final uplinkSpeed = _formatSpeed(stats?.uplink.toInt() ?? 0);
     final downlinkSpeed = _formatSpeed(stats?.downlink.toInt() ?? 0);
@@ -79,12 +80,12 @@ class HomePage extends HookConsumerWidget {
           children: [
             Assets.images.logo.svg(height: 24),
             const Gap(8),
-            const Text.rich(
+            Text.rich(
               TextSpan(
                 children: [
-                  TextSpan(text: "Nimbus"),
-                  TextSpan(text: " "),
-                  WidgetSpan(child: AppVersionLabel(), alignment: PlaceholderAlignment.middle),
+                  TextSpan(text: appTitle),
+                  const TextSpan(text: " "),
+                  const WidgetSpan(child: AppVersionLabel(), alignment: PlaceholderAlignment.middle),
                 ],
               ),
             ),

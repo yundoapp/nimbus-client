@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">雲渡</string>
+    <string name="stop">停止</string>
+    <string name="quick_toggle">切換</string>
+    <string name="status_starting">服務啟動中…</string>
+    <string name="status_started">服務已啟動</string>
+</resources>
