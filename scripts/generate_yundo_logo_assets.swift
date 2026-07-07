@@ -173,14 +173,14 @@ func renderedAppIcon(size: Int) -> NSImage {
     highlight.lineWidth = max(1, CGFloat(size) * 0.007)
     highlight.stroke()
 
-    let markRect = iconRect.insetBy(dx: CGFloat(size) * 0.11, dy: CGFloat(size) * 0.12)
+    let markRect = iconRect.insetBy(dx: CGFloat(size) * 0.01, dy: CGFloat(size) * 0.065)
     drawYMark(in: markRect, fill: color(0xffffff), shadowEnabled: true)
   }
 }
 
 func renderedTrayTemplateIcon(size: Int) -> NSImage {
   renderedImage(size: size) { canvas in
-    let markRect = canvas.insetBy(dx: CGFloat(size) * 0.14, dy: CGFloat(size) * 0.09)
+    let markRect = canvas
     drawYMark(in: markRect, fill: color(0xffffff), shadowEnabled: false)
   }
 }
