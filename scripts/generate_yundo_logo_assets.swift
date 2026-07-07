@@ -70,56 +70,60 @@ func scaledPoint(_ x: CGFloat, _ y: CGFloat, in rect: NSRect) -> NSPoint {
   NSPoint(x: rect.minX + rect.width * x / 64, y: rect.minY + rect.height * (1 - y / 64))
 }
 
+func scaledTrayPoint(_ x: CGFloat, _ y: CGFloat, in rect: NSRect) -> NSPoint {
+  NSPoint(x: rect.minX + rect.width * x / 24, y: rect.minY + rect.height * (1 - y / 24))
+}
+
 func cloudTopPath(in rect: NSRect) -> NSBezierPath {
   let path = NSBezierPath()
-  path.move(to: scaledPoint(13.5, 38.5, in: rect))
+  path.move(to: scaledPoint(14.5, 38.1, in: rect))
   path.curve(
-    to: scaledPoint(25.5, 26.5, in: rect),
-    controlPoint1: scaledPoint(13.5, 31.9, in: rect),
-    controlPoint2: scaledPoint(18.8, 26.5, in: rect)
+    to: scaledPoint(25.2, 27.9, in: rect),
+    controlPoint1: scaledPoint(14.6, 32.4, in: rect),
+    controlPoint2: scaledPoint(19.2, 27.9, in: rect)
   )
   path.curve(
-    to: scaledPoint(48.1, 20.6, in: rect),
-    controlPoint1: scaledPoint(28.1, 16.6, in: rect),
-    controlPoint2: scaledPoint(40.8, 13.3, in: rect)
+    to: scaledPoint(47.4, 21.5, in: rect),
+    controlPoint1: scaledPoint(28.0, 18.2, in: rect),
+    controlPoint2: scaledPoint(40.1, 14.2, in: rect)
   )
   path.curve(
-    to: scaledPoint(52.3, 30.9, in: rect),
-    controlPoint1: scaledPoint(51, 23.5, in: rect),
-    controlPoint2: scaledPoint(52.4, 27.2, in: rect)
+    to: scaledPoint(51.5, 31.5, in: rect),
+    controlPoint1: scaledPoint(50.1, 24.2, in: rect),
+    controlPoint2: scaledPoint(51.5, 27.6, in: rect)
   )
   path.curve(
-    to: scaledPoint(62.5, 42.1, in: rect),
-    controlPoint1: scaledPoint(58.5, 31.8, in: rect),
-    controlPoint2: scaledPoint(62.5, 36.4, in: rect)
+    to: scaledPoint(60.5, 42.1, in: rect),
+    controlPoint1: scaledPoint(56.2, 32.4, in: rect),
+    controlPoint2: scaledPoint(60.5, 36.4, in: rect)
   )
   path.curve(
-    to: scaledPoint(50.5, 54, in: rect),
-    controlPoint1: scaledPoint(62.5, 48.7, in: rect),
-    controlPoint2: scaledPoint(57.2, 54, in: rect)
+    to: scaledPoint(49.0, 53.5, in: rect),
+    controlPoint1: scaledPoint(60.5, 48.4, in: rect),
+    controlPoint2: scaledPoint(55.4, 53.5, in: rect)
   )
-  path.line(to: scaledPoint(43.1, 54, in: rect))
+  path.line(to: scaledPoint(43.7, 53.5, in: rect))
   return path
 }
 
 func cloudBottomPath(in rect: NSRect) -> NSBezierPath {
   let path = NSBezierPath()
-  path.move(to: scaledPoint(13.5, 38.5, in: rect))
+  path.move(to: scaledPoint(14.5, 38.1, in: rect))
   path.curve(
-    to: scaledPoint(7.5, 45.8, in: rect),
-    controlPoint1: scaledPoint(10.1, 39.3, in: rect),
-    controlPoint2: scaledPoint(7.5, 42.2, in: rect)
+    to: scaledPoint(7.9, 45.8, in: rect),
+    controlPoint1: scaledPoint(10.6, 38.8, in: rect),
+    controlPoint2: scaledPoint(7.9, 42.0, in: rect)
   )
   path.curve(
-    to: scaledPoint(15.8, 54, in: rect),
-    controlPoint1: scaledPoint(7.5, 50.3, in: rect),
-    controlPoint2: scaledPoint(11.2, 54, in: rect)
+    to: scaledPoint(16.0, 53.5, in: rect),
+    controlPoint1: scaledPoint(7.9, 50.1, in: rect),
+    controlPoint2: scaledPoint(11.5, 53.5, in: rect)
   )
-  path.line(to: scaledPoint(27.2, 54, in: rect))
+  path.line(to: scaledPoint(27.0, 53.5, in: rect))
   path.curve(
-    to: scaledPoint(50.5, 45.9, in: rect),
-    controlPoint1: scaledPoint(36.8, 54, in: rect),
-    controlPoint2: scaledPoint(43.2, 51.3, in: rect)
+    to: scaledPoint(49.5, 45.5, in: rect),
+    controlPoint1: scaledPoint(36.2, 53.5, in: rect),
+    controlPoint2: scaledPoint(42.6, 50.9, in: rect)
   )
   return path
 }
@@ -141,6 +145,44 @@ func drawCloud(in rect: NSRect, lineWidth: CGFloat, strokeColor: NSColor = color
     strokeColor.setStroke()
     path.stroke()
   }
+}
+
+func trayCloudPath(in rect: NSRect) -> NSBezierPath {
+  let path = NSBezierPath()
+  path.move(to: scaledTrayPoint(19.35, 10.04, in: rect))
+  path.curve(
+    to: scaledTrayPoint(12.0, 4.0, in: rect),
+    controlPoint1: scaledTrayPoint(18.67, 6.59, in: rect),
+    controlPoint2: scaledTrayPoint(15.64, 4.0, in: rect)
+  )
+  path.curve(
+    to: scaledTrayPoint(5.35, 8.04, in: rect),
+    controlPoint1: scaledTrayPoint(9.11, 4.0, in: rect),
+    controlPoint2: scaledTrayPoint(6.6, 5.64, in: rect)
+  )
+  path.curve(
+    to: scaledTrayPoint(0.0, 14.0, in: rect),
+    controlPoint1: scaledTrayPoint(2.34, 8.36, in: rect),
+    controlPoint2: scaledTrayPoint(0.0, 10.91, in: rect)
+  )
+  path.curve(
+    to: scaledTrayPoint(6.0, 20.0, in: rect),
+    controlPoint1: scaledTrayPoint(0.0, 17.31, in: rect),
+    controlPoint2: scaledTrayPoint(2.69, 20.0, in: rect)
+  )
+  path.line(to: scaledTrayPoint(19.0, 20.0, in: rect))
+  path.curve(
+    to: scaledTrayPoint(24.0, 15.0, in: rect),
+    controlPoint1: scaledTrayPoint(21.76, 20.0, in: rect),
+    controlPoint2: scaledTrayPoint(24.0, 17.76, in: rect)
+  )
+  path.curve(
+    to: scaledTrayPoint(19.35, 10.04, in: rect),
+    controlPoint1: scaledTrayPoint(24.0, 12.64, in: rect),
+    controlPoint2: scaledTrayPoint(21.95, 10.49, in: rect)
+  )
+  path.close()
+  return path
 }
 
 func renderedImage(size: Int, draw: (NSRect) -> Void) -> NSImage {
@@ -179,27 +221,27 @@ func renderedImage(size: Int, draw: (NSRect) -> Void) -> NSImage {
 
 func renderedAppIcon(size: Int) -> NSImage {
   renderedImage(size: size) { canvas in
-  let inset = CGFloat(size) * 0.035
+  let inset = CGFloat(size) * 0.04
   let iconRect = canvas.insetBy(dx: inset, dy: inset)
-  let cornerRadius = CGFloat(size) * 0.22
+  let cornerRadius = CGFloat(size) * 0.19
   let backgroundPath = NSBezierPath(roundedRect: iconRect, xRadius: cornerRadius, yRadius: cornerRadius)
   backgroundPath.addClip()
 
-  let gradient = NSGradient(colors: [color(0x6b7fbc), color(0x4f67aa), color(0x2e4296)])!
+  let gradient = NSGradient(colors: [color(0x7184cf), color(0x4f67aa), color(0x2d45a5)])!
   gradient.draw(in: iconRect, angle: 255)
 
-  color(0xffffff, alpha: 0.16).setStroke()
+  color(0xffffff, alpha: 0.08).setStroke()
   let highlight = NSBezierPath(
-    roundedRect: iconRect.insetBy(dx: CGFloat(size) * 0.035, dy: CGFloat(size) * 0.035),
+    roundedRect: iconRect.insetBy(dx: CGFloat(size) * 0.03, dy: CGFloat(size) * 0.03),
     xRadius: cornerRadius * 0.78,
     yRadius: cornerRadius * 0.78
   )
-  highlight.lineWidth = max(1, CGFloat(size) * 0.012)
+  highlight.lineWidth = max(1, CGFloat(size) * 0.008)
   highlight.stroke()
 
   NSGraphicsContext.saveGraphicsState()
-  let cloudRect = iconRect.insetBy(dx: CGFloat(size) * 0.13, dy: CGFloat(size) * 0.18)
-  drawCloud(in: cloudRect, lineWidth: max(2, CGFloat(size) * 0.078))
+  let cloudRect = iconRect.insetBy(dx: CGFloat(size) * 0.145, dy: CGFloat(size) * 0.17)
+  drawCloud(in: cloudRect, lineWidth: max(2, CGFloat(size) * 0.071))
 
   NSGraphicsContext.restoreGraphicsState()
   }
@@ -207,13 +249,9 @@ func renderedAppIcon(size: Int) -> NSImage {
 
 func renderedTrayTemplateIcon(size: Int) -> NSImage {
   renderedImage(size: size) { canvas in
-    let iconRect = canvas.insetBy(dx: CGFloat(size) * 0.12, dy: CGFloat(size) * 0.2)
-    drawCloud(
-      in: iconRect,
-      lineWidth: max(2, CGFloat(size) * 0.075),
-      strokeColor: color(0xffffff),
-      shadowEnabled: false
-    )
+    let iconRect = canvas.insetBy(dx: CGFloat(size) * 0.12, dy: CGFloat(size) * 0.10)
+    color(0xffffff).setFill()
+    trayCloudPath(in: iconRect).fill()
   }
 }
 
