@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -25,6 +26,7 @@ class NimbusAuthPage extends HookConsumerWidget {
     final obscurePassword = useState(true);
     final authState = ref.watch(nimbusAuthControllerProvider);
     final isRegister = mode.value == NimbusAuthMode.register;
+    final appTitle = ref.watch(translationsProvider).requireValue.common.appTitle;
 
     Future<void> submit() async {
       if (authState.isLoading) return;
@@ -58,7 +60,7 @@ class NimbusAuthPage extends HookConsumerWidget {
                     Icon(Icons.cloud_done_rounded, size: 44, color: theme.colorScheme.primary),
                     const Gap(16),
                     Text(
-                      isRegister ? '注册 Nimbus' : '登录 Nimbus',
+                      isRegister ? '注册 $appTitle' : '登录 $appTitle',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
                     ),

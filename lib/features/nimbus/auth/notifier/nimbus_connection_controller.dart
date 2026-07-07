@@ -24,7 +24,7 @@ import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 const _managedProfileId = 'nimbus-managed-profile';
-const _managedProfileName = 'Nimbus';
+const _managedProfileName = 'Yundo';
 const _stateSentinel = Object();
 
 final nimbusConnectionControllerProvider = NotifierProvider<NimbusConnectionController, NimbusConnectionState>(
