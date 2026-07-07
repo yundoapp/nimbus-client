@@ -28,6 +28,7 @@ import 'package:window_manager/window_manager.dart';
 
 bool _debugAccessibility = false;
 bool isOnPauseCalled = false;
+const _yundoMacosAppMenuChannel = MethodChannel("yundo_macos_app_menu");
 
 class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
   const App({super.key});
@@ -77,7 +78,12 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
 
     useEffect(() {
       if (PlatformUtils.isDesktop) {
-        Future.microtask(() => windowManager.setTitle(appTitle));
+        Future.microtask(() async {
+          await windowManager.setTitle(appTitle);
+          if (PlatformUtils.isMacOS) {
+            await _yundoMacosAppMenuChannel.invokeMethod("setApplicationName", {"title": appTitle});
+          }
+        });
       }
       return null;
     }, [appTitle]);
