@@ -7,6 +7,7 @@ import 'package:hiddify/core/model/region.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_route_preferences_dialog.dart';
 import 'package:hiddify/features/per_app_proxy/model/per_app_proxy_mode.dart';
 import 'package:hiddify/features/per_app_proxy/overview/per_app_proxy_notifier.dart';
 import 'package:hiddify/features/route_rules/notifier/rules_notifier.dart';
@@ -90,6 +91,13 @@ class RoutingOptionsPage extends HookConsumerWidget {
       ),
       body: Column(
         children: [
+          ListTile(
+            title: const Text('访问偏好'),
+            leading: const Icon(Icons.tune_rounded),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => showDialog<void>(context: context, builder: (_) => const NimbusRoutePreferencesDialog()),
+          ),
+          const Divider(height: 1),
           Expanded(
             child: Stack(
               children: [

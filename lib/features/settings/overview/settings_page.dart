@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_devices_dialog.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
 import 'package:hiddify/features/settings/notifier/reset_tunnel/reset_tunnel_notifier.dart';
@@ -173,6 +176,25 @@ class SettingsPage extends HookConsumerWidget {
             title: t.pages.settings.tlsTricks.title,
             icon: Icons.content_cut_rounded,
             namedLocation: context.namedLocation('tlsTricks'),
+          ),
+          const Divider(height: 16),
+          ListTile(
+            title: const Text('设备管理'),
+            leading: const Icon(Icons.devices_rounded),
+            onTap: () => showDialog<void>(context: context, builder: (_) => const NimbusDevicesDialog()),
+          ),
+          ListTile(
+            title: const Text('上报问题'),
+            leading: const Icon(Icons.outlined_flag_rounded),
+            onTap: () => showDialog<void>(context: context, builder: (_) => const NimbusIssueReportDialog()),
+          ),
+          ListTile(
+            title: const Text('退出登录'),
+            leading: const Icon(Icons.logout_rounded),
+            onTap: () async {
+              await ref.read(nimbusAuthControllerProvider.notifier).logout();
+              if (context.mounted) context.go('/auth/login');
+            },
           ),
           if (PlatformUtils.isIOS)
             Material(

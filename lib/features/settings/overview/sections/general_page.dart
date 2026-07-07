@@ -62,6 +62,12 @@ class GeneralPage extends HookConsumerWidget {
               value: ref.watch(Preferences.silentStart),
               onChanged: ref.read(Preferences.silentStart.notifier).update,
             ),
+            SwitchListTile.adaptive(
+              title: const Text('启动后自动连接'),
+              secondary: const Icon(Icons.bolt_rounded),
+              value: ref.watch(Preferences.nimbusAutoConnect),
+              onChanged: ref.read(Preferences.nimbusAutoConnect.notifier).update,
+            ),
           ],
           if (PlatformUtils.isAndroid) const BatteryOptimizationWidget(),
           SwitchListTile.adaptive(
@@ -76,10 +82,11 @@ class GeneralPage extends HookConsumerWidget {
             secondary: const Icon(Icons.bug_report_rounded),
             value: ref.watch(debugModeNotifierProvider),
             onChanged: (value) async {
-              if (value)
+              if (value) {
                 await ref
                     .read(dialogNotifierProvider.notifier)
                     .showOk(t.pages.settings.general.debugMode, t.pages.settings.general.debugModeMsg);
+              }
               await ref.read(debugModeNotifierProvider.notifier).update(value);
             },
           ),

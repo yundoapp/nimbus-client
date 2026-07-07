@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
@@ -11,13 +10,8 @@ import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
-import 'package:hiddify/features/nimbus/auth/widget/nimbus_desktop_settings_dialog.dart';
-import 'package:hiddify/features/nimbus/auth/widget/nimbus_devices_dialog.dart';
-import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.dart';
-import 'package:hiddify/features/nimbus/auth/widget/nimbus_route_preferences_dialog.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_delay_indicator.dart';
 import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
-import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class HomePage extends HookConsumerWidget {
@@ -90,70 +84,6 @@ class HomePage extends HookConsumerWidget {
             ),
           ],
         ),
-        actions: [
-          MenuAnchor(
-            menuChildren: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Text(authState.session?.user.username ?? '已登录', style: theme.textTheme.labelLarge),
-              ),
-              if (PlatformUtils.isDesktop)
-                MenuItemButton(
-                  leadingIcon: const Icon(Icons.desktop_mac_rounded),
-                  onPressed: () {
-                    showDialog<void>(context: context, builder: (_) => const NimbusDesktopSettingsDialog());
-                  },
-                  child: const Text('桌面设置'),
-                ),
-              MenuItemButton(
-                leadingIcon: const Icon(Icons.tune_rounded),
-                onPressed: () {
-                  showDialog<void>(context: context, builder: (_) => const NimbusRoutePreferencesDialog());
-                },
-                child: const Text('访问偏好'),
-              ),
-              MenuItemButton(
-                leadingIcon: const Icon(Icons.outlined_flag_rounded),
-                onPressed: () {
-                  showDialog<void>(context: context, builder: (_) => const NimbusIssueReportDialog());
-                },
-                child: const Text('上报问题'),
-              ),
-              MenuItemButton(
-                leadingIcon: const Icon(Icons.system_update_alt_rounded),
-                onPressed: versionState.isChecking ? null : () => checkForUpdate(manual: true),
-                child: Text(versionState.isChecking ? '检查中' : '检查更新'),
-              ),
-              MenuItemButton(
-                leadingIcon: const Icon(Icons.devices_rounded),
-                onPressed: () {
-                  showDialog<void>(context: context, builder: (_) => const NimbusDevicesDialog());
-                },
-                child: const Text('设备管理'),
-              ),
-              MenuItemButton(
-                leadingIcon: const Icon(Icons.logout_rounded),
-                onPressed: () async {
-                  await ref.read(nimbusAuthControllerProvider.notifier).logout();
-                  if (context.mounted) context.go('/auth/login');
-                },
-                child: const Text('退出登录'),
-              ),
-            ],
-            builder: (context, controller, child) => IconButton(
-              tooltip: '账号',
-              onPressed: () {
-                if (controller.isOpen) {
-                  controller.close();
-                } else {
-                  controller.open();
-                }
-              },
-              icon: const Icon(Icons.account_circle_outlined),
-            ),
-          ),
-          const Gap(8),
-        ],
       ),
       body: Container(
         decoration: BoxDecoration(
