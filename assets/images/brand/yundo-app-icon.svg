@@ -11,7 +11,7 @@
       <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#10245F" flood-opacity="0.28"/>
     </filter>
   </defs>
-  <rect x="52" y="52" width="920" height="920" rx="172" fill="url(#yundo-bg)"/>
+  <rect x="0" y="0" width="1024" height="1024" rx="190" fill="url(#yundo-bg)"/>
   <g filter="url(#mark-shadow)" stroke="white" stroke-width="94" stroke-linecap="round">
     <path d="M338 364L476 502"/>
     <path d="M686 364L548 502"/>
