@@ -11,7 +11,6 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_control
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_delay_indicator.dart';
-import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class HomePage extends HookConsumerWidget {
@@ -22,11 +21,8 @@ class HomePage extends HookConsumerWidget {
     final theme = Theme.of(context);
     final authState = ref.watch(nimbusAuthControllerProvider);
     final versionState = ref.watch(nimbusAppVersionControllerProvider);
-    final stats = ref.watch(statsNotifierProvider).asData?.value;
     final appTitle = ref.watch(translationsProvider).requireValue.common.appTitle;
     final hasActivePlan = authState.me?.subscription.hasActivePlan ?? false;
-    final uplinkSpeed = _formatSpeed(stats?.uplink.toInt() ?? 0);
-    final downlinkSpeed = _formatSpeed(stats?.downlink.toInt() ?? 0);
     final selectedLocation = _selectedLocation(authState);
 
     useEffect(() {
@@ -127,8 +123,6 @@ class HomePage extends HookConsumerWidget {
                     _NimbusStatusPanel(
                       theme: theme,
                       me: authState.me,
-                      uplinkSpeed: uplinkSpeed,
-                      downlinkSpeed: downlinkSpeed,
                       locationName: selectedLocation.displayName,
                       onActivate: showActivationDialog,
                     ),
@@ -148,16 +142,12 @@ class _NimbusStatusPanel extends StatelessWidget {
   const _NimbusStatusPanel({
     required this.theme,
     required this.me,
-    required this.uplinkSpeed,
-    required this.downlinkSpeed,
     required this.locationName,
     required this.onActivate,
   });
 
   final ThemeData theme;
   final NimbusMe? me;
-  final String uplinkSpeed;
-  final String downlinkSpeed;
   final String locationName;
   final VoidCallback onActivate;
 
@@ -219,17 +209,6 @@ class _NimbusStatusPanel extends StatelessWidget {
             ),
             Expanded(
               child: _StatusText(label: "规则", value: rulesVersion, color: muted, alignEnd: true),
-            ),
-          ],
-        ),
-        const Gap(12),
-        Row(
-          children: [
-            Expanded(
-              child: _StatusText(label: "上传", value: uplinkSpeed, color: muted),
-            ),
-            Expanded(
-              child: _StatusText(label: "下载", value: downlinkSpeed, color: muted, alignEnd: true),
             ),
           ],
         ),
@@ -453,8 +432,6 @@ String _formatBytes(int bytes) {
   final fractionDigits = unitIndex <= 1 || value >= 100 ? 0 : 1;
   return '${value.toStringAsFixed(fractionDigits)} ${units[unitIndex]}';
 }
-
-String _formatSpeed(int bytesPerSecond) => '${_formatBytes(bytesPerSecond)}/s';
 
 String _formatDate(DateTime? value) {
   if (value == null) return '--';
