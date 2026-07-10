@@ -89,6 +89,18 @@ scripts/verify_macos_privileged_helper.sh
 
 真实签名包可用后，仍需完成连接前、连接后、断开后三阶段网络采证，以及退出、异常结束、睡眠唤醒和网络切换恢复验证。
 
+三阶段快照完成后运行只读对比：
+
+```bash
+scripts/check_macos_tun_evidence.sh \
+  build/tun-evidence/<before-tun> \
+  build/tun-evidence/<connected-tun> \
+  build/tun-evidence/<disconnected-tun> \
+  --strict
+```
+
+对比器检查连接阶段新增 `utun` 和对应路由、断开后默认出口/公网路由恢复、额外 `utun` 清理，并在断开目录生成不含网关、DNS、IP 或接口名的 `verification-summary.txt`。它只读取三阶段快照，不修改系统网络。
+
 ## 版本边界
 
 - 当前现代权限承载层要求 macOS 13+。
