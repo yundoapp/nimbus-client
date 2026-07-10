@@ -31,6 +31,8 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer flutter build macos --d
 scripts/verify_macos_privileged_helper.sh
 ```
 
+Developer ID 和公证包就绪后，使用 `scripts/check_macos_distribution_readiness.sh` 做只读验收；该脚本不是签名或发布命令，详见 [macOS TUN 最小权限辅助进程](./macos-privileged-helper.md)。
+
 需要联调本地平台 API 时，在构建命令增加：
 
 ```bash

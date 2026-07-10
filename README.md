@@ -47,7 +47,7 @@ Yundo（云渡）是一个面向个人自用和小范围朋友测试的跨平台
 
 ## 开发与构建
 
-macOS 当前是第一优先平台。工具链、生成命令、Debug 构建与内测包步骤见 [macOS 开发版构建基线](./docs/development/macos-debug-build.md)，公告展示与验证见 [首页公告接入](./docs/development/announcements.md)，TUN 权限边界见 [macOS TUN 最小权限辅助进程](./docs/development/macos-privileged-helper.md)。
+macOS 当前是第一优先平台。工具链、生成命令、Debug 构建与内测包步骤见 [macOS 开发版构建基线](./docs/development/macos-debug-build.md)，公告展示与验证见 [首页公告接入](./docs/development/announcements.md)，TUN 权限边界及正式签名包只读预检见 [macOS TUN 最小权限辅助进程](./docs/development/macos-privileged-helper.md)。
 
 核心生成与检查命令：
 

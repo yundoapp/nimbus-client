@@ -14,6 +14,17 @@
 
 ad hoc Debug 包可以验证代码和包结构，但不作为 `SMAppService` 真实注册成功的证据。
 
+正式签名包生成后先运行只读发行就绪检查：
+
+```bash
+export YUNDO_DEVELOPER_ID_APPLICATION='Developer ID Application: Example (TEAMID)'
+export YUNDO_NOTARY_PROFILE='yundo-notary'
+scripts/check_macos_distribution_readiness.sh \
+  'build/macos/Build/Products/Release/Yundo.app' --strict
+```
+
+脚本检查 Developer ID identity、notarytool 凭据可用性、App/helper 同 Team、hardened runtime、深度签名、Gatekeeper 和 stapling。它只读取公证历史以验证凭据，不会签名、提交公证、注册 helper 或修改网络；未加 `--strict` 时只输出结构化阻塞项，适合证书尚未准备好的本机检查。
+
 ## 进程边界
 
 ```text
