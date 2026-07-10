@@ -4,13 +4,13 @@ import 'package:hiddify/utils/utils.dart';
 
 abstract class Constants {
   static const appName = "Yundo";
-  static const githubUrl = "https://github.com/wintion/nimbus-client";
-  static const licenseUrl = "https://github.com/wintion/nimbus-client?tab=License-1-ov-file#readme";
-  static const githubReleasesApiUrl = "https://api.github.com/repos/wintion/nimbus-client/releases";
-  static const githubLatestReleaseUrl = "https://github.com/wintion/nimbus-client/releases/latest";
-  static const appCastUrl = "https://raw.githubusercontent.com/wintion/nimbus-client/develop/appcast.xml";
-  static const privacyPolicyUrl = "https://github.com/wintion/nimbus-platform";
-  static const termsAndConditionsUrl = "https://github.com/wintion/nimbus-platform";
+  static const githubUrl = "https://yundo.app/source";
+  static const licenseUrl = "https://yundo.app/license";
+  static const githubReleasesApiUrl = "https://yundo.app/releases.json";
+  static const githubLatestReleaseUrl = "https://yundo.app/download";
+  static const appCastUrl = "https://yundo.app/appcast.xml";
+  static const privacyPolicyUrl = "https://yundo.app/privacy";
+  static const termsAndConditionsUrl = "https://yundo.app/terms";
   static const cfWarpPrivacyPolicy = "https://www.cloudflare.com/application/privacypolicy/";
   static const cfWarpTermsOfService = "https://www.cloudflare.com/application/terms/";
 }

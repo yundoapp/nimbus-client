@@ -6,7 +6,8 @@ repo_root="$(cd "${script_dir}/.." && pwd)"
 source_app="${1:-${repo_root}/build/macos/Build/Products/Debug/Yundo Dev.app}"
 output_dir="${2:-${repo_root}/build/internal-test}"
 expected_display_name="${YUNDO_EXPECTED_DISPLAY_NAME:-Yundo Dev}"
-expected_bundle_id="${YUNDO_EXPECTED_BUNDLE_ID:-com.wintion.yundo.dev}"
+expected_bundle_id="${YUNDO_EXPECTED_BUNDLE_ID:-app.yundo.client.dev}"
+forbidden_brand_marker="${YUNDO_FORBIDDEN_BRAND_MARKER:-win""tion}"
 
 fail() {
   echo "错误：$*" >&2
@@ -17,7 +18,7 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "缺少必要命令：$1"
 }
 
-for command_name in codesign ditto file git shasum unzip; do
+for command_name in codesign ditto file git rg shasum unzip; do
   require_command "$command_name"
 done
 
@@ -30,6 +31,13 @@ info_plist="${source_app}/Contents/Info.plist"
 
 read_plist() {
   "$plist_buddy" -c "Print :$1" "$info_plist"
+}
+
+assert_no_forbidden_branding() {
+  local target="$1"
+  local matches
+  matches="$(rg -a -i -l -- "$forbidden_brand_marker" "$target" || true)"
+  [[ -z "$matches" ]] || fail "构建产物包含禁用品牌标识：${matches}"
 }
 
 display_name="$(read_plist CFBundleDisplayName)"
@@ -47,6 +55,7 @@ executable_path="${source_app}/Contents/MacOS/${executable_name}"
 [[ "$build_number" =~ ^[0-9]+$ ]] || fail "构建号格式不正确：${build_number}"
 (( build_number >= 10000 )) || fail "构建号不能小于 10000"
 [[ -x "$executable_path" ]] || fail "找不到 App 可执行文件：${executable_path}"
+assert_no_forbidden_branding "$source_app"
 
 architecture_output="$(file "$executable_path")"
 if [[ "$architecture_output" != *"arm64"* && "$architecture_output" != *"x86_64"* ]]; then
@@ -85,6 +94,7 @@ verification_dir="${staging_root}/verified"
 mkdir -p "$verification_dir"
 ditto -x -k "$artifact_path" "$verification_dir"
 codesign --verify --deep --strict "${verification_dir}/${expected_display_name}.app"
+assert_no_forbidden_branding "${verification_dir}/${expected_display_name}.app"
 
 (
   cd "$output_dir"
@@ -108,6 +118,7 @@ build_number=${build_number}
 signature=adhoc
 source_commit=${source_commit}
 source_state=${source_state}
+forbidden_branding_scan=passed
 architecture=${architecture_output#*: }
 created_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 EOF

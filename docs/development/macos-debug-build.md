@@ -39,10 +39,10 @@ build/macos/Build/Products/Debug/Yundo Dev.app
 产物身份必须为：
 
 - 显示名：`Yundo Dev`
-- Bundle ID：`com.wintion.yundo.dev`
+- Bundle ID：`app.yundo.client.dev`
 - 版本：`1.0.0+10000` 或后续递增版本
 
-Android Debug 使用 `com.wintion.yundo.dev`，并通过独立的 Debug 应用名和 Application ID 与正式版隔离。本阶段只校验身份配置，不开始 Android 功能开发。
+Android Debug 使用 `app.yundo.client.dev`，并通过独立的 Debug 应用名和 Application ID 与正式版隔离。本阶段只校验身份配置，不开始 Android 功能开发。
 
 ## 内测包
 
@@ -52,10 +52,11 @@ Android Debug 使用 `com.wintion.yundo.dev`，并通过独立的 Debug 应用�
 scripts/package_macos_internal_test.sh
 ```
 
-脚本会检查显示名、Bundle ID、版本、架构和签名，生成 ZIP、SHA-256 与 manifest。验收时 manifest 必须包含：
+脚本会检查显示名、Bundle ID、版本、架构、签名和禁用品牌字符串，生成 ZIP、SHA-256 与 manifest。验收时 manifest 必须包含：
 
 ```text
 source_state=clean
+forbidden_branding_scan=passed
 ```
 
 `build/` 下的 App、ZIP、校验文件和 manifest 均为本地产物，不提交到仓库。

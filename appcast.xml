@@ -6,35 +6,35 @@
             <title>Version 1.0.0</title>
             <pubDate>Wed, 8 Jul 2026 00:00:00 +0000</pubDate>
             <enclosure
-                url="https://github.com/wintion/nimbus-client/releases"
+                url="https://yundo.app/download"
                 sparkle:version="1.0.0" sparkle:os="android" />
         </item>
         <item>
             <title>Version 1.0.0</title>
             <pubDate>Wed, 8 Jul 2026 00:00:00 +0000</pubDate>
             <enclosure
-                url="https://github.com/wintion/nimbus-client/releases"
+                url="https://yundo.app/download"
                 sparkle:version="1.0.0" sparkle:os="ios" />
         </item>
         <item>
             <title>Version 1.0.0</title>
             <pubDate>Wed, 8 Jul 2026 00:00:00 +0000</pubDate>
             <enclosure
-                url="https://github.com/wintion/nimbus-client/releases"
+                url="https://yundo.app/download"
                 sparkle:version="1.0.0" sparkle:os="windows" />
         </item>
         <item>
             <title>Version 1.0.0</title>
             <pubDate>Wed, 8 Jul 2026 00:00:00 +0000</pubDate>
             <enclosure
-                url="https://github.com/wintion/nimbus-client/releases"
+                url="https://yundo.app/download"
                 sparkle:version="1.0.0" sparkle:os="macos" />
         </item>
         <item>
             <title>Version 1.0.0</title>
             <pubDate>Wed, 8 Jul 2026 00:00:00 +0000</pubDate>
             <enclosure
-                url="https://github.com/wintion/nimbus-client/releases"
+                url="https://yundo.app/download"
                 sparkle:version="1.0.0" sparkle:os="linux" />
         </item>
     </channel>
