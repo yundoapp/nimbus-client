@@ -169,7 +169,7 @@ class HiddifyCoreService with InfraLogger {
         );
         ref.read(coreRestartSignalProvider.notifier).restart();
         if (res.messageType != MessageType.ALREADY_STARTED && res.messageType != MessageType.EMPTY) {
-          final alert = res.message.contains("denied") ? CoreAlert.requestVPNPermission : CoreAlert.startFailed;
+          final alert = _isSystemPermissionError(res.message) ? CoreAlert.requestVPNPermission : CoreAlert.startFailed;
           currentState = CoreStatus.stopped(
             alert: alert,
             message: "failed to start core ${res.messageType} ${res.message}",
@@ -188,6 +188,9 @@ class HiddifyCoreService with InfraLogger {
         if (e.code == StatusCode.unavailable) {
           return left(const ConnectionFailure.unexpected("background core is not started yet!"));
         }
+        if (_isSystemPermissionError(e.message)) {
+          return left(const ConnectionFailure.missingPrivilege());
+        }
         // throw InvalidConfig(e.message);
         // throw DioException.connectionError(requestOptions: RequestOptions(), reason: e.codeName, error: e);
 
@@ -199,6 +202,13 @@ class HiddifyCoreService with InfraLogger {
 
       return right(unit);
     });
+  }
+
+  bool _isSystemPermissionError(String? message) {
+    final normalized = message?.toLowerCase() ?? '';
+    return normalized.contains('permission denied') ||
+        normalized.contains('operation not permitted') ||
+        normalized.contains('access denied');
   }
 
   TaskEither<String, Unit> stop() {

@@ -449,7 +449,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         {
           'type': 'tun',
           'tag': 'nimbus-tun',
-          'interface_name': 'nimbus0',
+          if (!Platform.isMacOS) 'interface_name': 'nimbus0',
           'address': ['172.19.0.1/30'],
           'mtu': 9000,
           'auto_route': true,
