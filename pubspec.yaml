@@ -1,7 +1,7 @@
 name: hiddify
 description: Cross Platform Multi Protocol Proxy Frontend.
 publish_to: "none"
-version: 4.1.2+40102
+version: 1.0.0+10000
 
 environment:
   sdk: ^3.10.4
@@ -22,8 +22,8 @@ dependencies:
   # re_highlight: ^0.0.3
   # json_editor_flutter: ^1.4.2
 
-  slang: ^4.8.1
-  slang_flutter: ^4.8.0
+  slang: 4.8.1
+  slang_flutter: 4.8.0
   fpdart: ^1.1.0
   freezed_annotation: ^2.4.1
   json_annotation: ^4.9.0
@@ -129,7 +129,7 @@ dev_dependencies:
   riverpod_generator: ^2.4.3
   drift_dev: ^2.21.0
   ffigen: ^19.1.0
-  slang_build_runner: ^4.4.0
+  slang_build_runner: 4.8.0
   flutter_gen_runner: 5.9.0
   dart_mappable_builder: ^4.2.1
   # protoc_builder: ^0.4.1
@@ -141,19 +141,9 @@ flutter:
     # - assets/core/geoip.db
     # - assets/core/geosite.db
     - assets/images/app_icon.png
-    - assets/images/logo.svg
     - assets/images/tray_icon.ico
     - assets/images/tray_icon.png
-    - assets/images/tray_icon_dark.ico
-    - assets/images/tray_icon_dark.png
-    - assets/images/tray_icon_connected.ico
-    - assets/images/tray_icon_connected.png
-    - assets/images/tray_icon_disconnected.ico
-    - assets/images/tray_icon_disconnected.png
-    - assets/images/connect_norouz.PNG
-    - assets/images/disconnect_norouz.PNG
     - assets/images/world_map.png
-    - assets/images/source/ic_launcher_border.png
 
   fonts:
     - family: Shabnam

@@ -629,13 +629,17 @@
 				CODE_SIGN_ENTITLEMENTS = Runner/DebugProfile.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				INFOPLIST_FILE = Runner/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Yundo;
+				INFOPLIST_FILE = Runner/DevInfo.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Yundo Dev";
+				INFOPLIST_KEY_CFBundleName = "Yundo Dev";
+				INFOPLIST_KEY_LSHasLocalizedDisplayName = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wintion.yundo.dev;
+				PRODUCT_NAME = "Yundo Dev";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
 			};
@@ -757,13 +761,17 @@
 				CODE_SIGN_ENTITLEMENTS = Runner/DebugProfile.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				INFOPLIST_FILE = Runner/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Yundo;
+				INFOPLIST_FILE = Runner/DevInfo.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Yundo Dev";
+				INFOPLIST_KEY_CFBundleName = "Yundo Dev";
+				INFOPLIST_KEY_LSHasLocalizedDisplayName = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wintion.yundo.dev;
+				PRODUCT_NAME = "Yundo Dev";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
