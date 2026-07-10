@@ -394,6 +394,38 @@ class NimbusAppVersionCheck {
   final String? releaseNotes;
 }
 
+class NimbusAnnouncement {
+  const NimbusAnnouncement({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.language,
+    this.startsAt,
+    this.endsAt,
+    this.updatedAt,
+  });
+
+  factory NimbusAnnouncement.fromJson(Map<String, dynamic> json) {
+    return NimbusAnnouncement(
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      body: json['body'] as String? ?? '',
+      language: json['language'] as String? ?? 'en',
+      startsAt: _dateTime(json['startsAt']),
+      endsAt: _dateTime(json['endsAt']),
+      updatedAt: _dateTime(json['updatedAt']),
+    );
+  }
+
+  final String id;
+  final String title;
+  final String body;
+  final String language;
+  final DateTime? startsAt;
+  final DateTime? endsAt;
+  final DateTime? updatedAt;
+}
+
 class NimbusConnectTraffic {
   const NimbusConnectTraffic({required this.usedBytes, required this.remainingBytes, required this.quotaBytes});
 

@@ -31,6 +31,12 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer flutter build macos --d
 scripts/verify_macos_privileged_helper.sh
 ```
 
+需要联调本地平台 API 时，在构建命令增加：
+
+```bash
+--dart-define=NIMBUS_API_BASE_URL=http://127.0.0.1:4000/api/v1
+```
+
 Debug 产物应位于：
 
 ```text

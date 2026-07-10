@@ -234,6 +234,18 @@ class NimbusAuthRepository {
     return NimbusAppVersionCheck.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
   }
 
+  Future<NimbusAnnouncement?> fetchCurrentAnnouncement({required String platform, required String language}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      'announcements/current',
+      queryParameters: {'platform': platform, 'language': language},
+    );
+    final data = Map<String, dynamic>.from(response.data ?? const {});
+    final item = data['item'];
+    if (item is! Map) return null;
+    final announcement = NimbusAnnouncement.fromJson(Map<String, dynamic>.from(item));
+    return announcement.id.isEmpty || announcement.title.isEmpty || announcement.body.isEmpty ? null : announcement;
+  }
+
   Future<NimbusConnectPlan> createConnectPlan({
     required NimbusAuthSession session,
     required String selectedLocation,

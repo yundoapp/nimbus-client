@@ -8,6 +8,7 @@ import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
+import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
@@ -25,9 +26,25 @@ class HomePage extends HookConsumerWidget {
     final theme = Theme.of(context);
     final authState = ref.watch(nimbusAuthControllerProvider);
     final versionState = ref.watch(nimbusAppVersionControllerProvider);
+    final appInfo = ref.watch(appInfoProvider).requireValue;
+    final locale = ref.watch(localePreferencesProvider);
+    final announcementRepository = ref.watch(nimbusAuthRepositoryProvider);
     final t = ref.watch(translationsProvider).requireValue;
     final appTitle = t.common.appTitle;
     final hasActivePlan = authState.me?.subscription.hasActivePlan ?? false;
+    final announcementLanguage = locale.flutterLocale.toLanguageTag();
+    final announcementPlatform = _platformForAnnouncement(appInfo.operatingSystem);
+    final announcementFuture = useMemoized(
+      () => announcementPlatform == null
+          ? Future<NimbusAnnouncement?>.value()
+          : announcementRepository.fetchCurrentAnnouncement(
+              platform: announcementPlatform,
+              language: announcementLanguage,
+            ),
+      [announcementRepository, announcementPlatform, announcementLanguage],
+    );
+    final announcement = useFuture(announcementFuture).data;
+    final dismissedAnnouncementId = useState<String?>(null);
 
     useEffect(() {
       if (authState.isAuthenticated && authState.locations == null) {
@@ -127,6 +144,14 @@ class HomePage extends HookConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Column(
                   children: [
+                    if (announcement != null && dismissedAnnouncementId.value != announcement.id) ...[
+                      _AnnouncementBanner(
+                        announcement: announcement,
+                        closeTooltip: t.common.close,
+                        onClose: () => dismissedAnnouncementId.value = announcement.id,
+                      ),
+                      const Gap(12),
+                    ],
                     const Spacer(),
                     if (hasActivePlan)
                       versionState.forceUpdate
@@ -156,6 +181,79 @@ class HomePage extends HookConsumerWidget {
       ),
     );
   }
+}
+
+class _AnnouncementBanner extends StatelessWidget {
+  const _AnnouncementBanner({required this.announcement, required this.closeTooltip, required this.onClose});
+
+  final NimbusAnnouncement announcement;
+  final String closeTooltip;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Material(
+      color: colors.secondaryContainer.withValues(alpha: theme.brightness == Brightness.dark ? 0.48 : 0.72),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.7)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.campaign_outlined, size: 20, color: colors.onSecondaryContainer),
+            const Gap(10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    announcement.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: colors.onSecondaryContainer,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Gap(3),
+                  Text(
+                    announcement.body,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSecondaryContainer.withValues(alpha: 0.86),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded, size: 18),
+              onPressed: onClose,
+              tooltip: closeTooltip,
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String? _platformForAnnouncement(String operatingSystem) {
+  return switch (operatingSystem) {
+    'macos' => 'macos',
+    'windows' => 'windows',
+    'ios' => 'ios',
+    'android' => 'android',
+    _ => null,
+  };
 }
 
 class _NimbusStatusPanel extends ConsumerWidget {
