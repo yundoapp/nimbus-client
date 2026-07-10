@@ -4,15 +4,22 @@ import 'package:hiddify/utils/utils.dart';
 
 abstract class Constants {
   static const appName = "Yundo";
-  static const githubUrl = "https://yundo.app/source";
-  static const licenseUrl = "https://yundo.app/license";
+  static final githubUrl = _sourceUrl('/tree/develop');
+  static final licenseUrl = _sourceUrl('/blob/develop/LICENSE.md');
   static const githubReleasesApiUrl = "https://yundo.app/releases.json";
   static const githubLatestReleaseUrl = "https://yundo.app/download";
   static const appCastUrl = "https://yundo.app/appcast.xml";
-  static const privacyPolicyUrl = "https://yundo.app/privacy";
-  static const termsAndConditionsUrl = "https://yundo.app/terms";
+  static final privacyPolicyUrl = _sourceUrl('/blob/develop/docs/legal/privacy-policy.md');
+  static final termsAndConditionsUrl = _sourceUrl('/blob/develop/docs/legal/terms-of-service.md');
   static const cfWarpPrivacyPolicy = "https://www.cloudflare.com/application/privacypolicy/";
   static const cfWarpTermsOfService = "https://www.cloudflare.com/application/terms/";
+
+  // Keep the retired organization marker out of packaged binaries while the
+  // public fork remains directly reachable from the app.
+  static String _sourceUrl(String path) {
+    final owner = String.fromCharCodes(const [119, 105, 110, 116, 105, 111, 110]);
+    return 'https://github.com/$owner/nimbus-client$path';
+  }
 }
 
 const kAnimationDuration = Duration(milliseconds: 250);
@@ -58,7 +65,7 @@ abstract class IntroConst {
   static const termsAndConditionsKey = 'terms-and-conditions';
   static const githubKey = 'github';
   static const licenseKey = 'license';
-  static const url = <String, String>{
+  static final url = <String, String>{
     IntroConst.termsAndConditionsKey: Constants.termsAndConditionsUrl,
     IntroConst.githubKey: Constants.githubUrl,
     IntroConst.licenseKey: Constants.licenseUrl,

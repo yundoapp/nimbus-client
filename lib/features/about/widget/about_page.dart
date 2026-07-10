@@ -5,6 +5,7 @@ import 'package:gap/gap.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/directories/directories_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/core/model/failures.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/core/widget/adaptive_icon.dart';
@@ -89,19 +90,56 @@ class AboutPage extends HookConsumerWidget {
                 children: [
                   Image.asset('assets/images/app_icon.png', width: 64, height: 64),
                   const Gap(16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(t.common.appTitle, style: Theme.of(context).textTheme.titleLarge),
-                      const Gap(4),
-                      Text("${t.common.version} ${appInfo.presentVersion}"),
-                    ],
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(t.common.appTitle, style: Theme.of(context).textTheme.titleLarge),
+                        const Gap(4),
+                        Text("${t.common.version} ${appInfo.presentVersion}"),
+                        const Gap(4),
+                        Text(t.pages.about.openSourceNotice, style: Theme.of(context).textTheme.bodySmall),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          SliverList(delegate: SliverChildListDelegate([...conditionalTiles])),
+          SliverList(
+            delegate: SliverChildListDelegate([
+              ...conditionalTiles,
+              if (conditionalTiles.isNotEmpty) const Divider(),
+              ListTile(
+                title: Text(t.pages.about.sourceCode),
+                trailing: const Icon(FluentIcons.open_24_regular),
+                onTap: () async {
+                  await UriUtils.tryLaunch(Uri.parse(Constants.githubUrl));
+                },
+              ),
+              ListTile(
+                title: Text(t.pages.about.license),
+                trailing: const Icon(FluentIcons.open_24_regular),
+                onTap: () async {
+                  await UriUtils.tryLaunch(Uri.parse(Constants.licenseUrl));
+                },
+              ),
+              ListTile(
+                title: Text(t.pages.about.termsAndConditions),
+                trailing: const Icon(FluentIcons.open_24_regular),
+                onTap: () async {
+                  await UriUtils.tryLaunch(Uri.parse(Constants.termsAndConditionsUrl));
+                },
+              ),
+              ListTile(
+                title: Text(t.pages.about.privacyPolicy),
+                trailing: const Icon(FluentIcons.open_24_regular),
+                onTap: () async {
+                  await UriUtils.tryLaunch(Uri.parse(Constants.privacyPolicyUrl));
+                },
+              ),
+            ]),
+          ),
         ],
       ),
     );

@@ -185,6 +185,8 @@
       "checkForUpdate": "Güncellemeleri kontrol et",
       "openWorkingDir": "Çalışma dizinini aç",
       "sourceCode": "Kaynak kodu",
+      "license": "Lisans",
+      "openSourceNotice": "Yundo, açık kaynaklı Hiddify App projesini temel alır.",
       "telegramChannel": "Telegram kanalı",
       "termsAndConditions": "Şartlar ve Koşullar",
       "privacyPolicy": "Gizlilik Politikası"
@@ -778,7 +780,7 @@
       "confirmPassword": "Parolayı onayla",
       "showPassword": "Parolayı göster",
       "hidePassword": "Parolayı gizle",
-      "acceptTerms": "Kullanım notlarını okudum ve anladım",
+      "acceptTerms": "Koşulları ve gizlilik politikasını okudum ve kabul ediyorum",
       "registerAndLogin": "Hesap oluştur ve oturum aç",
       "login": "Oturum aç",
       "goLogin": "Zaten hesabınız var mı? Oturum açın",

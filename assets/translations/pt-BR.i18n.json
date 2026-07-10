@@ -185,6 +185,8 @@
       "checkForUpdate": "Verificar atualizações",
       "openWorkingDir": "Abrir diretório de trabalho",
       "sourceCode": "Código-fonte",
+      "license": "Licença",
+      "openSourceNotice": "O Yundo é baseado no projeto de código aberto Hiddify App.",
       "telegramChannel": "Canal do Telegram",
       "termsAndConditions": "Termos e Condições",
       "privacyPolicy": "Política de Privacidade"
@@ -778,7 +780,7 @@
       "confirmPassword": "Confirmar senha",
       "showPassword": "Mostrar senha",
       "hidePassword": "Ocultar senha",
-      "acceptTerms": "Li e entendi as instruções de uso",
+      "acceptTerms": "Li e concordo com os termos e a política de privacidade",
       "registerAndLogin": "Criar conta e entrar",
       "login": "Entrar",
       "goLogin": "Já tem uma conta? Entrar",

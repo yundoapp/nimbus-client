@@ -185,6 +185,8 @@
       "checkForUpdate": "بررسی برای به‌روزرسانی",
       "openWorkingDir": "باز کردن پوشه کاری",
       "sourceCode": "کد منبع",
+      "license": "مجوز",
+      "openSourceNotice": "Yundo بر پایه پروژه متن‌باز Hiddify App ساخته شده است.",
       "telegramChannel": "کانال تلگرام",
       "termsAndConditions": "شرایط و ضوابط",
       "privacyPolicy": "سیاست حفظ حریم خصوصی"
@@ -778,7 +780,7 @@
       "confirmPassword": "تأیید رمز عبور",
       "showPassword": "نمایش رمز عبور",
       "hidePassword": "پنهان کردن رمز عبور",
-      "acceptTerms": "یادداشت‌های استفاده را خوانده و درک کرده‌ام",
+      "acceptTerms": "شرایط استفاده و سیاست حفظ حریم خصوصی را خوانده و می‌پذیرم",
       "registerAndLogin": "ایجاد حساب و ورود",
       "login": "ورود",
       "goLogin": "حساب دارید؟ وارد شوید",

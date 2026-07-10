@@ -191,6 +191,8 @@
       "checkForUpdate": "التحقق من وجود تحديثات",
       "openWorkingDir": "فتح مجلد العمل",
       "sourceCode": "الكود المصدري",
+      "license": "الرخصة",
+      "openSourceNotice": "يعتمد Yundo على مشروع Hiddify App مفتوح المصدر.",
       "telegramChannel": "قناة التيليجرام",
       "termsAndConditions": "الشروط والأحكام",
       "privacyPolicy": "سياسة الخصوصية"
@@ -784,7 +786,7 @@
       "confirmPassword": "تأكيد كلمة المرور",
       "showPassword": "إظهار كلمة المرور",
       "hidePassword": "إخفاء كلمة المرور",
-      "acceptTerms": "قرأت ملاحظات الاستخدام وفهمتها",
+      "acceptTerms": "قرأت شروط الاستخدام وسياسة الخصوصية وأوافق عليهما",
       "registerAndLogin": "إنشاء حساب وتسجيل الدخول",
       "login": "تسجيل الدخول",
       "goLogin": "لديك حساب؟ سجّل الدخول",

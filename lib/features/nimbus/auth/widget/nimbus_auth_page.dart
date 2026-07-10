@@ -4,7 +4,9 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 enum NimbusAuthMode { login, register }
@@ -22,7 +24,7 @@ class NimbusAuthPage extends HookConsumerWidget {
     final usernameController = useTextEditingController();
     final passwordController = useTextEditingController();
     final confirmPasswordController = useTextEditingController();
-    final acceptedTerms = useState(true);
+    final acceptedTerms = useState(false);
     final obscurePassword = useState(true);
     final authState = ref.watch(nimbusAuthControllerProvider);
     final isRegister = mode.value == NimbusAuthMode.register;
@@ -133,6 +135,26 @@ class NimbusAuthPage extends HookConsumerWidget {
                         onChanged: (value) => acceptedTerms.value = value ?? false,
                         title: Text(t.nimbus.auth.acceptTerms),
                       ),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        children: [
+                          TextButton.icon(
+                            onPressed: () async {
+                              await UriUtils.tryLaunch(Uri.parse(Constants.termsAndConditionsUrl));
+                            },
+                            icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                            label: Text(t.pages.about.termsAndConditions),
+                          ),
+                          TextButton.icon(
+                            onPressed: () async {
+                              await UriUtils.tryLaunch(Uri.parse(Constants.privacyPolicyUrl));
+                            },
+                            icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                            label: Text(t.pages.about.privacyPolicy),
+                          ),
+                        ],
+                      ),
                     ],
                     if (authState.errorMessage != null) ...[
                       const Gap(10),
@@ -145,7 +167,7 @@ class NimbusAuthPage extends HookConsumerWidget {
                     const Gap(18),
                     FilledButton(
                       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                      onPressed: authState.isLoading ? null : submit,
+                      onPressed: authState.isLoading || (isRegister && !acceptedTerms.value) ? null : submit,
                       child: authState.isLoading
                           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                           : Text(isRegister ? t.nimbus.auth.registerAndLogin : t.nimbus.auth.login),

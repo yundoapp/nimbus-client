@@ -57,6 +57,9 @@ scripts/package_macos_internal_test.sh
 ```text
 source_state=clean
 forbidden_branding_scan=passed
+compliance_assets=passed
 ```
+
+脚本会拒绝从 dirty 工作区打包，并校验 App 和解包后的 ZIP 都包含 `LICENSE.md`、隐私说明和使用条款。manifest 同时记录完整源码 commit，便于对应公开 fork 中的精确版本。
 
 `build/` 下的 App、ZIP、校验文件和 manifest 均为本地产物，不提交到仓库。

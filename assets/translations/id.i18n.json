@@ -185,6 +185,8 @@
       "checkForUpdate": "Periksa pembaruan",
       "openWorkingDir": "Buka direktori kerja",
       "sourceCode": "Kode sumber",
+      "license": "Lisensi",
+      "openSourceNotice": "Yundo didasarkan pada proyek sumber terbuka Hiddify App.",
       "telegramChannel": "Saluran Telegram",
       "termsAndConditions": "Syarat dan Ketentuan",
       "privacyPolicy": "Kebijakan Privasi"
@@ -778,7 +780,7 @@
       "confirmPassword": "Konfirmasi kata sandi",
       "showPassword": "Tampilkan kata sandi",
       "hidePassword": "Sembunyikan kata sandi",
-      "acceptTerms": "Saya telah membaca dan memahami catatan penggunaan",
+      "acceptTerms": "Saya telah membaca dan menyetujui syarat serta kebijakan privasi",
       "registerAndLogin": "Buat akun dan masuk",
       "login": "Masuk",
       "goLogin": "Sudah punya akun? Masuk",

@@ -22,6 +22,14 @@ for command_name in codesign ditto file git rg shasum unzip; do
   require_command "$command_name"
 done
 
+source_commit="$(git -C "$repo_root" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+source_commit_full="$(git -C "$repo_root" rev-parse HEAD 2>/dev/null || echo unknown)"
+source_state="clean"
+if [[ -n "$(git -C "$repo_root" status --porcelain 2>/dev/null || true)" ]]; then
+  source_state="dirty"
+fi
+[[ "$source_state" == "clean" ]] || fail "只允许从 clean 工作区生成内测包"
+
 plist_buddy="/usr/libexec/PlistBuddy"
 [[ -x "$plist_buddy" ]] || fail "缺少必要命令：${plist_buddy}"
 [[ -d "$source_app" ]] || fail "找不到 App：${source_app}"
@@ -40,6 +48,22 @@ assert_no_forbidden_branding() {
   [[ -z "$matches" ]] || fail "构建产物包含禁用品牌标识：${matches}"
 }
 
+assert_compliance_assets() {
+  local app_path="$1"
+  local flutter_assets="${app_path}/Contents/Frameworks/App.framework/Resources/flutter_assets"
+  local required_assets=(
+    "LICENSE.md"
+    "docs/legal/privacy-policy.md"
+    "docs/legal/terms-of-service.md"
+  )
+
+  for relative_path in "${required_assets[@]}"; do
+    [[ -f "${flutter_assets}/${relative_path}" ]] || fail "App 缺少合规文档：${relative_path}"
+  done
+  rg -q "Hiddify Extended GNU General Public License v3" "${flutter_assets}/LICENSE.md" \
+    || fail "App 内许可证不是预期的 Hiddify Extended GPLv3"
+}
+
 display_name="$(read_plist CFBundleDisplayName)"
 bundle_name="$(read_plist CFBundleName)"
 bundle_id="$(read_plist CFBundleIdentifier)"
@@ -56,6 +80,7 @@ executable_path="${source_app}/Contents/MacOS/${executable_name}"
 (( build_number >= 10000 )) || fail "构建号不能小于 10000"
 [[ -x "$executable_path" ]] || fail "找不到 App 可执行文件：${executable_path}"
 assert_no_forbidden_branding "$source_app"
+assert_compliance_assets "$source_app"
 
 architecture_output="$(file "$executable_path")"
 if [[ "$architecture_output" != *"arm64"* && "$architecture_output" != *"x86_64"* ]]; then
@@ -95,17 +120,13 @@ mkdir -p "$verification_dir"
 ditto -x -k "$artifact_path" "$verification_dir"
 codesign --verify --deep --strict "${verification_dir}/${expected_display_name}.app"
 assert_no_forbidden_branding "${verification_dir}/${expected_display_name}.app"
+assert_compliance_assets "${verification_dir}/${expected_display_name}.app"
 
 (
   cd "$output_dir"
   shasum -a 256 "$artifact_name" >"${artifact_name}.sha256"
 )
 
-source_commit="$(git -C "$repo_root" rev-parse --short HEAD 2>/dev/null || echo unknown)"
-source_state="clean"
-if [[ -n "$(git -C "$repo_root" status --porcelain 2>/dev/null || true)" ]]; then
-  source_state="dirty"
-fi
 sha256="$(awk '{print $1}' "$checksum_path")"
 
 cat >"$manifest_path" <<EOF
@@ -117,8 +138,13 @@ version=${version}
 build_number=${build_number}
 signature=adhoc
 source_commit=${source_commit}
+source_commit_full=${source_commit_full}
 source_state=${source_state}
 forbidden_branding_scan=passed
+compliance_assets=passed
+license_asset=LICENSE.md
+privacy_policy_asset=docs/legal/privacy-policy.md
+terms_asset=docs/legal/terms-of-service.md
 architecture=${architecture_output#*: }
 created_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 EOF
