@@ -16,20 +16,7 @@ part 'general_preferences.g.dart';
 
 bool _debugIntroPage = false;
 
-enum NimbusProxyMode {
-  auto,
-  global;
-
-  String get label => switch (this) {
-    auto => '自动模式',
-    global => '全局模式',
-  };
-
-  String get description => switch (this) {
-    auto => '自动按需走代理，国内大部分访问不会走代理。',
-    global => '全部访问都尽量通过代理，适合临时排查网络问题。',
-  };
-}
+enum NimbusProxyMode { auto, global }
 
 abstract class Preferences {
   static final introCompleted = PreferencesNotifier.create(

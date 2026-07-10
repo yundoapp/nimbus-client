@@ -1,4 +1,5 @@
 import 'package:hiddify/core/app_info/app_info_provider.dart';
+import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -21,6 +22,7 @@ class NimbusAppVersionState {
 
 class NimbusAppVersionController extends Notifier<NimbusAppVersionState> {
   NimbusAuthRepository get _repository => ref.read(nimbusAuthRepositoryProvider);
+  Translations get _t => ref.read(translationsProvider).requireValue;
 
   @override
   NimbusAppVersionState build() => const NimbusAppVersionState();
@@ -42,7 +44,7 @@ class NimbusAppVersionController extends Notifier<NimbusAppVersionState> {
       state = NimbusAppVersionState(
         hasChecked: true,
         result: state.result,
-        errorMessage: _repository.describeError(error),
+        errorMessage: _repository.describeError(error, _t),
       );
       return state.result;
     }

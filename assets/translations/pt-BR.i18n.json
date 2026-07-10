@@ -725,5 +725,157 @@
       "missingLicense": "Licença do Psiphon necessária",
       "missingLicenseMsg": "O perfil selecionado usa o recurso Psiphon; para usar este recurso, você deve concordar com a licença do Psiphon"
     }
+  },
+  "nimbus": {
+    "common": {
+      "latestVersion": "Você já está na versão mais recente",
+      "serverUnavailable": "Não foi possível conectar ao servidor. Tente novamente mais tarde.",
+      "requestTimeout": "A solicitação expirou. Tente novamente mais tarde.",
+      "requestFailed": "A solicitação falhou. Tente novamente mais tarde.",
+      "operationFailed": "A operação falhou. Tente novamente mais tarde."
+    },
+    "home": {
+      "noPlanTitle": "Nenhum plano ativo",
+      "noPlanMessage": "Ative um plano antes de conectar.",
+      "later": "Mais tarde",
+      "activatePlan": "Ativar plano",
+      "planExpired": "Plano expirado",
+      "noAvailablePlan": "Nenhum plano ativo",
+      "activateHint": "Ative um plano antes de conectar.",
+      "monthlyUsage": "Uso do plano neste mês",
+      "expiresOn": "Expira em ${date}",
+      "used": "Usado",
+      "unused": "Restante",
+      "connectionMode": "Modo de conexão",
+      "accessPolicyVersion": "Política de acesso ${version}",
+      "globalRoutingDetail": "Todo o tráfego passa pelo Yundo",
+      "locationTitle": "Localização",
+      "locationDetail": "Escolher por país ou região",
+      "connect": "Conectar",
+      "updateRequired": "Atualização necessária"
+    },
+    "activation": {
+      "title": "Ativar plano",
+      "codeLabel": "Código de ativação",
+      "invalidCode": "Digite um código de ativação de 16 caracteres",
+      "activated": "Plano ativado",
+      "failed": "Falha na ativação. Tente novamente mais tarde.",
+      "submit": "Ativar"
+    },
+    "proxyMode": {
+      "auto": "Automático",
+      "global": "Todo o tráfego",
+      "autoDescription": "Escolhe automaticamente quando o Yundo é necessário.",
+      "globalDescription": "Envia todo o tráfego pelo Yundo. Útil para diagnóstico temporário."
+    },
+    "auth": {
+      "loginTitle": "Entrar no ${appTitle}",
+      "registerTitle": "Criar conta ${appTitle}",
+      "loginSubtitle": "Entre para ver seu plano, tráfego e dispositivos.",
+      "registerSubtitle": "Crie uma conta e ative seu plano com um código.",
+      "username": "Nome de usuário",
+      "password": "Senha",
+      "confirmPassword": "Confirmar senha",
+      "showPassword": "Mostrar senha",
+      "hidePassword": "Ocultar senha",
+      "acceptTerms": "Li e entendi as instruções de uso",
+      "registerAndLogin": "Criar conta e entrar",
+      "login": "Entrar",
+      "goLogin": "Já tem uma conta? Entrar",
+      "goRegister": "Ainda não tem conta? Criar",
+      "usernameInvalid": "Use 4 a 32 letras, números ou sublinhados",
+      "passwordRequired": "Digite sua senha",
+      "passwordsDoNotMatch": "As senhas não coincidem",
+      "passwordTooShort": "A senha deve ter pelo menos 10 caracteres",
+      "passwordNeedsLetter": "A senha deve incluir uma letra",
+      "passwordNeedsNumber": "A senha deve incluir um número",
+      "passwordNeedsSymbol": "A senha deve incluir um caractere especial"
+    },
+    "devices": {
+      "title": "Gerenciamento de dispositivos",
+      "count": "${used}/${limit} dispositivos",
+      "empty": "Nenhum dispositivo ainda",
+      "unknownDevice": "Dispositivo desconhecido",
+      "current": "Atual",
+      "deleteTooltip": "Remover dispositivo",
+      "deleteTitle": "Remover dispositivo",
+      "deleteConfirm": "Remover \"${name}\"?",
+      "unknownPlatform": "Plataforma desconhecida",
+      "lastActive": "Última atividade ${time}",
+      "lastActiveEmpty": "Última atividade --"
+    },
+    "issueReport": {
+      "title": "Relatar um problema",
+      "description": "Um diagnóstico sem dados sensíveis será enviado para ajudar a localizar o problema mais rápido.",
+      "descriptionLabel": "Descrição do problema (opcional)",
+      "submit": "Relatar",
+      "submitted": "Problema relatado"
+    },
+    "routePreferences": {
+      "title": "Preferências de acesso",
+      "count": "${used}/${limit} preferências",
+      "requiresConnection": "Usar conexão",
+      "directConnection": "Conexão não necessária",
+      "domainRequired": "Digite um domínio",
+      "domainLabel": "Domínio",
+      "cloudSyncHint": "As preferências são salvas na nuvem. Seus outros dispositivos as usarão na próxima conexão.",
+      "cloudSyncSaved": "Salvo na nuvem. Seus outros dispositivos usarão essa preferência na próxima conexão.",
+      "limitReached": "Limite atingido",
+      "add": "Adicionar",
+      "empty": "Nenhuma preferência de acesso ainda",
+      "deleteTooltip": "Excluir",
+      "deleteTitle": "Excluir preferência de acesso",
+      "deleteConfirm": "Excluir \"${value}\"?"
+    },
+    "appVersion": {
+      "updateRequired": "Atualização necessária",
+      "newVersion": "Nova versão disponível",
+      "forceMessage": "Esta versão não é mais compatível. Atualize para continuar.",
+      "optionalMessage": "Há uma nova versão disponível.",
+      "currentVersion": "Versão atual",
+      "latestVersion": "Versão mais recente",
+      "minimumVersion": "Mínima compatível",
+      "releaseNotes": "Notas da versão",
+      "openDownloadPage": "Abrir página de download"
+    },
+    "settings": {
+      "deviceManagement": "Gerenciamento de dispositivos",
+      "issueReport": "Relatar um problema",
+      "logout": "Sair",
+      "autoConnectOnLaunch": "Conectar ao iniciar",
+      "accessPreferences": "Preferências de acesso"
+    },
+    "tray": {
+      "openMainWindow": "Abrir janela principal",
+      "disconnected": "Desconectado"
+    },
+    "errors": {
+      "loginRequired": "Entre antes de conectar.",
+      "noPlan": "Ative um plano antes de conectar.",
+      "updateRequired": "Atualize o app para continuar.",
+      "connectFailed": "Falha na conexão. Tente novamente mais tarde.",
+      "trafficExceeded": "O tráfego deste ciclo acabou. A conexão foi interrompida automaticamente.",
+      "sessionEnded": "Esta conexão terminou. Conecte novamente para continuar.",
+      "disconnectedTitle": "Desconectado",
+      "cannotConnectTitle": "Não foi possível conectar",
+      "missingSystemPermission": "Permita a rede do sistema necessária antes de conectar.",
+      "missingPrivilege": "É necessária autorização do sistema antes de conectar."
+    },
+    "apiError": {
+      "invalidCredentials": "Nome de usuário ou senha inválidos.",
+      "registrationDisabled": "O cadastro não está disponível agora.",
+      "usernameTaken": "Este nome de usuário já está em uso.",
+      "accountDisabled": "Esta conta está desativada.",
+      "deviceLimitReached": "O limite de dispositivos foi atingido. Remova um dispositivo antigo e tente novamente.",
+      "activationCodeInvalid": "Este código de ativação é inválido ou indisponível.",
+      "activationCodeUsed": "Este código de ativação já foi usado.",
+      "activationCodeRevoked": "Este código de ativação foi fechado.",
+      "planUnavailable": "Este plano não está disponível agora.",
+      "subscriptionExpired": "Seu plano expirou. Ative um novo plano para continuar.",
+      "noAvailableLocation": "Nenhuma localização disponível agora. Tente novamente mais tarde.",
+      "routePreferenceConflict": "Esta preferência de acesso já existe.",
+      "routeTargetInvalid": "Digite um domínio válido.",
+      "issueReportAlreadyOpen": "Você já tem um relato de problema aberto."
+    }
   }
 }

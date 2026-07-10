@@ -725,5 +725,157 @@
       "missingLicense": "Psiphon lisansı gerekli",
       "missingLicenseMsg": "Seçili profil Psiphon özelliğini kullanıyor; bu özelliği kullanmak için Psiphon lisansı kabul edilmelidir"
     }
+  },
+  "nimbus": {
+    "common": {
+      "latestVersion": "En son sürümü kullanıyorsunuz",
+      "serverUnavailable": "Sunucuya ulaşılamıyor. Lütfen daha sonra tekrar deneyin.",
+      "requestTimeout": "İstek zaman aşımına uğradı. Lütfen daha sonra tekrar deneyin.",
+      "requestFailed": "İstek başarısız oldu. Lütfen daha sonra tekrar deneyin.",
+      "operationFailed": "İşlem başarısız oldu. Lütfen daha sonra tekrar deneyin."
+    },
+    "home": {
+      "noPlanTitle": "Aktif plan yok",
+      "noPlanMessage": "Bağlanmadan önce bir plan etkinleştirin.",
+      "later": "Daha sonra",
+      "activatePlan": "Planı etkinleştir",
+      "planExpired": "Planın süresi doldu",
+      "noAvailablePlan": "Aktif plan yok",
+      "activateHint": "Bağlanmadan önce bir plan etkinleştirin.",
+      "monthlyUsage": "Bu ayki plan kullanımı",
+      "expiresOn": "Bitiş ${date}",
+      "used": "Kullanılan",
+      "unused": "Kalan",
+      "connectionMode": "Bağlantı modu",
+      "accessPolicyVersion": "Erişim politikası ${version}",
+      "globalRoutingDetail": "Tüm trafik Yundo üzerinden geçer",
+      "locationTitle": "Konum",
+      "locationDetail": "Ülke veya bölgeye göre seç",
+      "connect": "Bağlan",
+      "updateRequired": "Güncelleme gerekli"
+    },
+    "activation": {
+      "title": "Planı etkinleştir",
+      "codeLabel": "Etkinleştirme kodu",
+      "invalidCode": "16 karakterli etkinleştirme kodunu girin",
+      "activated": "Plan etkinleştirildi",
+      "failed": "Etkinleştirme başarısız. Lütfen daha sonra tekrar deneyin.",
+      "submit": "Etkinleştir"
+    },
+    "proxyMode": {
+      "auto": "Otomatik",
+      "global": "Tüm trafik",
+      "autoDescription": "Yundo gerektiğinde otomatik olarak seçer.",
+      "globalDescription": "Tüm trafiği Yundo üzerinden yönlendirir. Geçici tanılama için kullanışlıdır."
+    },
+    "auth": {
+      "loginTitle": "${appTitle} oturumu aç",
+      "registerTitle": "${appTitle} hesabı oluştur",
+      "loginSubtitle": "Planınızı, trafiğinizi ve cihazlarınızı görmek için oturum açın.",
+      "registerSubtitle": "Bir hesap oluşturun, ardından kodla planınızı etkinleştirin.",
+      "username": "Kullanıcı adı",
+      "password": "Parola",
+      "confirmPassword": "Parolayı onayla",
+      "showPassword": "Parolayı göster",
+      "hidePassword": "Parolayı gizle",
+      "acceptTerms": "Kullanım notlarını okudum ve anladım",
+      "registerAndLogin": "Hesap oluştur ve oturum aç",
+      "login": "Oturum aç",
+      "goLogin": "Zaten hesabınız var mı? Oturum açın",
+      "goRegister": "Hesabınız yok mu? Oluşturun",
+      "usernameInvalid": "4-32 harf, rakam veya alt çizgi kullanın",
+      "passwordRequired": "Parolanızı girin",
+      "passwordsDoNotMatch": "Parolalar eşleşmiyor",
+      "passwordTooShort": "Parola en az 10 karakter olmalı",
+      "passwordNeedsLetter": "Parola bir harf içermeli",
+      "passwordNeedsNumber": "Parola bir rakam içermeli",
+      "passwordNeedsSymbol": "Parola özel karakter içermeli"
+    },
+    "devices": {
+      "title": "Cihaz yönetimi",
+      "count": "${used}/${limit} cihaz",
+      "empty": "Henüz cihaz yok",
+      "unknownDevice": "Bilinmeyen cihaz",
+      "current": "Geçerli",
+      "deleteTooltip": "Cihazı kaldır",
+      "deleteTitle": "Cihazı kaldır",
+      "deleteConfirm": "\"${name}\" kaldırılsın mı?",
+      "unknownPlatform": "Bilinmeyen platform",
+      "lastActive": "Son etkinlik ${time}",
+      "lastActiveEmpty": "Son etkinlik --"
+    },
+    "issueReport": {
+      "title": "Sorun bildir",
+      "description": "Sorunu daha hızlı bulmaya yardımcı olmak için anonimleştirilmiş tanılama anlık görüntüsü yüklenecek.",
+      "descriptionLabel": "Sorun açıklaması (isteğe bağlı)",
+      "submit": "Bildir",
+      "submitted": "Sorun bildirildi"
+    },
+    "routePreferences": {
+      "title": "Erişim tercihleri",
+      "count": "${used}/${limit} tercih",
+      "requiresConnection": "Bağlantıyı kullan",
+      "directConnection": "Bağlantı gerekmiyor",
+      "domainRequired": "Alan adı girin",
+      "domainLabel": "Alan adı",
+      "cloudSyncHint": "Tercihler buluta kaydedilir. Diğer cihazlarınız bir sonraki bağlantıda bunları kullanır.",
+      "cloudSyncSaved": "Buluta kaydedildi. Diğer cihazlarınız bir sonraki bağlantıda bu tercihi kullanır.",
+      "limitReached": "Sınıra ulaşıldı",
+      "add": "Ekle",
+      "empty": "Henüz erişim tercihi yok",
+      "deleteTooltip": "Sil",
+      "deleteTitle": "Erişim tercihini sil",
+      "deleteConfirm": "\"${value}\" silinsin mi?"
+    },
+    "appVersion": {
+      "updateRequired": "Güncelleme gerekli",
+      "newVersion": "Yeni sürüm mevcut",
+      "forceMessage": "Bu sürüm artık desteklenmiyor. Devam etmek için güncelleyin.",
+      "optionalMessage": "Yeni bir sürüm mevcut.",
+      "currentVersion": "Geçerli sürüm",
+      "latestVersion": "En son sürüm",
+      "minimumVersion": "Desteklenen minimum",
+      "releaseNotes": "Sürüm notları",
+      "openDownloadPage": "İndirme sayfasını aç"
+    },
+    "settings": {
+      "deviceManagement": "Cihaz yönetimi",
+      "issueReport": "Sorun bildir",
+      "logout": "Oturumu kapat",
+      "autoConnectOnLaunch": "Başlatınca bağlan",
+      "accessPreferences": "Erişim tercihleri"
+    },
+    "tray": {
+      "openMainWindow": "Ana pencereyi aç",
+      "disconnected": "Bağlantı yok"
+    },
+    "errors": {
+      "loginRequired": "Bağlanmadan önce oturum açın.",
+      "noPlan": "Bağlanmadan önce bir plan etkinleştirin.",
+      "updateRequired": "Devam etmek için uygulamayı güncelleyin.",
+      "connectFailed": "Bağlantı başarısız. Lütfen daha sonra tekrar deneyin.",
+      "trafficExceeded": "Bu döngünün trafiği bitti. Bağlantı otomatik olarak durduruldu.",
+      "sessionEnded": "Bu bağlantı sona erdi. Devam etmek için tekrar bağlanın.",
+      "disconnectedTitle": "Bağlantı kesildi",
+      "cannotConnectTitle": "Bağlanılamıyor",
+      "missingSystemPermission": "Bağlanmadan önce gerekli sistem ağ iznine izin verin.",
+      "missingPrivilege": "Bağlanmadan önce sistem yetkilendirmesi gerekiyor."
+    },
+    "apiError": {
+      "invalidCredentials": "Kullanıcı adı veya parola hatalı.",
+      "registrationDisabled": "Hesap kaydı şu anda kullanılamıyor.",
+      "usernameTaken": "Bu kullanıcı adı zaten alınmış.",
+      "accountDisabled": "Bu hesap şu anda devre dışı.",
+      "deviceLimitReached": "Cihaz sınırına ulaşıldı. Eski bir cihazı kaldırıp tekrar deneyin.",
+      "activationCodeInvalid": "Bu etkinleştirme kodu geçersiz veya kullanılamıyor.",
+      "activationCodeUsed": "Bu etkinleştirme kodu zaten kullanılmış.",
+      "activationCodeRevoked": "Bu etkinleştirme kodu kapatılmış.",
+      "planUnavailable": "Bu plan şu anda kullanılamıyor.",
+      "subscriptionExpired": "Planınızın süresi doldu. Devam etmek için yeni bir plan etkinleştirin.",
+      "noAvailableLocation": "Şu anda kullanılabilir konum yok. Lütfen daha sonra tekrar deneyin.",
+      "routePreferenceConflict": "Bu erişim tercihi zaten var.",
+      "routeTargetInvalid": "Geçerli bir alan adı girin.",
+      "issueReportAlreadyOpen": "Zaten açık bir sorun bildiriminiz var."
+    }
   }
 }

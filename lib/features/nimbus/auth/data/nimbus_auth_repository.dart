@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
+import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/app_info_entity.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
@@ -329,19 +330,48 @@ class NimbusAuthRepository {
     return error is DioException && error.response?.statusCode == 401;
   }
 
-  String describeError(Object error) {
+  String describeError(Object error, Translations t) {
     if (error is DioException) {
       final data = error.response?.data;
-      if (data is Map && data['message'] is String) return data['message'] as String;
-      if (error.type == DioExceptionType.connectionError) return '无法连接服务器，请稍后重试';
+      if (data is Map) {
+        final mappedMessage = _describeApiCode(data['code'], t);
+        if (mappedMessage != null) return mappedMessage;
+        return t.nimbus.common.operationFailed;
+      }
+      if (error.type == DioExceptionType.connectionError) return t.nimbus.common.serverUnavailable;
       if (error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.receiveTimeout ||
           error.type == DioExceptionType.sendTimeout) {
-        return '连接超时，请稍后重试';
+        return t.nimbus.common.requestTimeout;
       }
-      return error.message ?? '请求失败，请稍后重试';
+      return t.nimbus.common.requestFailed;
     }
-    return '操作失败，请稍后重试';
+    return t.nimbus.common.operationFailed;
+  }
+
+  String? _describeApiCode(Object? rawCode, Translations t) {
+    if (rawCode is! String || rawCode.isEmpty) return null;
+    return switch (rawCode) {
+      'AUTH_INVALID_CREDENTIALS' => t.nimbus.apiError.invalidCredentials,
+      'AUTH_REGISTRATION_DISABLED' => t.nimbus.apiError.registrationDisabled,
+      'AUTH_USERNAME_TAKEN' => t.nimbus.apiError.usernameTaken,
+      'ACCOUNT_DISABLED' => t.nimbus.apiError.accountDisabled,
+      'DEVICE_LIMIT_REACHED' || 'DEVICE_NEW_LOGIN_DISABLED' => t.nimbus.apiError.deviceLimitReached,
+      'ACTIVATION_CODE_INVALID' || 'ACTIVATION_CODE_NOT_FOUND' => t.nimbus.apiError.activationCodeInvalid,
+      'ACTIVATION_CODE_USED' => t.nimbus.apiError.activationCodeUsed,
+      'ACTIVATION_CODE_REVOKED' => t.nimbus.apiError.activationCodeRevoked,
+      'PLAN_NOT_FOUND' || 'PLAN_DISABLED' => t.nimbus.apiError.planUnavailable,
+      'NO_ACTIVE_SUBSCRIPTION' => t.nimbus.errors.noPlan,
+      'SUBSCRIPTION_EXPIRED' => t.nimbus.apiError.subscriptionExpired,
+      'TRAFFIC_EXCEEDED' => t.nimbus.errors.trafficExceeded,
+      'NO_AVAILABLE_NODE' => t.nimbus.apiError.noAvailableLocation,
+      'CONNECT_PLAN_EXPIRED' || 'CONNECT_SESSION_CLOSED' => t.nimbus.errors.sessionEnded,
+      'ROUTE_PREFERENCE_LIMIT_REACHED' => t.nimbus.routePreferences.limitReached,
+      'ROUTE_PREFERENCE_CONFLICT' => t.nimbus.apiError.routePreferenceConflict,
+      'ROUTE_TARGET_INVALID' => t.nimbus.apiError.routeTargetInvalid,
+      'ISSUE_REPORT_ALREADY_OPEN' => t.nimbus.apiError.issueReportAlreadyOpen,
+      _ => null,
+    };
   }
 
   Map<String, String> _devicePayload() {

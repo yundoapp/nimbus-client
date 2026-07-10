@@ -92,7 +92,7 @@ class RoutingOptionsPage extends HookConsumerWidget {
       body: Column(
         children: [
           ListTile(
-            title: const Text('访问偏好'),
+            title: Text(t.nimbus.settings.accessPreferences),
             leading: const Icon(Icons.tune_rounded),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => showDialog<void>(context: context, builder: (_) => const NimbusRoutePreferencesDialog()),

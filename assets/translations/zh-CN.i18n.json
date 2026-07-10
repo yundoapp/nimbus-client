@@ -725,5 +725,157 @@
       "missingLicense": "需要 Psiphon 许可证",
       "missingLicenseMsg": "所选配置文件使用 Psiphon 功能；要使用此功能，必须同意 Psiphon 许可证"
     }
+  },
+  "nimbus": {
+    "common": {
+      "latestVersion": "已是最新版本",
+      "serverUnavailable": "无法连接服务器，请稍后重试",
+      "requestTimeout": "连接超时，请稍后重试",
+      "requestFailed": "请求失败，请稍后重试",
+      "operationFailed": "操作失败，请稍后重试"
+    },
+    "home": {
+      "noPlanTitle": "暂无可用套餐",
+      "noPlanMessage": "请先激活套餐后再连接。",
+      "later": "稍后",
+      "activatePlan": "激活套餐",
+      "planExpired": "套餐已过期",
+      "noAvailablePlan": "当前暂无可用套餐",
+      "activateHint": "请先激活套餐后再连接。",
+      "monthlyUsage": "本月套餐使用情况",
+      "expiresOn": "到期 ${date}",
+      "used": "已使用",
+      "unused": "未使用",
+      "connectionMode": "连接模式",
+      "accessPolicyVersion": "访问策略 ${version}",
+      "globalRoutingDetail": "所有访问均通过云渡连接",
+      "locationTitle": "位置",
+      "locationDetail": "按国家或地区选择",
+      "connect": "连接",
+      "updateRequired": "需要更新"
+    },
+    "activation": {
+      "title": "激活套餐",
+      "codeLabel": "激活码",
+      "invalidCode": "请输入 16 位激活码",
+      "activated": "套餐已激活",
+      "failed": "激活失败，请稍后重试",
+      "submit": "激活"
+    },
+    "proxyMode": {
+      "auto": "自动模式",
+      "global": "全局模式",
+      "autoDescription": "自动判断什么时候需要通过云渡连接。",
+      "globalDescription": "全部访问都通过云渡连接，适合临时排查网络问题。"
+    },
+    "auth": {
+      "loginTitle": "登录 ${appTitle}",
+      "registerTitle": "注册 ${appTitle}",
+      "loginSubtitle": "登录后即可查看套餐、流量和设备。",
+      "registerSubtitle": "创建账号后再使用激活码开通套餐。",
+      "username": "用户名",
+      "password": "密码",
+      "confirmPassword": "确认密码",
+      "showPassword": "显示密码",
+      "hidePassword": "隐藏密码",
+      "acceptTerms": "我确认已了解使用说明",
+      "registerAndLogin": "注册并登录",
+      "login": "登录",
+      "goLogin": "已有账号，去登录",
+      "goRegister": "没有账号，去注册",
+      "usernameInvalid": "用户名需为 4-32 位字母、数字或下划线",
+      "passwordRequired": "请输入密码",
+      "passwordsDoNotMatch": "两次输入的密码不一致",
+      "passwordTooShort": "密码至少 10 位",
+      "passwordNeedsLetter": "密码需要包含字母",
+      "passwordNeedsNumber": "密码需要包含数字",
+      "passwordNeedsSymbol": "密码需要包含特殊字符"
+    },
+    "devices": {
+      "title": "设备管理",
+      "count": "${used}/${limit} 台设备",
+      "empty": "暂无设备",
+      "unknownDevice": "未知设备",
+      "current": "当前",
+      "deleteTooltip": "删除设备",
+      "deleteTitle": "删除设备",
+      "deleteConfirm": "确定删除“${name}”吗？",
+      "unknownPlatform": "未知平台",
+      "lastActive": "最近活跃 ${time}",
+      "lastActiveEmpty": "最近活跃 --"
+    },
+    "issueReport": {
+      "title": "上报问题",
+      "description": "会同时上传脱敏诊断信息，方便尽快定位问题。",
+      "descriptionLabel": "问题描述（选填）",
+      "submit": "上报",
+      "submitted": "问题已上报"
+    },
+    "routePreferences": {
+      "title": "访问偏好",
+      "count": "${used}/${limit} 条偏好",
+      "requiresConnection": "需要连接",
+      "directConnection": "不需要连接",
+      "domainRequired": "请输入域名",
+      "domainLabel": "域名",
+      "cloudSyncHint": "保存后会同步到云端，你的其他设备下次连接时也会自动生效。",
+      "cloudSyncSaved": "已保存到云端，其他设备下次连接时也会自动生效。",
+      "limitReached": "已达上限",
+      "add": "添加",
+      "empty": "暂无访问偏好",
+      "deleteTooltip": "删除",
+      "deleteTitle": "删除访问偏好",
+      "deleteConfirm": "确定删除“${value}”吗？"
+    },
+    "appVersion": {
+      "updateRequired": "需要更新",
+      "newVersion": "发现新版本",
+      "forceMessage": "当前版本已不再支持，请更新后继续使用。",
+      "optionalMessage": "有新的版本可用。",
+      "currentVersion": "当前版本",
+      "latestVersion": "最新版本",
+      "minimumVersion": "最低支持",
+      "releaseNotes": "更新说明",
+      "openDownloadPage": "打开下载页"
+    },
+    "settings": {
+      "deviceManagement": "设备管理",
+      "issueReport": "上报问题",
+      "logout": "退出登录",
+      "autoConnectOnLaunch": "启动后自动连接",
+      "accessPreferences": "访问偏好"
+    },
+    "tray": {
+      "openMainWindow": "打开主窗口",
+      "disconnected": "未连接"
+    },
+    "errors": {
+      "loginRequired": "请先登录后再连接。",
+      "noPlan": "请先激活套餐后再连接。",
+      "updateRequired": "当前版本需要更新后继续使用。",
+      "connectFailed": "连接失败，请稍后重试。",
+      "trafficExceeded": "本周期流量已用完，已自动断开。",
+      "sessionEnded": "本次连接已结束，请重新连接。",
+      "disconnectedTitle": "已断开",
+      "cannotConnectTitle": "无法连接",
+      "missingSystemPermission": "需要允许系统网络权限后才能连接。",
+      "missingPrivilege": "需要系统授权后才能连接。"
+    },
+    "apiError": {
+      "invalidCredentials": "用户名或密码不正确。",
+      "registrationDisabled": "当前暂不开放注册。",
+      "usernameTaken": "这个用户名已被使用。",
+      "accountDisabled": "当前账号已被停用。",
+      "deviceLimitReached": "设备数量已达上限，请删除旧设备后再试。",
+      "activationCodeInvalid": "这个激活码无效或不可用。",
+      "activationCodeUsed": "这个激活码已被使用。",
+      "activationCodeRevoked": "这个激活码已关闭。",
+      "planUnavailable": "这个套餐当前不可用。",
+      "subscriptionExpired": "套餐已到期，请激活新套餐后继续。",
+      "noAvailableLocation": "当前暂无可用位置，请稍后再试。",
+      "routePreferenceConflict": "这个访问偏好已存在。",
+      "routeTargetInvalid": "请输入有效域名。",
+      "issueReportAlreadyOpen": "你已有一个待处理的问题上报。"
+    }
   }
 }

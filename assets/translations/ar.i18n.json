@@ -731,5 +731,157 @@
       "missingLicense": "رخصة Psiphon مطلوبة",
       "missingLicenseMsg": "الملف الشخصي المحدد يستخدم ميزة Psiphon؛ لاستخدام هذه الميزة، يجب الموافقة على رخصة Psiphon"
     }
+  },
+  "nimbus": {
+    "common": {
+      "latestVersion": "أنت تستخدم أحدث إصدار",
+      "serverUnavailable": "تعذر الاتصال بالخادم. حاول لاحقًا.",
+      "requestTimeout": "انتهت مهلة الطلب. حاول لاحقًا.",
+      "requestFailed": "فشل الطلب. حاول لاحقًا.",
+      "operationFailed": "فشلت العملية. حاول لاحقًا."
+    },
+    "home": {
+      "noPlanTitle": "لا توجد خطة نشطة",
+      "noPlanMessage": "فعّل خطة قبل الاتصال.",
+      "later": "لاحقًا",
+      "activatePlan": "تفعيل الخطة",
+      "planExpired": "انتهت صلاحية الخطة",
+      "noAvailablePlan": "لا توجد خطة نشطة",
+      "activateHint": "فعّل خطة قبل الاتصال.",
+      "monthlyUsage": "استخدام الخطة هذا الشهر",
+      "expiresOn": "تنتهي في ${date}",
+      "used": "مستخدم",
+      "unused": "متبقٍ",
+      "connectionMode": "وضع الاتصال",
+      "accessPolicyVersion": "سياسة الوصول ${version}",
+      "globalRoutingDetail": "تمر كل حركة المرور عبر Yundo",
+      "locationTitle": "الموقع",
+      "locationDetail": "اختر حسب الدولة أو المنطقة",
+      "connect": "اتصال",
+      "updateRequired": "يلزم التحديث"
+    },
+    "activation": {
+      "title": "تفعيل الخطة",
+      "codeLabel": "رمز التفعيل",
+      "invalidCode": "أدخل رمز تفعيل من 16 حرفًا",
+      "activated": "تم تفعيل الخطة",
+      "failed": "فشل التفعيل. حاول لاحقًا.",
+      "submit": "تفعيل"
+    },
+    "proxyMode": {
+      "auto": "تلقائي",
+      "global": "كل الحركة",
+      "autoDescription": "يختار تلقائيًا متى تكون Yundo مطلوبة.",
+      "globalDescription": "يمرر كل الحركة عبر Yundo. مفيد للتشخيص المؤقت."
+    },
+    "auth": {
+      "loginTitle": "تسجيل الدخول إلى ${appTitle}",
+      "registerTitle": "إنشاء حساب ${appTitle}",
+      "loginSubtitle": "سجّل الدخول لعرض خطتك وحركة البيانات وأجهزتك.",
+      "registerSubtitle": "أنشئ حسابًا ثم فعّل خطتك برمز.",
+      "username": "اسم المستخدم",
+      "password": "كلمة المرور",
+      "confirmPassword": "تأكيد كلمة المرور",
+      "showPassword": "إظهار كلمة المرور",
+      "hidePassword": "إخفاء كلمة المرور",
+      "acceptTerms": "قرأت ملاحظات الاستخدام وفهمتها",
+      "registerAndLogin": "إنشاء حساب وتسجيل الدخول",
+      "login": "تسجيل الدخول",
+      "goLogin": "لديك حساب؟ سجّل الدخول",
+      "goRegister": "ليس لديك حساب؟ أنشئ حسابًا",
+      "usernameInvalid": "استخدم 4-32 حرفًا أو رقمًا أو شرطة سفلية",
+      "passwordRequired": "أدخل كلمة المرور",
+      "passwordsDoNotMatch": "كلمتا المرور غير متطابقتين",
+      "passwordTooShort": "يجب أن تكون كلمة المرور 10 أحرف على الأقل",
+      "passwordNeedsLetter": "يجب أن تحتوي كلمة المرور على حرف",
+      "passwordNeedsNumber": "يجب أن تحتوي كلمة المرور على رقم",
+      "passwordNeedsSymbol": "يجب أن تحتوي كلمة المرور على رمز خاص"
+    },
+    "devices": {
+      "title": "إدارة الأجهزة",
+      "count": "${used}/${limit} أجهزة",
+      "empty": "لا توجد أجهزة بعد",
+      "unknownDevice": "جهاز غير معروف",
+      "current": "الحالي",
+      "deleteTooltip": "إزالة الجهاز",
+      "deleteTitle": "إزالة الجهاز",
+      "deleteConfirm": "هل تريد إزالة \"${name}\"؟",
+      "unknownPlatform": "منصة غير معروفة",
+      "lastActive": "آخر نشاط ${time}",
+      "lastActiveEmpty": "آخر نشاط --"
+    },
+    "issueReport": {
+      "title": "الإبلاغ عن مشكلة",
+      "description": "سيتم رفع لقطة تشخيص منقحة للمساعدة في تحديد المشكلة بشكل أسرع.",
+      "descriptionLabel": "وصف المشكلة (اختياري)",
+      "submit": "إبلاغ",
+      "submitted": "تم الإبلاغ عن المشكلة"
+    },
+    "routePreferences": {
+      "title": "تفضيلات الوصول",
+      "count": "${used}/${limit} تفضيلات",
+      "requiresConnection": "استخدام الاتصال",
+      "directConnection": "لا يحتاج إلى اتصال",
+      "domainRequired": "أدخل نطاقًا",
+      "domainLabel": "النطاق",
+      "cloudSyncHint": "تُحفظ التفضيلات في السحابة، وستستخدمها أجهزتك الأخرى عند الاتصال في المرة القادمة.",
+      "cloudSyncSaved": "تم الحفظ في السحابة، وستستخدمه أجهزتك الأخرى عند الاتصال في المرة القادمة.",
+      "limitReached": "تم بلوغ الحد",
+      "add": "إضافة",
+      "empty": "لا توجد تفضيلات وصول بعد",
+      "deleteTooltip": "حذف",
+      "deleteTitle": "حذف تفضيل الوصول",
+      "deleteConfirm": "هل تريد حذف \"${value}\"؟"
+    },
+    "appVersion": {
+      "updateRequired": "يلزم التحديث",
+      "newVersion": "يتوفر إصدار جديد",
+      "forceMessage": "لم يعد هذا الإصدار مدعومًا. حدّث للمتابعة.",
+      "optionalMessage": "يتوفر إصدار جديد.",
+      "currentVersion": "الإصدار الحالي",
+      "latestVersion": "أحدث إصدار",
+      "minimumVersion": "الحد الأدنى المدعوم",
+      "releaseNotes": "ملاحظات الإصدار",
+      "openDownloadPage": "فتح صفحة التنزيل"
+    },
+    "settings": {
+      "deviceManagement": "إدارة الأجهزة",
+      "issueReport": "الإبلاغ عن مشكلة",
+      "logout": "تسجيل الخروج",
+      "autoConnectOnLaunch": "الاتصال بعد التشغيل",
+      "accessPreferences": "تفضيلات الوصول"
+    },
+    "tray": {
+      "openMainWindow": "فتح النافذة الرئيسية",
+      "disconnected": "غير متصل"
+    },
+    "errors": {
+      "loginRequired": "سجّل الدخول قبل الاتصال.",
+      "noPlan": "فعّل خطة قبل الاتصال.",
+      "updateRequired": "حدّث التطبيق للمتابعة.",
+      "connectFailed": "فشل الاتصال. حاول لاحقًا.",
+      "trafficExceeded": "تم استهلاك حركة هذا الدور. توقف الاتصال تلقائيًا.",
+      "sessionEnded": "انتهى هذا الاتصال. اتصل مرة أخرى للمتابعة.",
+      "disconnectedTitle": "تم قطع الاتصال",
+      "cannotConnectTitle": "تعذر الاتصال",
+      "missingSystemPermission": "اسمح بإذن شبكة النظام المطلوب قبل الاتصال.",
+      "missingPrivilege": "يلزم تفويض النظام قبل الاتصال."
+    },
+    "apiError": {
+      "invalidCredentials": "اسم المستخدم أو كلمة المرور غير صحيحة.",
+      "registrationDisabled": "تسجيل الحساب غير متاح الآن.",
+      "usernameTaken": "اسم المستخدم هذا مستخدم بالفعل.",
+      "accountDisabled": "هذا الحساب معطل حاليًا.",
+      "deviceLimitReached": "تم بلوغ حد الأجهزة. أزل جهازًا قديمًا وحاول مرة أخرى.",
+      "activationCodeInvalid": "رمز التفعيل هذا غير صالح أو غير متاح.",
+      "activationCodeUsed": "تم استخدام رمز التفعيل هذا بالفعل.",
+      "activationCodeRevoked": "تم إغلاق رمز التفعيل هذا.",
+      "planUnavailable": "هذه الخطة غير متاحة الآن.",
+      "subscriptionExpired": "انتهت صلاحية خطتك. فعّل خطة جديدة للمتابعة.",
+      "noAvailableLocation": "لا يوجد موقع متاح الآن. حاول لاحقًا.",
+      "routePreferenceConflict": "تفضيل الوصول هذا موجود بالفعل.",
+      "routeTargetInvalid": "أدخل نطاقًا صالحًا.",
+      "issueReportAlreadyOpen": "لديك بالفعل بلاغ مشكلة مفتوح."
+    }
   }
 }

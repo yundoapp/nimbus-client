@@ -179,17 +179,17 @@ class SettingsPage extends HookConsumerWidget {
           ),
           const Divider(height: 16),
           ListTile(
-            title: const Text('设备管理'),
+            title: Text(t.nimbus.settings.deviceManagement),
             leading: const Icon(Icons.devices_rounded),
             onTap: () => showDialog<void>(context: context, builder: (_) => const NimbusDevicesDialog()),
           ),
           ListTile(
-            title: const Text('上报问题'),
+            title: Text(t.nimbus.settings.issueReport),
             leading: const Icon(Icons.outlined_flag_rounded),
             onTap: () => showDialog<void>(context: context, builder: (_) => const NimbusIssueReportDialog()),
           ),
           ListTile(
-            title: const Text('退出登录'),
+            title: Text(t.nimbus.settings.logout),
             leading: const Icon(Icons.logout_rounded),
             onTap: () async {
               await ref.read(nimbusAuthControllerProvider.notifier).logout();

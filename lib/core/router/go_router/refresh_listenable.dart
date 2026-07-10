@@ -16,7 +16,7 @@ class RefreshListenable extends ChangeNotifier {
       }
     });
     ref.listen(Preferences.introCompleted, (_, _) => notifyListeners());
-    ref.listen(nimbusAuthControllerProvider, (_, _) => notifyListeners());
+    ref.listen(nimbusAuthControllerProvider.select((state) => state.isAuthenticated), (_, _) => notifyListeners());
   }
   final Ref ref;
 }

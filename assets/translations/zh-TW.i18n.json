@@ -725,5 +725,157 @@
       "missingLicense": "需要 Psiphon 授權",
       "missingLicenseMsg": "所選設定檔使用 Psiphon 功能；要使用此功能，必須同意 Psiphon 授權條款"
     }
+  },
+  "nimbus": {
+    "common": {
+      "latestVersion": "已是最新版本",
+      "serverUnavailable": "無法連線伺服器，請稍後再試",
+      "requestTimeout": "連線逾時，請稍後再試",
+      "requestFailed": "請求失敗，請稍後再試",
+      "operationFailed": "操作失敗，請稍後再試"
+    },
+    "home": {
+      "noPlanTitle": "暫無可用套餐",
+      "noPlanMessage": "請先啟用套餐後再連線。",
+      "later": "稍後",
+      "activatePlan": "啟用套餐",
+      "planExpired": "套餐已過期",
+      "noAvailablePlan": "目前暫無可用套餐",
+      "activateHint": "請先啟用套餐後再連線。",
+      "monthlyUsage": "本月套餐使用情況",
+      "expiresOn": "到期 ${date}",
+      "used": "已使用",
+      "unused": "未使用",
+      "connectionMode": "連線模式",
+      "accessPolicyVersion": "存取策略 ${version}",
+      "globalRoutingDetail": "所有存取均透過 Yundo 連線",
+      "locationTitle": "位置",
+      "locationDetail": "按國家或地區選擇",
+      "connect": "連線",
+      "updateRequired": "需要更新"
+    },
+    "activation": {
+      "title": "啟用套餐",
+      "codeLabel": "啟用碼",
+      "invalidCode": "請輸入 16 位啟用碼",
+      "activated": "套餐已啟用",
+      "failed": "啟用失敗，請稍後再試",
+      "submit": "啟用"
+    },
+    "proxyMode": {
+      "auto": "自動模式",
+      "global": "全域模式",
+      "autoDescription": "自動判斷何時需要透過 Yundo 連線。",
+      "globalDescription": "全部存取都透過 Yundo 連線，適合臨時排查網路問題。"
+    },
+    "auth": {
+      "loginTitle": "登入 ${appTitle}",
+      "registerTitle": "註冊 ${appTitle}",
+      "loginSubtitle": "登入後即可查看套餐、流量和裝置。",
+      "registerSubtitle": "建立帳號後再使用啟用碼開通套餐。",
+      "username": "使用者名稱",
+      "password": "密碼",
+      "confirmPassword": "確認密碼",
+      "showPassword": "顯示密碼",
+      "hidePassword": "隱藏密碼",
+      "acceptTerms": "我確認已了解使用說明",
+      "registerAndLogin": "註冊並登入",
+      "login": "登入",
+      "goLogin": "已有帳號，去登入",
+      "goRegister": "沒有帳號，去註冊",
+      "usernameInvalid": "使用者名稱需為 4-32 位字母、數字或底線",
+      "passwordRequired": "請輸入密碼",
+      "passwordsDoNotMatch": "兩次輸入的密碼不一致",
+      "passwordTooShort": "密碼至少 10 位",
+      "passwordNeedsLetter": "密碼需要包含字母",
+      "passwordNeedsNumber": "密碼需要包含數字",
+      "passwordNeedsSymbol": "密碼需要包含特殊字元"
+    },
+    "devices": {
+      "title": "裝置管理",
+      "count": "${used}/${limit} 台裝置",
+      "empty": "暫無裝置",
+      "unknownDevice": "未知裝置",
+      "current": "目前",
+      "deleteTooltip": "刪除裝置",
+      "deleteTitle": "刪除裝置",
+      "deleteConfirm": "確定刪除「${name}」嗎？",
+      "unknownPlatform": "未知平台",
+      "lastActive": "最近活躍 ${time}",
+      "lastActiveEmpty": "最近活躍 --"
+    },
+    "issueReport": {
+      "title": "回報問題",
+      "description": "會同時上傳已脫敏的診斷資訊，方便盡快定位問題。",
+      "descriptionLabel": "問題描述（選填）",
+      "submit": "回報",
+      "submitted": "問題已回報"
+    },
+    "routePreferences": {
+      "title": "存取偏好",
+      "count": "${used}/${limit} 條偏好",
+      "requiresConnection": "需要連線",
+      "directConnection": "不需要連線",
+      "domainRequired": "請輸入網域",
+      "domainLabel": "網域",
+      "cloudSyncHint": "偏好會儲存在雲端，其他裝置下次連線時也會自動套用。",
+      "cloudSyncSaved": "已儲存到雲端，其他裝置下次連線時也會自動套用。",
+      "limitReached": "已達上限",
+      "add": "新增",
+      "empty": "暫無存取偏好",
+      "deleteTooltip": "刪除",
+      "deleteTitle": "刪除存取偏好",
+      "deleteConfirm": "確定刪除「${value}」嗎？"
+    },
+    "appVersion": {
+      "updateRequired": "需要更新",
+      "newVersion": "發現新版本",
+      "forceMessage": "目前版本已不再支援，請更新後繼續使用。",
+      "optionalMessage": "有新的版本可用。",
+      "currentVersion": "目前版本",
+      "latestVersion": "最新版本",
+      "minimumVersion": "最低支援",
+      "releaseNotes": "更新說明",
+      "openDownloadPage": "開啟下載頁"
+    },
+    "settings": {
+      "deviceManagement": "裝置管理",
+      "issueReport": "回報問題",
+      "logout": "登出",
+      "autoConnectOnLaunch": "啟動後自動連線",
+      "accessPreferences": "存取偏好"
+    },
+    "tray": {
+      "openMainWindow": "開啟主視窗",
+      "disconnected": "未連線"
+    },
+    "errors": {
+      "loginRequired": "請先登入後再連線。",
+      "noPlan": "請先啟用套餐後再連線。",
+      "updateRequired": "目前版本需要更新後繼續使用。",
+      "connectFailed": "連線失敗，請稍後再試。",
+      "trafficExceeded": "本週期流量已用完，已自動斷線。",
+      "sessionEnded": "本次連線已結束，請重新連線。",
+      "disconnectedTitle": "已斷線",
+      "cannotConnectTitle": "無法連線",
+      "missingSystemPermission": "需要允許系統網路權限後才能連線。",
+      "missingPrivilege": "需要系統授權後才能連線。"
+    },
+    "apiError": {
+      "invalidCredentials": "使用者名稱或密碼不正確。",
+      "registrationDisabled": "目前暫不開放註冊。",
+      "usernameTaken": "這個使用者名稱已被使用。",
+      "accountDisabled": "目前帳號已被停用。",
+      "deviceLimitReached": "裝置數量已達上限，請刪除舊裝置後再試。",
+      "activationCodeInvalid": "這個啟用碼無效或不可用。",
+      "activationCodeUsed": "這個啟用碼已被使用。",
+      "activationCodeRevoked": "這個啟用碼已關閉。",
+      "planUnavailable": "這個套餐目前不可用。",
+      "subscriptionExpired": "套餐已到期，請啟用新套餐後繼續。",
+      "noAvailableLocation": "目前暫無可用位置，請稍後再試。",
+      "routePreferenceConflict": "這個存取偏好已存在。",
+      "routeTargetInvalid": "請輸入有效網域。",
+      "issueReportAlreadyOpen": "你已有一個待處理的問題回報。"
+    }
   }
 }

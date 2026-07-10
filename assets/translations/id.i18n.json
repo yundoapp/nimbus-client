@@ -725,5 +725,157 @@
       "missingLicense": "Lisensi Psiphon diperlukan",
       "missingLicenseMsg": "Profil yang dipilih menggunakan fitur Psiphon; untuk menggunakan fitur ini, Anda harus menyetujui lisensi Psiphon"
     }
+  },
+  "nimbus": {
+    "common": {
+      "latestVersion": "Anda sudah memakai versi terbaru",
+      "serverUnavailable": "Tidak dapat terhubung ke server. Coba lagi nanti.",
+      "requestTimeout": "Permintaan habis waktu. Coba lagi nanti.",
+      "requestFailed": "Permintaan gagal. Coba lagi nanti.",
+      "operationFailed": "Operasi gagal. Coba lagi nanti."
+    },
+    "home": {
+      "noPlanTitle": "Tidak ada paket aktif",
+      "noPlanMessage": "Aktifkan paket sebelum terhubung.",
+      "later": "Nanti",
+      "activatePlan": "Aktifkan paket",
+      "planExpired": "Paket kedaluwarsa",
+      "noAvailablePlan": "Tidak ada paket aktif",
+      "activateHint": "Aktifkan paket sebelum terhubung.",
+      "monthlyUsage": "Pemakaian paket bulan ini",
+      "expiresOn": "Berakhir ${date}",
+      "used": "Terpakai",
+      "unused": "Tersisa",
+      "connectionMode": "Mode koneksi",
+      "accessPolicyVersion": "Kebijakan akses ${version}",
+      "globalRoutingDetail": "Semua lalu lintas melewati Yundo",
+      "locationTitle": "Lokasi",
+      "locationDetail": "Pilih berdasarkan negara atau wilayah",
+      "connect": "Hubungkan",
+      "updateRequired": "Perlu pembaruan"
+    },
+    "activation": {
+      "title": "Aktifkan paket",
+      "codeLabel": "Kode aktivasi",
+      "invalidCode": "Masukkan kode aktivasi 16 karakter",
+      "activated": "Paket diaktifkan",
+      "failed": "Aktivasi gagal. Coba lagi nanti.",
+      "submit": "Aktifkan"
+    },
+    "proxyMode": {
+      "auto": "Otomatis",
+      "global": "Semua lalu lintas",
+      "autoDescription": "Otomatis memilih kapan Yundo diperlukan.",
+      "globalDescription": "Mengarahkan semua lalu lintas melalui Yundo. Berguna untuk diagnosis sementara."
+    },
+    "auth": {
+      "loginTitle": "Masuk ke ${appTitle}",
+      "registerTitle": "Buat akun ${appTitle}",
+      "loginSubtitle": "Masuk untuk melihat paket, lalu lintas, dan perangkat Anda.",
+      "registerSubtitle": "Buat akun, lalu aktifkan paket dengan kode.",
+      "username": "Nama pengguna",
+      "password": "Kata sandi",
+      "confirmPassword": "Konfirmasi kata sandi",
+      "showPassword": "Tampilkan kata sandi",
+      "hidePassword": "Sembunyikan kata sandi",
+      "acceptTerms": "Saya telah membaca dan memahami catatan penggunaan",
+      "registerAndLogin": "Buat akun dan masuk",
+      "login": "Masuk",
+      "goLogin": "Sudah punya akun? Masuk",
+      "goRegister": "Belum punya akun? Buat",
+      "usernameInvalid": "Gunakan 4-32 huruf, angka, atau garis bawah",
+      "passwordRequired": "Masukkan kata sandi Anda",
+      "passwordsDoNotMatch": "Kata sandi tidak cocok",
+      "passwordTooShort": "Kata sandi minimal 10 karakter",
+      "passwordNeedsLetter": "Kata sandi harus berisi huruf",
+      "passwordNeedsNumber": "Kata sandi harus berisi angka",
+      "passwordNeedsSymbol": "Kata sandi harus berisi karakter khusus"
+    },
+    "devices": {
+      "title": "Manajemen perangkat",
+      "count": "${used}/${limit} perangkat",
+      "empty": "Belum ada perangkat",
+      "unknownDevice": "Perangkat tidak dikenal",
+      "current": "Saat ini",
+      "deleteTooltip": "Hapus perangkat",
+      "deleteTitle": "Hapus perangkat",
+      "deleteConfirm": "Hapus \"${name}\"?",
+      "unknownPlatform": "Platform tidak dikenal",
+      "lastActive": "Terakhir aktif ${time}",
+      "lastActiveEmpty": "Terakhir aktif --"
+    },
+    "issueReport": {
+      "title": "Laporkan masalah",
+      "description": "Snapshot diagnostik yang sudah disamarkan akan diunggah untuk membantu menemukan masalah lebih cepat.",
+      "descriptionLabel": "Deskripsi masalah (opsional)",
+      "submit": "Laporkan",
+      "submitted": "Masalah dilaporkan"
+    },
+    "routePreferences": {
+      "title": "Preferensi akses",
+      "count": "${used}/${limit} preferensi",
+      "requiresConnection": "Gunakan koneksi",
+      "directConnection": "Tidak perlu koneksi",
+      "domainRequired": "Masukkan domain",
+      "domainLabel": "Domain",
+      "cloudSyncHint": "Preferensi disimpan di cloud. Perangkat lain Anda akan menggunakannya saat terhubung berikutnya.",
+      "cloudSyncSaved": "Tersimpan di cloud. Perangkat lain Anda akan menggunakannya saat terhubung berikutnya.",
+      "limitReached": "Batas tercapai",
+      "add": "Tambah",
+      "empty": "Belum ada preferensi akses",
+      "deleteTooltip": "Hapus",
+      "deleteTitle": "Hapus preferensi akses",
+      "deleteConfirm": "Hapus \"${value}\"?"
+    },
+    "appVersion": {
+      "updateRequired": "Perlu pembaruan",
+      "newVersion": "Versi baru tersedia",
+      "forceMessage": "Versi ini tidak lagi didukung. Perbarui untuk melanjutkan.",
+      "optionalMessage": "Versi baru tersedia.",
+      "currentVersion": "Versi saat ini",
+      "latestVersion": "Versi terbaru",
+      "minimumVersion": "Minimum didukung",
+      "releaseNotes": "Catatan rilis",
+      "openDownloadPage": "Buka halaman unduhan"
+    },
+    "settings": {
+      "deviceManagement": "Manajemen perangkat",
+      "issueReport": "Laporkan masalah",
+      "logout": "Keluar",
+      "autoConnectOnLaunch": "Hubungkan setelah dibuka",
+      "accessPreferences": "Preferensi akses"
+    },
+    "tray": {
+      "openMainWindow": "Buka jendela utama",
+      "disconnected": "Terputus"
+    },
+    "errors": {
+      "loginRequired": "Masuk sebelum terhubung.",
+      "noPlan": "Aktifkan paket sebelum terhubung.",
+      "updateRequired": "Perbarui aplikasi untuk melanjutkan.",
+      "connectFailed": "Koneksi gagal. Coba lagi nanti.",
+      "trafficExceeded": "Lalu lintas siklus ini telah habis. Koneksi dihentikan otomatis.",
+      "sessionEnded": "Koneksi ini telah berakhir. Hubungkan lagi untuk melanjutkan.",
+      "disconnectedTitle": "Terputus",
+      "cannotConnectTitle": "Tidak dapat terhubung",
+      "missingSystemPermission": "Izinkan izin jaringan sistem yang diperlukan sebelum terhubung.",
+      "missingPrivilege": "Otorisasi sistem diperlukan sebelum terhubung."
+    },
+    "apiError": {
+      "invalidCredentials": "Nama pengguna atau kata sandi salah.",
+      "registrationDisabled": "Pendaftaran akun belum tersedia saat ini.",
+      "usernameTaken": "Nama pengguna ini sudah digunakan.",
+      "accountDisabled": "Akun ini sedang dinonaktifkan.",
+      "deviceLimitReached": "Batas perangkat tercapai. Hapus perangkat lama lalu coba lagi.",
+      "activationCodeInvalid": "Kode aktivasi ini tidak valid atau tidak tersedia.",
+      "activationCodeUsed": "Kode aktivasi ini sudah digunakan.",
+      "activationCodeRevoked": "Kode aktivasi ini sudah ditutup.",
+      "planUnavailable": "Paket ini tidak tersedia saat ini.",
+      "subscriptionExpired": "Paket Anda kedaluwarsa. Aktifkan paket baru untuk melanjutkan.",
+      "noAvailableLocation": "Belum ada lokasi yang tersedia. Coba lagi nanti.",
+      "routePreferenceConflict": "Preferensi akses ini sudah ada.",
+      "routeTargetInvalid": "Masukkan domain yang valid.",
+      "issueReportAlreadyOpen": "Anda sudah memiliki laporan masalah terbuka."
+    }
   }
 }

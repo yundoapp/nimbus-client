@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
+import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
@@ -14,6 +15,8 @@ import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.da
 import 'package:hiddify/features/proxy/active/active_proxy_delay_indicator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+const _yundoLogoColor = Color(0xFF4F67AA);
+
 class HomePage extends HookConsumerWidget {
   const HomePage({super.key});
 
@@ -22,7 +25,8 @@ class HomePage extends HookConsumerWidget {
     final theme = Theme.of(context);
     final authState = ref.watch(nimbusAuthControllerProvider);
     final versionState = ref.watch(nimbusAppVersionControllerProvider);
-    final appTitle = ref.watch(translationsProvider).requireValue.common.appTitle;
+    final t = ref.watch(translationsProvider).requireValue;
+    final appTitle = t.common.appTitle;
     final hasActivePlan = authState.me?.subscription.hasActivePlan ?? false;
 
     useEffect(() {
@@ -40,16 +44,16 @@ class HomePage extends HookConsumerWidget {
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('暂无可用套餐'),
-          content: const Text('您当前尚无可用套餐，请先激活或者购买套餐后再连接。'),
+          title: Text(t.nimbus.home.noPlanTitle),
+          content: Text(t.nimbus.home.noPlanMessage),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('稍后')),
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.common.later)),
             FilledButton(
               onPressed: () {
                 Navigator.of(context).pop();
                 showActivationDialog();
               },
-              child: const Text('激活套餐'),
+              child: Text(t.nimbus.home.activatePlan),
             ),
           ],
         ),
@@ -70,7 +74,7 @@ class HomePage extends HookConsumerWidget {
       if (result != null && (result.updateAvailable || result.forceUpdate)) {
         await showVersionDialog(result);
       } else if (manual) {
-        final message = latestState.errorMessage ?? '已是最新版本';
+        final message = latestState.errorMessage ?? t.nimbus.common.latestVersion;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       }
     }
@@ -127,6 +131,7 @@ class HomePage extends HookConsumerWidget {
                     if (hasActivePlan)
                       versionState.forceUpdate
                           ? _UpdateRequiredConnectionButton(
+                              label: t.nimbus.home.updateRequired,
                               onTap: () {
                                 final version = versionState.result;
                                 if (version != null) showVersionDialog(version);
@@ -134,7 +139,7 @@ class HomePage extends HookConsumerWidget {
                             )
                           : const ConnectionButton()
                     else
-                      _ActivationConnectionButton(onTap: showNoPlanDialog),
+                      _ActivationConnectionButton(label: t.nimbus.home.connect, onTap: showNoPlanDialog),
                     const Gap(16),
                     _HomeQuickControls(rulesVersion: authState.me?.rules.publicRulesVersion),
                     const Gap(8),
@@ -153,7 +158,7 @@ class HomePage extends HookConsumerWidget {
   }
 }
 
-class _NimbusStatusPanel extends StatelessWidget {
+class _NimbusStatusPanel extends ConsumerWidget {
   const _NimbusStatusPanel({required this.theme, required this.me, required this.onActivate});
 
   final ThemeData theme;
@@ -161,7 +166,8 @@ class _NimbusStatusPanel extends StatelessWidget {
   final VoidCallback onActivate;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = ref.watch(translationsProvider).requireValue;
     final muted = theme.colorScheme.onSurfaceVariant;
     final subscription = me?.subscription;
     final quotaBytes = subscription?.quotaBytes;
@@ -177,17 +183,21 @@ class _NimbusStatusPanel extends StatelessWidget {
       return Column(
         children: [
           Text(
-            subscription?.status == 'expired' ? '套餐已过期' : '当前暂无可用套餐',
+            subscription?.status == 'expired' ? t.nimbus.home.planExpired : t.nimbus.home.noAvailablePlan,
             style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           const Gap(4),
           Text(
-            '请先激活或者购买套餐。',
+            t.nimbus.home.activateHint,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(color: muted),
           ),
           const Gap(10),
-          FilledButton.tonalIcon(onPressed: onActivate, icon: const Icon(Icons.key_rounded), label: const Text('激活套餐')),
+          FilledButton.tonalIcon(
+            onPressed: onActivate,
+            icon: const Icon(Icons.key_rounded),
+            label: Text(t.nimbus.home.activatePlan),
+          ),
         ],
       );
     }
@@ -199,12 +209,15 @@ class _NimbusStatusPanel extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                '本月套餐使用情况',
+                t.nimbus.home.monthlyUsage,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
               ),
             ),
-            Text('到期 $expiresText', style: theme.textTheme.bodySmall?.copyWith(color: muted)),
+            Text(
+              t.nimbus.home.expiresOn(date: expiresText),
+              style: theme.textTheme.bodySmall?.copyWith(color: muted),
+            ),
           ],
         ),
         const Gap(8),
@@ -218,10 +231,10 @@ class _NimbusStatusPanel extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _StatusText(label: "已使用", value: usedText, color: muted),
+              child: _StatusText(label: t.nimbus.home.used, value: usedText, color: muted),
             ),
             Expanded(
-              child: _StatusText(label: "未使用", value: remainingText, color: muted, alignEnd: true),
+              child: _StatusText(label: t.nimbus.home.unused, value: remainingText, color: muted, alignEnd: true),
             ),
           ],
         ),
@@ -239,14 +252,17 @@ class _HomeQuickControls extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final proxyMode = ref.watch(Preferences.nimbusProxyMode);
     final authState = ref.watch(nimbusAuthControllerProvider);
+    final t = ref.watch(translationsProvider).requireValue;
     final selectedLocation = _selectedLocation(authState);
-    final rulesText = rulesVersion == null || rulesVersion!.isEmpty ? '--' : rulesVersion!;
+    final rulesText = _formatRulesVersionForDisplay(rulesVersion);
 
     Widget proxyCard() => _HomeControlCard(
       icon: Icons.route_rounded,
-      title: '代理模式',
-      value: proxyMode.label,
-      detail: '规则 $rulesText',
+      title: t.nimbus.home.connectionMode,
+      value: proxyMode.label(t),
+      detail: proxyMode == NimbusProxyMode.auto
+          ? t.nimbus.home.accessPolicyVersion(version: rulesText)
+          : t.nimbus.home.globalRoutingDetail,
       onTap: () => _showProxyModeDialog(context),
     );
 
@@ -287,6 +303,8 @@ class _LocationControlCard extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(nimbusAuthControllerProvider);
+    final t = ref.watch(translationsProvider).requireValue;
+    final locale = ref.watch(localePreferencesProvider);
     final locations = authState.locations?.items ?? [selectedLocation];
 
     return MenuAnchor(
@@ -297,15 +315,15 @@ class _LocationControlCard extends HookConsumerWidget {
                   ? const Icon(Icons.check_rounded)
                   : const SizedBox(width: 24),
               onPressed: () => ref.read(nimbusAuthControllerProvider.notifier).selectLocation(location),
-              child: Text(location.displayName),
+              child: Text(_locationDisplayName(t, location, locale.languageCode)),
             ),
           )
           .toList(),
       builder: (context, controller, child) => _HomeControlCard(
         icon: Icons.public_rounded,
-        title: '节点选择',
-        value: selectedLocation.displayName,
-        detail: '按国家选择',
+        title: t.nimbus.home.locationTitle,
+        value: _locationDisplayName(t, selectedLocation, locale.languageCode),
+        detail: t.nimbus.home.locationDetail,
         onTap: () async {
           await ref.read(nimbusAuthControllerProvider.notifier).loadLocations();
           if (!context.mounted) return;
@@ -387,8 +405,9 @@ Future<void> _showProxyModeDialog(BuildContext context) async {
     builder: (context) => Consumer(
       builder: (context, ref, _) {
         final selected = ref.watch(Preferences.nimbusProxyMode);
+        final t = ref.watch(translationsProvider).requireValue;
         return AlertDialog(
-          title: const Text('代理模式'),
+          title: Text(t.nimbus.home.connectionMode),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: NimbusProxyMode.values
@@ -398,8 +417,8 @@ Future<void> _showProxyModeDialog(BuildContext context) async {
                       mode == selected ? Icons.check_circle_rounded : Icons.circle_outlined,
                       color: mode == selected ? Theme.of(context).colorScheme.primary : null,
                     ),
-                    title: Text(mode.label),
-                    subtitle: Text(mode.description),
+                    title: Text(mode.label(t)),
+                    subtitle: Text(mode.description(t)),
                     onTap: () async {
                       await ref.read(Preferences.nimbusProxyMode.notifier).update(mode);
                       if (context.mounted) Navigator.of(context).pop();
@@ -408,7 +427,7 @@ Future<void> _showProxyModeDialog(BuildContext context) async {
                 )
                 .toList(),
           ),
-          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('关闭'))],
+          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.common.close))],
         );
       },
     ),
@@ -416,21 +435,22 @@ Future<void> _showProxyModeDialog(BuildContext context) async {
 }
 
 class _ActivationConnectionButton extends StatelessWidget {
-  const _ActivationConnectionButton({required this.onTap});
+  const _ActivationConnectionButton({required this.label, required this.onTap});
 
+  final String label;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = theme.colorScheme.primary;
+    const color = _yundoLogoColor;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Semantics(
           button: true,
-          label: '启用',
+          label: label,
           child: SizedBox(
             width: 168,
             height: 168,
@@ -446,15 +466,16 @@ class _ActivationConnectionButton extends StatelessWidget {
           ),
         ),
         const Gap(16),
-        Text('启用', style: theme.textTheme.titleMedium),
+        Text(label, style: theme.textTheme.titleMedium),
       ],
     );
   }
 }
 
 class _UpdateRequiredConnectionButton extends StatelessWidget {
-  const _UpdateRequiredConnectionButton({required this.onTap});
+  const _UpdateRequiredConnectionButton({required this.label, required this.onTap});
 
+  final String label;
   final VoidCallback onTap;
 
   @override
@@ -467,7 +488,7 @@ class _UpdateRequiredConnectionButton extends StatelessWidget {
       children: [
         Semantics(
           button: true,
-          label: '需要更新',
+          label: label,
           child: SizedBox(
             width: 168,
             height: 168,
@@ -483,7 +504,7 @@ class _UpdateRequiredConnectionButton extends StatelessWidget {
           ),
         ),
         const Gap(16),
-        Text('需要更新', style: theme.textTheme.titleMedium),
+        Text(label, style: theme.textTheme.titleMedium),
       ],
     );
   }
@@ -497,11 +518,13 @@ class _ActivationDialog extends HookConsumerWidget {
     final controller = useTextEditingController();
     final errorMessage = useState<String?>(null);
     final authState = ref.watch(nimbusAuthControllerProvider);
+    final theme = Theme.of(context);
+    final t = ref.watch(translationsProvider).requireValue;
 
     Future<void> submit() async {
       final code = controller.text.replaceAll(RegExp('[\\s-]'), '').toUpperCase();
       if (code.length != 16) {
-        errorMessage.value = '请输入 16 位激活码';
+        errorMessage.value = t.nimbus.activation.invalidCode;
         return;
       }
       final success = await ref.read(nimbusAuthControllerProvider.notifier).redeemActivationCode(code);
@@ -509,14 +532,14 @@ class _ActivationDialog extends HookConsumerWidget {
       if (success) {
         final messenger = ScaffoldMessenger.of(context);
         Navigator.of(context).pop();
-        messenger.showSnackBar(const SnackBar(content: Text('套餐已激活')));
+        messenger.showSnackBar(SnackBar(content: Text(t.nimbus.activation.activated)));
       } else {
-        errorMessage.value = ref.read(nimbusAuthControllerProvider).errorMessage ?? '激活失败，请稍后重试';
+        errorMessage.value = ref.read(nimbusAuthControllerProvider).errorMessage ?? t.nimbus.activation.failed;
       }
     }
 
     return AlertDialog(
-      title: const Text('激活套餐'),
+      title: Text(t.nimbus.activation.title),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 360),
         child: Column(
@@ -532,7 +555,16 @@ class _ActivationDialog extends HookConsumerWidget {
                 FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9 -]')),
                 LengthLimitingTextInputFormatter(19),
               ],
-              decoration: const InputDecoration(labelText: '激活码', prefixIcon: Icon(Icons.key_rounded)),
+              decoration: InputDecoration(
+                labelText: t.nimbus.activation.codeLabel,
+                hintText: 'ABCD-EFGH-JKMP-QRST',
+                hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.72),
+                  letterSpacing: 0.4,
+                ),
+                floatingLabelBehavior: FloatingLabelBehavior.always,
+                prefixIcon: const Icon(Icons.key_rounded),
+              ),
               onChanged: (_) => errorMessage.value = null,
               onSubmitted: (_) => submit(),
             ),
@@ -547,12 +579,15 @@ class _ActivationDialog extends HookConsumerWidget {
         ),
       ),
       actions: [
-        TextButton(onPressed: authState.isLoading ? null : () => Navigator.of(context).pop(), child: const Text('取消')),
+        TextButton(
+          onPressed: authState.isLoading ? null : () => Navigator.of(context).pop(),
+          child: Text(t.common.cancel),
+        ),
         FilledButton(
           onPressed: authState.isLoading ? null : submit,
           child: authState.isLoading
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('激活'),
+              : Text(t.nimbus.activation.submit),
         ),
       ],
     );
@@ -560,11 +595,34 @@ class _ActivationDialog extends HookConsumerWidget {
 }
 
 NimbusLocation _selectedLocation(NimbusAuthState authState) {
-  final locations = authState.locations?.items ?? const [NimbusLocation(code: 'auto', displayName: '自动')];
+  final locations = authState.locations?.items ?? const [NimbusLocation(code: 'auto', displayName: '')];
   return locations.firstWhere(
     (location) => location.code == authState.selectedLocationCode,
-    orElse: () => const NimbusLocation(code: 'auto', displayName: '自动'),
+    orElse: () => const NimbusLocation(code: 'auto', displayName: ''),
   );
+}
+
+String _locationDisplayName(Translations t, NimbusLocation location, String languageCode) {
+  if (location.code == 'auto') return t.common.auto;
+  return location.displayNameForLanguage(languageCode);
+}
+
+String _formatRulesVersionForDisplay(String? version) {
+  final text = version?.trim() ?? '';
+  if (text.isEmpty) return '--';
+  return RegExp(r'^\d{4}\.').hasMatch(text) ? text.substring(2) : text;
+}
+
+extension on NimbusProxyMode {
+  String label(Translations t) => switch (this) {
+    NimbusProxyMode.auto => t.nimbus.proxyMode.auto,
+    NimbusProxyMode.global => t.nimbus.proxyMode.global,
+  };
+
+  String description(Translations t) => switch (this) {
+    NimbusProxyMode.auto => t.nimbus.proxyMode.autoDescription,
+    NimbusProxyMode.global => t.nimbus.proxyMode.globalDescription,
+  };
 }
 
 String _formatPlanBytes(int? bytes) {

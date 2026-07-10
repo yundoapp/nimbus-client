@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
+import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/features/connection/data/connection_data_providers.dart';
@@ -79,6 +80,9 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   bool _sessionClosedByServer = false;
 
   NimbusAuthRepository get _repository => ref.read(nimbusAuthRepositoryProvider);
+  Translations get _t => ref.read(translationsProvider).requireValue;
+
+  String _describeError(Object error) => _repository.describeError(error, _t);
 
   @override
   NimbusConnectionState build() {
@@ -157,17 +161,17 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
 
     final session = authState.session;
     if (!authState.isAuthenticated || session == null) {
-      await _fail('请先登录后再启用。', showErrors: showErrors);
+      await _fail(_t.nimbus.errors.loginRequired, showErrors: showErrors);
       return;
     }
     if (!(authState.me?.subscription.hasActivePlan ?? false)) {
-      await _fail('您当前尚无可用套餐，请先激活或者购买套餐后再连接。', showErrors: showErrors);
+      await _fail(_t.nimbus.errors.noPlan, showErrors: showErrors);
       return;
     }
 
     final version = await ref.read(nimbusAppVersionControllerProvider.notifier).check();
     if (version?.forceUpdate ?? false) {
-      await _fail('当前版本需要更新后继续使用。', showErrors: showErrors);
+      await _fail(_t.nimbus.errors.updateRequired, showErrors: showErrors);
       return;
     }
 
@@ -195,7 +199,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       await _writeManagedProfile(plan, rulesPackage);
       state = state.copyWith(isPreparing: true, plan: plan, traffic: plan.traffic, connectedReported: false);
     } catch (error) {
-      await _fail(_repository.describeError(error), showErrors: showErrors);
+      await _fail(_describeError(error), showErrors: showErrors);
       if (_repository.isUnauthorized(error)) {
         await ref.read(nimbusAuthControllerProvider.notifier).restore();
       }
@@ -217,7 +221,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     } catch (error) {
       await _safeReportResult(session: session, plan: plan, status: 'failed', failureCode: 'CLIENT_START_FAILED');
       state = const NimbusConnectionState();
-      await _fail('启用失败，请稍后重试。', showErrors: showErrors);
+      await _fail(_t.nimbus.errors.connectFailed, showErrors: showErrors);
       loggy.warning('failed to start managed connection', error);
     }
   }
@@ -347,10 +351,14 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   Future<void> _handleServerDisconnect(NimbusConnectHeartbeat heartbeat) async {
     _sessionClosedByServer = true;
     _stopHeartbeat();
-    final message = heartbeat.reason == 'TRAFFIC_EXCEEDED' ? '本周期流量已用完，已自动断开。' : '本次连接已结束，请重新启用。';
+    final message = heartbeat.reason == 'TRAFFIC_EXCEEDED'
+        ? _t.nimbus.errors.trafficExceeded
+        : _t.nimbus.errors.sessionEnded;
     state = state.copyWith(isPreparing: false, traffic: heartbeat.traffic, errorMessage: message);
     await ref.read(connectionNotifierProvider.notifier).abortConnection();
-    await ref.read(dialogNotifierProvider.notifier).showCustomAlert(title: '已断开', message: message);
+    await ref
+        .read(dialogNotifierProvider.notifier)
+        .showCustomAlert(title: _t.nimbus.errors.disconnectedTitle, message: message);
     state = NimbusConnectionState(traffic: heartbeat.traffic, errorMessage: message);
     _sessionClosedByServer = false;
   }
@@ -552,15 +560,17 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   Future<void> _fail(String message, {required bool showErrors}) async {
     state = state.copyWith(isPreparing: false, errorMessage: message, plan: null, connectedReported: false);
     if (showErrors) {
-      await ref.read(dialogNotifierProvider.notifier).showCustomAlert(title: '无法启用', message: message);
+      await ref
+          .read(dialogNotifierProvider.notifier)
+          .showCustomAlert(title: _t.nimbus.errors.cannotConnectTitle, message: message);
     }
   }
 
   String _friendlyConnectionFailure(ConnectionFailure failure) {
     return switch (failure) {
-      MissingVpnPermission() => '需要允许系统网络权限后才能启用。',
-      MissingPrivilege() => '需要系统授权后才能启用。',
-      _ => '启用失败，请稍后重试。',
+      MissingVpnPermission() => _t.nimbus.errors.missingSystemPermission,
+      MissingPrivilege() => _t.nimbus.errors.missingPrivilege,
+      _ => _t.nimbus.errors.connectFailed,
     };
   }
 

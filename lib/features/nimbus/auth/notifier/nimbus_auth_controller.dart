@@ -1,3 +1,4 @@
+import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -52,6 +53,9 @@ class NimbusAuthState {
 
 class NimbusAuthController extends Notifier<NimbusAuthState> {
   NimbusAuthRepository get _repository => ref.read(nimbusAuthRepositoryProvider);
+  Translations get _t => ref.read(translationsProvider).requireValue;
+
+  String _describeError(Object error) => _repository.describeError(error, _t);
 
   @override
   NimbusAuthState build() {
@@ -89,7 +93,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
           devices: state.devices,
           locations: state.locations,
           selectedLocationCode: state.selectedLocationCode,
-          errorMessage: _repository.describeError(error),
+          errorMessage: _describeError(error),
         );
         return;
       }
@@ -127,7 +131,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       await _setAuthenticated(session);
       return true;
     } catch (error) {
-      state = NimbusAuthState(isAuthenticated: false, errorMessage: _repository.describeError(error));
+      state = NimbusAuthState(isAuthenticated: false, errorMessage: _describeError(error));
       return false;
     }
   }
@@ -147,7 +151,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       await _setAuthenticated(session);
       return true;
     } catch (error) {
-      state = NimbusAuthState(isAuthenticated: false, errorMessage: _repository.describeError(error));
+      state = NimbusAuthState(isAuthenticated: false, errorMessage: _describeError(error));
       return false;
     }
   }
@@ -175,7 +179,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
         devices: state.devices,
         locations: state.locations,
         selectedLocationCode: state.selectedLocationCode,
-        errorMessage: _repository.describeError(error),
+        errorMessage: _describeError(error),
       );
     }
   }
@@ -211,7 +215,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
         devices: state.devices,
         locations: state.locations,
         selectedLocationCode: state.selectedLocationCode,
-        errorMessage: _repository.describeError(error),
+        errorMessage: _describeError(error),
       );
     }
   }
@@ -250,7 +254,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
         devices: state.devices,
         locations: state.locations,
         selectedLocationCode: state.selectedLocationCode,
-        errorMessage: _repository.describeError(error),
+        errorMessage: _describeError(error),
       );
     }
   }
@@ -308,7 +312,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
           devices: state.devices,
           locations: state.locations,
           selectedLocationCode: state.selectedLocationCode,
-          errorMessage: _repository.describeError(error),
+          errorMessage: _describeError(error),
         );
       }
       return false;
@@ -350,7 +354,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
           devices: state.devices,
           locations: state.locations,
           selectedLocationCode: state.selectedLocationCode,
-          errorMessage: _repository.describeError(error),
+          errorMessage: _describeError(error),
         );
       }
       return false;
@@ -383,7 +387,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
     try {
       me = await _repository.fetchMe(session.accessToken);
     } catch (error) {
-      errorMessage = _repository.describeError(error);
+      errorMessage = _describeError(error);
     }
     state = NimbusAuthState.authenticated(
       session: session,

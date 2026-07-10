@@ -26,7 +26,8 @@ class NimbusAuthPage extends HookConsumerWidget {
     final obscurePassword = useState(true);
     final authState = ref.watch(nimbusAuthControllerProvider);
     final isRegister = mode.value == NimbusAuthMode.register;
-    final appTitle = ref.watch(translationsProvider).requireValue.common.appTitle;
+    final t = ref.watch(translationsProvider).requireValue;
+    final appTitle = t.common.appTitle;
 
     Future<void> submit() async {
       if (authState.isLoading) return;
@@ -60,13 +61,15 @@ class NimbusAuthPage extends HookConsumerWidget {
                     Image.asset('assets/images/app_icon.png', width: 56, height: 56),
                     const Gap(16),
                     Text(
-                      isRegister ? '注册 $appTitle' : '登录 $appTitle',
+                      isRegister
+                          ? t.nimbus.auth.registerTitle(appTitle: appTitle)
+                          : t.nimbus.auth.loginTitle(appTitle: appTitle),
                       textAlign: TextAlign.center,
                       style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
                     ),
                     const Gap(6),
                     Text(
-                      isRegister ? '创建账号后再使用激活码开通套餐' : '登录后即可查看套餐、流量和设备',
+                      isRegister ? t.nimbus.auth.registerSubtitle : t.nimbus.auth.loginSubtitle,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
@@ -79,11 +82,11 @@ class NimbusAuthPage extends HookConsumerWidget {
                         FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9_]')),
                         LengthLimitingTextInputFormatter(32),
                       ],
-                      decoration: const InputDecoration(
-                        labelText: '用户名',
-                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      decoration: InputDecoration(
+                        labelText: t.nimbus.auth.username,
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
                       ),
-                      validator: _validateUsername,
+                      validator: (value) => _validateUsername(t, value),
                     ),
                     const Gap(14),
                     TextFormField(
@@ -95,15 +98,15 @@ class NimbusAuthPage extends HookConsumerWidget {
                         if (!isRegister) submit();
                       },
                       decoration: InputDecoration(
-                        labelText: '密码',
+                        labelText: t.nimbus.auth.password,
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: IconButton(
-                          tooltip: obscurePassword.value ? '显示密码' : '隐藏密码',
+                          tooltip: obscurePassword.value ? t.nimbus.auth.showPassword : t.nimbus.auth.hidePassword,
                           onPressed: () => obscurePassword.value = !obscurePassword.value,
                           icon: Icon(obscurePassword.value ? Icons.visibility_rounded : Icons.visibility_off_rounded),
                         ),
                       ),
-                      validator: (value) => isRegister ? _validateNewPassword(value) : _validatePassword(value),
+                      validator: (value) => isRegister ? _validateNewPassword(t, value) : _validatePassword(t, value),
                     ),
                     if (isRegister) ...[
                       const Gap(14),
@@ -113,12 +116,12 @@ class NimbusAuthPage extends HookConsumerWidget {
                         obscureText: obscurePassword.value,
                         textInputAction: TextInputAction.done,
                         onFieldSubmitted: (_) => submit(),
-                        decoration: const InputDecoration(
-                          labelText: '确认密码',
-                          prefixIcon: Icon(Icons.lock_reset_rounded),
+                        decoration: InputDecoration(
+                          labelText: t.nimbus.auth.confirmPassword,
+                          prefixIcon: const Icon(Icons.lock_reset_rounded),
                         ),
                         validator: (value) {
-                          if (value != passwordController.text) return '两次输入的密码不一致';
+                          if (value != passwordController.text) return t.nimbus.auth.passwordsDoNotMatch;
                           return null;
                         },
                       ),
@@ -128,7 +131,7 @@ class NimbusAuthPage extends HookConsumerWidget {
                         controlAffinity: ListTileControlAffinity.leading,
                         value: acceptedTerms.value,
                         onChanged: (value) => acceptedTerms.value = value ?? false,
-                        title: const Text('我确认已了解使用说明'),
+                        title: Text(t.nimbus.auth.acceptTerms),
                       ),
                     ],
                     if (authState.errorMessage != null) ...[
@@ -145,7 +148,7 @@ class NimbusAuthPage extends HookConsumerWidget {
                       onPressed: authState.isLoading ? null : submit,
                       child: authState.isLoading
                           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : Text(isRegister ? '注册并登录' : '登录'),
+                          : Text(isRegister ? t.nimbus.auth.registerAndLogin : t.nimbus.auth.login),
                     ),
                     const Gap(10),
                     TextButton(
@@ -155,7 +158,7 @@ class NimbusAuthPage extends HookConsumerWidget {
                               mode.value = isRegister ? NimbusAuthMode.login : NimbusAuthMode.register;
                               formKey.currentState?.reset();
                             },
-                      child: Text(isRegister ? '已有账号，去登录' : '没有账号，去注册'),
+                      child: Text(isRegister ? t.nimbus.auth.goLogin : t.nimbus.auth.goRegister),
                     ),
                   ],
                 ),
@@ -168,24 +171,24 @@ class NimbusAuthPage extends HookConsumerWidget {
   }
 }
 
-String? _validateUsername(String? value) {
+String? _validateUsername(Translations t, String? value) {
   final username = value?.trim() ?? '';
   if (!RegExp(r'^[A-Za-z0-9_]{4,32}$').hasMatch(username)) {
-    return '用户名需为 4-32 位字母、数字或下划线';
+    return t.nimbus.auth.usernameInvalid;
   }
   return null;
 }
 
-String? _validatePassword(String? value) {
-  if (value == null || value.isEmpty) return '请输入密码';
+String? _validatePassword(Translations t, String? value) {
+  if (value == null || value.isEmpty) return t.nimbus.auth.passwordRequired;
   return null;
 }
 
-String? _validateNewPassword(String? value) {
+String? _validateNewPassword(Translations t, String? value) {
   final password = value ?? '';
-  if (password.length < 10) return '密码至少 10 位';
-  if (!RegExp('[A-Za-z]').hasMatch(password)) return '密码需要包含字母';
-  if (!RegExp('[0-9]').hasMatch(password)) return '密码需要包含数字';
-  if (!RegExp('[^A-Za-z0-9]').hasMatch(password)) return '密码需要包含特殊字符';
+  if (password.length < 10) return t.nimbus.auth.passwordTooShort;
+  if (!RegExp('[A-Za-z]').hasMatch(password)) return t.nimbus.auth.passwordNeedsLetter;
+  if (!RegExp('[0-9]').hasMatch(password)) return t.nimbus.auth.passwordNeedsNumber;
+  if (!RegExp('[^A-Za-z0-9]').hasMatch(password)) return t.nimbus.auth.passwordNeedsSymbol;
   return null;
 }

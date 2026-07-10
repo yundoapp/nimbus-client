@@ -717,5 +717,157 @@
       "missingLicense": "Licence Psiphon requise",
       "missingLicenseMsg": "Le profil sélectionné utilise la fonctionnalité Psiphon ; pour utiliser cette fonctionnalité, vous devez accepter la licence Psiphon"
     }
+  },
+  "nimbus": {
+    "common": {
+      "latestVersion": "Vous utilisez déjà la dernière version",
+      "serverUnavailable": "Impossible de joindre le serveur. Réessayez plus tard.",
+      "requestTimeout": "La requête a expiré. Réessayez plus tard.",
+      "requestFailed": "La requête a échoué. Réessayez plus tard.",
+      "operationFailed": "L’opération a échoué. Réessayez plus tard."
+    },
+    "home": {
+      "noPlanTitle": "Aucun forfait actif",
+      "noPlanMessage": "Activez un forfait avant de vous connecter.",
+      "later": "Plus tard",
+      "activatePlan": "Activer le forfait",
+      "planExpired": "Forfait expiré",
+      "noAvailablePlan": "Aucun forfait actif",
+      "activateHint": "Activez un forfait avant de vous connecter.",
+      "monthlyUsage": "Utilisation du forfait ce mois-ci",
+      "expiresOn": "Expire le ${date}",
+      "used": "Utilisé",
+      "unused": "Restant",
+      "connectionMode": "Mode de connexion",
+      "accessPolicyVersion": "Politique d’accès ${version}",
+      "globalRoutingDetail": "Tout le trafic passe par Yundo",
+      "locationTitle": "Emplacement",
+      "locationDetail": "Choisir par pays ou région",
+      "connect": "Connecter",
+      "updateRequired": "Mise à jour requise"
+    },
+    "activation": {
+      "title": "Activer le forfait",
+      "codeLabel": "Code d’activation",
+      "invalidCode": "Saisissez un code d’activation de 16 caractères",
+      "activated": "Forfait activé",
+      "failed": "Échec de l’activation. Réessayez plus tard.",
+      "submit": "Activer"
+    },
+    "proxyMode": {
+      "auto": "Automatique",
+      "global": "Tout le trafic",
+      "autoDescription": "Choisit automatiquement quand Yundo est nécessaire.",
+      "globalDescription": "Fait passer tout le trafic par Yundo. Utile pour un diagnostic temporaire."
+    },
+    "auth": {
+      "loginTitle": "Connexion à ${appTitle}",
+      "registerTitle": "Créer un compte ${appTitle}",
+      "loginSubtitle": "Connectez-vous pour voir votre forfait, votre trafic et vos appareils.",
+      "registerSubtitle": "Créez un compte, puis activez votre forfait avec un code.",
+      "username": "Nom d’utilisateur",
+      "password": "Mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "showPassword": "Afficher le mot de passe",
+      "hidePassword": "Masquer le mot de passe",
+      "acceptTerms": "J’ai lu et compris les consignes d’utilisation",
+      "registerAndLogin": "Créer le compte et se connecter",
+      "login": "Se connecter",
+      "goLogin": "Déjà un compte ? Se connecter",
+      "goRegister": "Pas encore de compte ? Créer",
+      "usernameInvalid": "Utilisez 4 à 32 lettres, chiffres ou traits de soulignement",
+      "passwordRequired": "Saisissez votre mot de passe",
+      "passwordsDoNotMatch": "Les mots de passe ne correspondent pas",
+      "passwordTooShort": "Le mot de passe doit contenir au moins 10 caractères",
+      "passwordNeedsLetter": "Le mot de passe doit contenir une lettre",
+      "passwordNeedsNumber": "Le mot de passe doit contenir un chiffre",
+      "passwordNeedsSymbol": "Le mot de passe doit contenir un caractère spécial"
+    },
+    "devices": {
+      "title": "Gestion des appareils",
+      "count": "${used}/${limit} appareils",
+      "empty": "Aucun appareil pour le moment",
+      "unknownDevice": "Appareil inconnu",
+      "current": "Actuel",
+      "deleteTooltip": "Retirer l’appareil",
+      "deleteTitle": "Retirer l’appareil",
+      "deleteConfirm": "Retirer « ${name} » ?",
+      "unknownPlatform": "Plateforme inconnue",
+      "lastActive": "Dernière activité ${time}",
+      "lastActiveEmpty": "Dernière activité --"
+    },
+    "issueReport": {
+      "title": "Signaler un problème",
+      "description": "Un instantané de diagnostic anonymisé sera envoyé pour aider à localiser le problème plus vite.",
+      "descriptionLabel": "Description du problème (facultatif)",
+      "submit": "Signaler",
+      "submitted": "Problème signalé"
+    },
+    "routePreferences": {
+      "title": "Préférences d’accès",
+      "count": "${used}/${limit} préférences",
+      "requiresConnection": "Utiliser la connexion",
+      "directConnection": "Connexion non nécessaire",
+      "domainRequired": "Saisissez un domaine",
+      "domainLabel": "Domaine",
+      "cloudSyncHint": "Les préférences sont enregistrées dans le cloud. Vos autres appareils les utiliseront à leur prochaine connexion.",
+      "cloudSyncSaved": "Enregistré dans le cloud. Vos autres appareils l’utiliseront à leur prochaine connexion.",
+      "limitReached": "Limite atteinte",
+      "add": "Ajouter",
+      "empty": "Aucune préférence d’accès",
+      "deleteTooltip": "Supprimer",
+      "deleteTitle": "Supprimer la préférence d’accès",
+      "deleteConfirm": "Supprimer « ${value} » ?"
+    },
+    "appVersion": {
+      "updateRequired": "Mise à jour requise",
+      "newVersion": "Nouvelle version disponible",
+      "forceMessage": "Cette version n’est plus prise en charge. Mettez à jour pour continuer.",
+      "optionalMessage": "Une nouvelle version est disponible.",
+      "currentVersion": "Version actuelle",
+      "latestVersion": "Dernière version",
+      "minimumVersion": "Version minimale prise en charge",
+      "releaseNotes": "Notes de version",
+      "openDownloadPage": "Ouvrir la page de téléchargement"
+    },
+    "settings": {
+      "deviceManagement": "Gestion des appareils",
+      "issueReport": "Signaler un problème",
+      "logout": "Se déconnecter",
+      "autoConnectOnLaunch": "Connecter au démarrage",
+      "accessPreferences": "Préférences d’accès"
+    },
+    "tray": {
+      "openMainWindow": "Ouvrir la fenêtre principale",
+      "disconnected": "Déconnecté"
+    },
+    "errors": {
+      "loginRequired": "Connectez-vous avant de vous connecter.",
+      "noPlan": "Activez un forfait avant de vous connecter.",
+      "updateRequired": "Mettez l’app à jour pour continuer.",
+      "connectFailed": "La connexion a échoué. Réessayez plus tard.",
+      "trafficExceeded": "Le trafic de ce cycle est épuisé. La connexion a été arrêtée automatiquement.",
+      "sessionEnded": "Cette connexion est terminée. Reconnectez-vous pour continuer.",
+      "disconnectedTitle": "Déconnecté",
+      "cannotConnectTitle": "Connexion impossible",
+      "missingSystemPermission": "Autorisez le réseau système requis avant de vous connecter.",
+      "missingPrivilege": "Une autorisation système est requise avant de vous connecter."
+    },
+    "apiError": {
+      "invalidCredentials": "Nom d’utilisateur ou mot de passe incorrect.",
+      "registrationDisabled": "L’inscription n’est pas disponible pour le moment.",
+      "usernameTaken": "Ce nom d’utilisateur est déjà utilisé.",
+      "accountDisabled": "Ce compte est désactivé.",
+      "deviceLimitReached": "La limite d’appareils est atteinte. Retirez un ancien appareil et réessayez.",
+      "activationCodeInvalid": "Ce code d’activation est invalide ou indisponible.",
+      "activationCodeUsed": "Ce code d’activation a déjà été utilisé.",
+      "activationCodeRevoked": "Ce code d’activation est fermé.",
+      "planUnavailable": "Ce forfait n’est pas disponible pour le moment.",
+      "subscriptionExpired": "Votre forfait a expiré. Activez un nouveau forfait pour continuer.",
+      "noAvailableLocation": "Aucun emplacement disponible pour le moment. Réessayez plus tard.",
+      "routePreferenceConflict": "Cette préférence d’accès existe déjà.",
+      "routeTargetInvalid": "Saisissez un domaine valide.",
+      "issueReportAlreadyOpen": "Vous avez déjà un signalement ouvert."
+    }
   }
 }

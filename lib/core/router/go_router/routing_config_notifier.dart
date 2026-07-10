@@ -55,19 +55,19 @@ int getIndexOfBranch(bool isMobileBreakpoint, bool showProfilesAction, String na
     ? ['home', 'settings'].indexOf(name)
     : ['home', if (showProfilesAction) 'profiles', 'settings', 'logs', 'about'].indexOf(name);
 
+bool shouldShowProfilesAction() {
+  // Yundo keeps a managed internal profile for the connection engine; users should not manage profiles directly.
+  return false;
+}
+
 @Riverpod(keepAlive: true)
 class RoutingConfigNotifier extends _$RoutingConfigNotifier {
   @override
   RoutingConfig build() {
     final isMobileBreakpoint = ref.watch(isMobileBreakpointProvider);
-    final bool showProfilesAction;
-    if (isMobileBreakpoint == true) {
-      showProfilesAction = false;
-    } else {
-      showProfilesAction = ref.watch(hasAnyProfileProvider).value ?? false;
-    }
+    final showProfilesAction = shouldShowProfilesAction();
     if (isMobileBreakpoint == null) return loadingConfig;
-    final authState = ref.watch(nimbusAuthControllerProvider);
+    final isAuthenticated = ref.watch(nimbusAuthControllerProvider.select((state) => state.isAuthenticated));
     return RoutingConfig(
       redirect: (context, state) {
         // fix path-parameters for deep link
@@ -85,21 +85,21 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
         }
 
         final isAuthRoute = state.matchedLocation.startsWith('/auth/');
-        if (!authState.isAuthenticated && !isAuthRoute) {
+        if (!isAuthenticated && !isAuthRoute) {
           return '/auth/login';
         }
-        if (authState.isAuthenticated && isAuthRoute) {
+        if (isAuthenticated && isAuthRoute) {
           return '/home';
         }
         if (state.matchedLocation == '/intro') {
           return '/home';
-        } else if (authState.isAuthenticated && url != null && Uri.parse(url).host == 'import') {
+        } else if (isAuthenticated && url != null && Uri.parse(url).host == 'import') {
           // Auto import profile from url
           WidgetsBinding.instance.addPostFrameCallback(
             (_) => ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile(url: url, triggeredByDeepLink: true),
           );
           return '/home';
-        } else if (authState.isAuthenticated && url != null) {
+        } else if (isAuthenticated && url != null) {
           final uri = Uri.parse(url);
           final path = uri.path + (uri.hasQuery ? "?${uri.query}" : "");
           return path;

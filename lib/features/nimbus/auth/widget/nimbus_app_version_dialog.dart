@@ -1,34 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/utils/uri_utils.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-class NimbusAppVersionDialog extends StatelessWidget {
+class NimbusAppVersionDialog extends ConsumerWidget {
   const NimbusAppVersionDialog({required this.version, super.key});
 
   final NimbusAppVersionCheck version;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final forceUpdate = version.forceUpdate;
     final theme = Theme.of(context);
+    final t = ref.watch(translationsProvider).requireValue;
 
     return AlertDialog(
-      title: Text(forceUpdate ? '需要更新' : '发现新版本'),
+      title: Text(forceUpdate ? t.nimbus.appVersion.updateRequired : t.nimbus.appVersion.newVersion),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(forceUpdate ? '当前版本已不再支持，请更新后继续使用。' : '有新的版本可用。'),
+            Text(forceUpdate ? t.nimbus.appVersion.forceMessage : t.nimbus.appVersion.optionalMessage),
             const Gap(12),
-            _VersionRow(label: '当前版本', value: version.currentVersion),
-            _VersionRow(label: '最新版本', value: version.latestVersion),
-            _VersionRow(label: '最低支持', value: version.minimumVersion),
+            _VersionRow(label: t.nimbus.appVersion.currentVersion, value: version.currentVersion),
+            _VersionRow(label: t.nimbus.appVersion.latestVersion, value: version.latestVersion),
+            _VersionRow(label: t.nimbus.appVersion.minimumVersion, value: version.minimumVersion),
             if (version.releaseNotes?.trim().isNotEmpty ?? false) ...[
               const Gap(12),
-              Text('更新说明', style: theme.textTheme.labelLarge),
+              Text(t.nimbus.appVersion.releaseNotes, style: theme.textTheme.labelLarge),
               const Gap(4),
               Text(version.releaseNotes!, style: theme.textTheme.bodyMedium),
             ],
@@ -36,7 +39,7 @@ class NimbusAppVersionDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        if (!forceUpdate) TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('稍后')),
+        if (!forceUpdate) TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.common.later)),
         FilledButton.icon(
           onPressed: version.downloadUrl == null
               ? null
@@ -44,7 +47,7 @@ class NimbusAppVersionDialog extends StatelessWidget {
                   await UriUtils.tryLaunch(Uri.parse(version.downloadUrl!));
                 },
           icon: const Icon(Icons.open_in_new_rounded),
-          label: const Text('打开下载页'),
+          label: Text(t.nimbus.appVersion.openDownloadPage),
         ),
       ],
     );

@@ -63,7 +63,7 @@ class GeneralPage extends HookConsumerWidget {
               onChanged: ref.read(Preferences.silentStart.notifier).update,
             ),
             SwitchListTile.adaptive(
-              title: const Text('启动后自动连接'),
+              title: Text(t.nimbus.settings.autoConnectOnLaunch),
               secondary: const Icon(Icons.bolt_rounded),
               value: ref.watch(Preferences.nimbusAutoConnect),
               onChanged: ref.read(Preferences.nimbusAutoConnect.notifier).update,

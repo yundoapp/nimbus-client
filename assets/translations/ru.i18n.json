@@ -729,5 +729,157 @@
       "missingLicense": "Требуется лицензия Psiphon",
       "missingLicenseMsg": "Выбранный профиль использует функцию Psiphon; для использования этой функции необходимо принять лицензию Psiphon"
     }
+  },
+  "nimbus": {
+    "common": {
+      "latestVersion": "У вас уже последняя версия",
+      "serverUnavailable": "Не удалось подключиться к серверу. Попробуйте позже.",
+      "requestTimeout": "Время ожидания запроса истекло. Попробуйте позже.",
+      "requestFailed": "Запрос не выполнен. Попробуйте позже.",
+      "operationFailed": "Операция не выполнена. Попробуйте позже."
+    },
+    "home": {
+      "noPlanTitle": "Нет активного плана",
+      "noPlanMessage": "Активируйте план перед подключением.",
+      "later": "Позже",
+      "activatePlan": "Активировать план",
+      "planExpired": "Срок плана истек",
+      "noAvailablePlan": "Нет активного плана",
+      "activateHint": "Активируйте план перед подключением.",
+      "monthlyUsage": "Использование плана за месяц",
+      "expiresOn": "Действует до ${date}",
+      "used": "Использовано",
+      "unused": "Осталось",
+      "connectionMode": "Режим подключения",
+      "accessPolicyVersion": "Политика доступа ${version}",
+      "globalRoutingDetail": "Весь трафик проходит через Yundo",
+      "locationTitle": "Расположение",
+      "locationDetail": "Выбрать страну или регион",
+      "connect": "Подключиться",
+      "updateRequired": "Требуется обновление"
+    },
+    "activation": {
+      "title": "Активировать план",
+      "codeLabel": "Код активации",
+      "invalidCode": "Введите 16-значный код активации",
+      "activated": "План активирован",
+      "failed": "Не удалось активировать. Попробуйте позже.",
+      "submit": "Активировать"
+    },
+    "proxyMode": {
+      "auto": "Автоматически",
+      "global": "Весь трафик",
+      "autoDescription": "Автоматически выбирает, когда нужен Yundo.",
+      "globalDescription": "Направляет весь трафик через Yundo. Полезно для временной диагностики."
+    },
+    "auth": {
+      "loginTitle": "Войти в ${appTitle}",
+      "registerTitle": "Создать аккаунт ${appTitle}",
+      "loginSubtitle": "Войдите, чтобы увидеть план, трафик и устройства.",
+      "registerSubtitle": "Создайте аккаунт, затем активируйте план кодом.",
+      "username": "Имя пользователя",
+      "password": "Пароль",
+      "confirmPassword": "Подтвердите пароль",
+      "showPassword": "Показать пароль",
+      "hidePassword": "Скрыть пароль",
+      "acceptTerms": "Я прочитал и понял инструкции по использованию",
+      "registerAndLogin": "Создать аккаунт и войти",
+      "login": "Войти",
+      "goLogin": "Уже есть аккаунт? Войти",
+      "goRegister": "Нет аккаунта? Создать",
+      "usernameInvalid": "Используйте 4-32 буквы, цифры или подчеркивания",
+      "passwordRequired": "Введите пароль",
+      "passwordsDoNotMatch": "Пароли не совпадают",
+      "passwordTooShort": "Пароль должен быть не короче 10 символов",
+      "passwordNeedsLetter": "Пароль должен содержать букву",
+      "passwordNeedsNumber": "Пароль должен содержать цифру",
+      "passwordNeedsSymbol": "Пароль должен содержать специальный символ"
+    },
+    "devices": {
+      "title": "Управление устройствами",
+      "count": "${used}/${limit} устройств",
+      "empty": "Устройств пока нет",
+      "unknownDevice": "Неизвестное устройство",
+      "current": "Текущее",
+      "deleteTooltip": "Удалить устройство",
+      "deleteTitle": "Удалить устройство",
+      "deleteConfirm": "Удалить «${name}»?",
+      "unknownPlatform": "Неизвестная платформа",
+      "lastActive": "Последняя активность ${time}",
+      "lastActiveEmpty": "Последняя активность --"
+    },
+    "issueReport": {
+      "title": "Сообщить о проблеме",
+      "description": "Будет отправлен обезличенный снимок диагностики, чтобы быстрее найти проблему.",
+      "descriptionLabel": "Описание проблемы (необязательно)",
+      "submit": "Отправить",
+      "submitted": "Проблема отправлена"
+    },
+    "routePreferences": {
+      "title": "Предпочтения доступа",
+      "count": "${used}/${limit} предпочтений",
+      "requiresConnection": "Использовать подключение",
+      "directConnection": "Подключение не требуется",
+      "domainRequired": "Введите домен",
+      "domainLabel": "Домен",
+      "cloudSyncHint": "Настройки сохраняются в облаке. Другие ваши устройства применят их при следующем подключении.",
+      "cloudSyncSaved": "Сохранено в облаке. Другие ваши устройства применят настройку при следующем подключении.",
+      "limitReached": "Достигнут лимит",
+      "add": "Добавить",
+      "empty": "Предпочтений доступа пока нет",
+      "deleteTooltip": "Удалить",
+      "deleteTitle": "Удалить предпочтение доступа",
+      "deleteConfirm": "Удалить «${value}»?"
+    },
+    "appVersion": {
+      "updateRequired": "Требуется обновление",
+      "newVersion": "Доступна новая версия",
+      "forceMessage": "Эта версия больше не поддерживается. Обновите приложение, чтобы продолжить.",
+      "optionalMessage": "Доступна новая версия.",
+      "currentVersion": "Текущая версия",
+      "latestVersion": "Последняя версия",
+      "minimumVersion": "Минимально поддерживаемая",
+      "releaseNotes": "Примечания к выпуску",
+      "openDownloadPage": "Открыть страницу загрузки"
+    },
+    "settings": {
+      "deviceManagement": "Управление устройствами",
+      "issueReport": "Сообщить о проблеме",
+      "logout": "Выйти",
+      "autoConnectOnLaunch": "Подключаться при запуске",
+      "accessPreferences": "Предпочтения доступа"
+    },
+    "tray": {
+      "openMainWindow": "Открыть главное окно",
+      "disconnected": "Отключено"
+    },
+    "errors": {
+      "loginRequired": "Войдите перед подключением.",
+      "noPlan": "Активируйте план перед подключением.",
+      "updateRequired": "Обновите приложение, чтобы продолжить.",
+      "connectFailed": "Не удалось подключиться. Попробуйте позже.",
+      "trafficExceeded": "Трафик этого цикла исчерпан. Подключение остановлено автоматически.",
+      "sessionEnded": "Это подключение завершено. Подключитесь снова, чтобы продолжить.",
+      "disconnectedTitle": "Отключено",
+      "cannotConnectTitle": "Не удалось подключиться",
+      "missingSystemPermission": "Разрешите системный сетевой доступ перед подключением.",
+      "missingPrivilege": "Перед подключением требуется системная авторизация."
+    },
+    "apiError": {
+      "invalidCredentials": "Неверное имя пользователя или пароль.",
+      "registrationDisabled": "Регистрация сейчас недоступна.",
+      "usernameTaken": "Это имя пользователя уже занято.",
+      "accountDisabled": "Этот аккаунт отключен.",
+      "deviceLimitReached": "Достигнут лимит устройств. Удалите старое устройство и попробуйте снова.",
+      "activationCodeInvalid": "Этот код активации недействителен или недоступен.",
+      "activationCodeUsed": "Этот код активации уже использован.",
+      "activationCodeRevoked": "Этот код активации закрыт.",
+      "planUnavailable": "Этот план сейчас недоступен.",
+      "subscriptionExpired": "Срок вашего плана истек. Активируйте новый план, чтобы продолжить.",
+      "noAvailableLocation": "Сейчас нет доступных локаций. Попробуйте позже.",
+      "routePreferenceConflict": "Это предпочтение доступа уже существует.",
+      "routeTargetInvalid": "Введите корректный домен.",
+      "issueReportAlreadyOpen": "У вас уже есть открытое сообщение о проблеме."
+    }
   }
 }

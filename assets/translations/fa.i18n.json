@@ -725,5 +725,157 @@
       "missingLicense": "لایسنس Psiphon لازم است",
       "missingLicenseMsg": "پروفایل انتخاب‌شده از ویژگی Psiphon استفاده می‌کند؛ برای استفاده از این قابلیت، باید با لایسنس Psiphon موافقت شود"
     }
+  },
+  "nimbus": {
+    "common": {
+      "latestVersion": "شما از آخرین نسخه استفاده می‌کنید",
+      "serverUnavailable": "اتصال به سرور ممکن نیست. بعداً دوباره تلاش کنید.",
+      "requestTimeout": "درخواست منقضی شد. بعداً دوباره تلاش کنید.",
+      "requestFailed": "درخواست ناموفق بود. بعداً دوباره تلاش کنید.",
+      "operationFailed": "عملیات ناموفق بود. بعداً دوباره تلاش کنید."
+    },
+    "home": {
+      "noPlanTitle": "طرح فعالی وجود ندارد",
+      "noPlanMessage": "پیش از اتصال، یک طرح را فعال کنید.",
+      "later": "بعداً",
+      "activatePlan": "فعال‌سازی طرح",
+      "planExpired": "طرح منقضی شده است",
+      "noAvailablePlan": "طرح فعالی وجود ندارد",
+      "activateHint": "پیش از اتصال، یک طرح را فعال کنید.",
+      "monthlyUsage": "مصرف طرح در این ماه",
+      "expiresOn": "انقضا ${date}",
+      "used": "مصرف‌شده",
+      "unused": "باقی‌مانده",
+      "connectionMode": "حالت اتصال",
+      "accessPolicyVersion": "سیاست دسترسی ${version}",
+      "globalRoutingDetail": "همه ترافیک از طریق Yundo عبور می‌کند",
+      "locationTitle": "موقعیت",
+      "locationDetail": "انتخاب بر اساس کشور یا منطقه",
+      "connect": "اتصال",
+      "updateRequired": "به‌روزرسانی لازم است"
+    },
+    "activation": {
+      "title": "فعال‌سازی طرح",
+      "codeLabel": "کد فعال‌سازی",
+      "invalidCode": "کد فعال‌سازی ۱۶ کاراکتری را وارد کنید",
+      "activated": "طرح فعال شد",
+      "failed": "فعال‌سازی ناموفق بود. بعداً دوباره تلاش کنید.",
+      "submit": "فعال‌سازی"
+    },
+    "proxyMode": {
+      "auto": "خودکار",
+      "global": "همه ترافیک",
+      "autoDescription": "به‌طور خودکار زمان نیاز به Yundo را انتخاب می‌کند.",
+      "globalDescription": "همه ترافیک را از طریق Yundo عبور می‌دهد. برای عیب‌یابی موقت مفید است."
+    },
+    "auth": {
+      "loginTitle": "ورود به ${appTitle}",
+      "registerTitle": "ایجاد حساب ${appTitle}",
+      "loginSubtitle": "برای دیدن طرح، ترافیک و دستگاه‌ها وارد شوید.",
+      "registerSubtitle": "یک حساب بسازید و سپس طرح را با کد فعال کنید.",
+      "username": "نام کاربری",
+      "password": "رمز عبور",
+      "confirmPassword": "تأیید رمز عبور",
+      "showPassword": "نمایش رمز عبور",
+      "hidePassword": "پنهان کردن رمز عبور",
+      "acceptTerms": "یادداشت‌های استفاده را خوانده و درک کرده‌ام",
+      "registerAndLogin": "ایجاد حساب و ورود",
+      "login": "ورود",
+      "goLogin": "حساب دارید؟ وارد شوید",
+      "goRegister": "حساب ندارید؟ ایجاد کنید",
+      "usernameInvalid": "از ۴ تا ۳۲ حرف، عدد یا زیرخط استفاده کنید",
+      "passwordRequired": "رمز عبور را وارد کنید",
+      "passwordsDoNotMatch": "رمزهای عبور یکسان نیستند",
+      "passwordTooShort": "رمز عبور باید حداقل ۱۰ کاراکتر باشد",
+      "passwordNeedsLetter": "رمز عبور باید شامل حرف باشد",
+      "passwordNeedsNumber": "رمز عبور باید شامل عدد باشد",
+      "passwordNeedsSymbol": "رمز عبور باید شامل نویسه ویژه باشد"
+    },
+    "devices": {
+      "title": "مدیریت دستگاه‌ها",
+      "count": "${used}/${limit} دستگاه",
+      "empty": "هنوز دستگاهی وجود ندارد",
+      "unknownDevice": "دستگاه ناشناس",
+      "current": "فعلی",
+      "deleteTooltip": "حذف دستگاه",
+      "deleteTitle": "حذف دستگاه",
+      "deleteConfirm": "«${name}» حذف شود؟",
+      "unknownPlatform": "پلتفرم ناشناس",
+      "lastActive": "آخرین فعالیت ${time}",
+      "lastActiveEmpty": "آخرین فعالیت --"
+    },
+    "issueReport": {
+      "title": "گزارش مشکل",
+      "description": "یک نمونه تشخیصی بدون اطلاعات حساس ارسال می‌شود تا مشکل سریع‌تر پیدا شود.",
+      "descriptionLabel": "شرح مشکل (اختیاری)",
+      "submit": "گزارش",
+      "submitted": "مشکل گزارش شد"
+    },
+    "routePreferences": {
+      "title": "ترجیحات دسترسی",
+      "count": "${used}/${limit} ترجیح",
+      "requiresConnection": "استفاده از اتصال",
+      "directConnection": "اتصال لازم نیست",
+      "domainRequired": "دامنه را وارد کنید",
+      "domainLabel": "دامنه",
+      "cloudSyncHint": "تنظیمات در فضای ابری ذخیره می‌شوند و دستگاه‌های دیگر شما در اتصال بعدی از آن‌ها استفاده می‌کنند.",
+      "cloudSyncSaved": "در فضای ابری ذخیره شد و دستگاه‌های دیگر شما در اتصال بعدی از آن استفاده می‌کنند.",
+      "limitReached": "به حد مجاز رسید",
+      "add": "افزودن",
+      "empty": "هنوز ترجیح دسترسی وجود ندارد",
+      "deleteTooltip": "حذف",
+      "deleteTitle": "حذف ترجیح دسترسی",
+      "deleteConfirm": "«${value}» حذف شود؟"
+    },
+    "appVersion": {
+      "updateRequired": "به‌روزرسانی لازم است",
+      "newVersion": "نسخه جدید در دسترس است",
+      "forceMessage": "این نسخه دیگر پشتیبانی نمی‌شود. برای ادامه به‌روزرسانی کنید.",
+      "optionalMessage": "نسخه جدیدی در دسترس است.",
+      "currentVersion": "نسخه فعلی",
+      "latestVersion": "آخرین نسخه",
+      "minimumVersion": "حداقل نسخه پشتیبانی‌شده",
+      "releaseNotes": "یادداشت‌های انتشار",
+      "openDownloadPage": "باز کردن صفحه دانلود"
+    },
+    "settings": {
+      "deviceManagement": "مدیریت دستگاه‌ها",
+      "issueReport": "گزارش مشکل",
+      "logout": "خروج",
+      "autoConnectOnLaunch": "اتصال پس از اجرا",
+      "accessPreferences": "ترجیحات دسترسی"
+    },
+    "tray": {
+      "openMainWindow": "باز کردن پنجره اصلی",
+      "disconnected": "قطع است"
+    },
+    "errors": {
+      "loginRequired": "پیش از اتصال وارد شوید.",
+      "noPlan": "پیش از اتصال یک طرح را فعال کنید.",
+      "updateRequired": "برای ادامه برنامه را به‌روزرسانی کنید.",
+      "connectFailed": "اتصال ناموفق بود. بعداً دوباره تلاش کنید.",
+      "trafficExceeded": "ترافیک این دوره تمام شده است. اتصال به‌طور خودکار قطع شد.",
+      "sessionEnded": "این اتصال پایان یافته است. برای ادامه دوباره وصل شوید.",
+      "disconnectedTitle": "قطع شد",
+      "cannotConnectTitle": "اتصال ممکن نیست",
+      "missingSystemPermission": "پیش از اتصال، مجوز شبکه سیستم را بدهید.",
+      "missingPrivilege": "پیش از اتصال، مجوز سیستم لازم است."
+    },
+    "apiError": {
+      "invalidCredentials": "نام کاربری یا رمز عبور نادرست است.",
+      "registrationDisabled": "ثبت‌نام حساب فعلاً در دسترس نیست.",
+      "usernameTaken": "این نام کاربری قبلاً استفاده شده است.",
+      "accountDisabled": "این حساب در حال حاضر غیرفعال است.",
+      "deviceLimitReached": "به حد مجاز دستگاه رسیده‌اید. یک دستگاه قدیمی را حذف کنید و دوباره تلاش کنید.",
+      "activationCodeInvalid": "این کد فعال‌سازی نامعتبر یا در دسترس نیست.",
+      "activationCodeUsed": "این کد فعال‌سازی قبلاً استفاده شده است.",
+      "activationCodeRevoked": "این کد فعال‌سازی بسته شده است.",
+      "planUnavailable": "این طرح در حال حاضر در دسترس نیست.",
+      "subscriptionExpired": "طرح شما منقضی شده است. برای ادامه یک طرح جدید فعال کنید.",
+      "noAvailableLocation": "در حال حاضر مکانی در دسترس نیست. بعداً دوباره تلاش کنید.",
+      "routePreferenceConflict": "این ترجیح دسترسی قبلاً وجود دارد.",
+      "routeTargetInvalid": "یک دامنه معتبر وارد کنید.",
+      "issueReportAlreadyOpen": "شما از قبل یک گزارش مشکل باز دارید."
+    }
   }
 }

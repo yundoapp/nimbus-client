@@ -3,6 +3,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
+import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
@@ -22,6 +23,7 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
     final descriptionController = useTextEditingController();
     final isSubmitting = useState(false);
     final errorMessage = useState<String?>(null);
+    final t = ref.watch(translationsProvider).requireValue;
 
     Future<void> submit() async {
       final session = ref.read(nimbusAuthControllerProvider).session;
@@ -49,12 +51,12 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
         if (!context.mounted) return;
         final messenger = ScaffoldMessenger.of(context);
         Navigator.of(context).pop();
-        messenger.showSnackBar(const SnackBar(content: Text('问题已上报')));
+        messenger.showSnackBar(SnackBar(content: Text(t.nimbus.issueReport.submitted)));
       } catch (error) {
         if (repository.isUnauthorized(error)) {
           await ref.read(nimbusAuthControllerProvider.notifier).restore();
         } else {
-          errorMessage.value = repository.describeError(error);
+          errorMessage.value = repository.describeError(error, t);
         }
       } finally {
         isSubmitting.value = false;
@@ -71,7 +73,7 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
     }
 
     return AlertDialog(
-      title: const Text('上报问题'),
+      title: Text(t.nimbus.issueReport.title),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: Column(
@@ -79,7 +81,7 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              '会同时上传脱敏诊断信息，方便尽快定位问题。',
+              t.nimbus.issueReport.description,
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -92,10 +94,10 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
               minLines: 3,
               maxLines: 5,
               maxLength: 1000,
-              decoration: const InputDecoration(
-                labelText: '问题描述（选填）',
+              decoration: InputDecoration(
+                labelText: t.nimbus.issueReport.descriptionLabel,
                 alignLabelWithHint: true,
-                prefixIcon: Icon(Icons.edit_note_rounded),
+                prefixIcon: const Icon(Icons.edit_note_rounded),
               ),
               onChanged: (_) => errorMessage.value = null,
             ),
@@ -110,13 +112,16 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
         ),
       ),
       actions: [
-        TextButton(onPressed: isSubmitting.value ? null : () => Navigator.of(context).pop(), child: const Text('取消')),
+        TextButton(
+          onPressed: isSubmitting.value ? null : () => Navigator.of(context).pop(),
+          child: Text(t.common.cancel),
+        ),
         FilledButton.icon(
           onPressed: isSubmitting.value ? null : submit,
           icon: isSubmitting.value
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.outlined_flag_rounded),
-          label: const Text('上报'),
+          label: Text(t.nimbus.issueReport.submit),
         ),
       ],
     );

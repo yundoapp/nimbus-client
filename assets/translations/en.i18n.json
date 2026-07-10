@@ -725,5 +725,157 @@
       "missingLicense": "Psiphon license required",
       "missingLicenseMsg": "The selected profile uses the Psiphon feature; to use this feature, the Psiphon license must be agreed to"
     }
+  },
+  "nimbus": {
+    "common": {
+      "latestVersion": "You are up to date",
+      "serverUnavailable": "Unable to reach the server. Please try again later.",
+      "requestTimeout": "The request timed out. Please try again later.",
+      "requestFailed": "Request failed. Please try again later.",
+      "operationFailed": "Operation failed. Please try again later."
+    },
+    "home": {
+      "noPlanTitle": "No active plan",
+      "noPlanMessage": "Activate a plan before connecting.",
+      "later": "Later",
+      "activatePlan": "Activate plan",
+      "planExpired": "Plan expired",
+      "noAvailablePlan": "No active plan",
+      "activateHint": "Activate a plan before connecting.",
+      "monthlyUsage": "This month's plan usage",
+      "expiresOn": "Expires ${date}",
+      "used": "Used",
+      "unused": "Remaining",
+      "connectionMode": "Connection mode",
+      "accessPolicyVersion": "Access policy ${version}",
+      "globalRoutingDetail": "All traffic uses Yundo",
+      "locationTitle": "Location",
+      "locationDetail": "Choose by country/region",
+      "connect": "Connect",
+      "updateRequired": "Update required"
+    },
+    "activation": {
+      "title": "Activate plan",
+      "codeLabel": "Activation code",
+      "invalidCode": "Enter a 16-character activation code",
+      "activated": "Plan activated",
+      "failed": "Activation failed. Please try again later.",
+      "submit": "Activate"
+    },
+    "proxyMode": {
+      "auto": "Automatic",
+      "global": "All traffic",
+      "autoDescription": "Automatically chooses when Yundo is needed.",
+      "globalDescription": "Routes all traffic through Yundo. Useful for temporary troubleshooting."
+    },
+    "auth": {
+      "loginTitle": "Sign in to ${appTitle}",
+      "registerTitle": "Create ${appTitle} account",
+      "loginSubtitle": "Sign in to view your plan, traffic, and devices.",
+      "registerSubtitle": "Create an account, then activate your plan with a code.",
+      "username": "Username",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "acceptTerms": "I have read and understand the usage notes",
+      "registerAndLogin": "Create account and sign in",
+      "login": "Sign in",
+      "goLogin": "Already have an account? Sign in",
+      "goRegister": "No account yet? Create one",
+      "usernameInvalid": "Use 4-32 letters, numbers, or underscores",
+      "passwordRequired": "Enter your password",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 10 characters",
+      "passwordNeedsLetter": "Password must include a letter",
+      "passwordNeedsNumber": "Password must include a number",
+      "passwordNeedsSymbol": "Password must include a special character"
+    },
+    "devices": {
+      "title": "Device management",
+      "count": "${used}/${limit} devices",
+      "empty": "No devices yet",
+      "unknownDevice": "Unknown device",
+      "current": "Current",
+      "deleteTooltip": "Remove device",
+      "deleteTitle": "Remove device",
+      "deleteConfirm": "Remove \"${name}\"?",
+      "unknownPlatform": "Unknown platform",
+      "lastActive": "Last active ${time}",
+      "lastActiveEmpty": "Last active --"
+    },
+    "issueReport": {
+      "title": "Report an issue",
+      "description": "A redacted diagnostics snapshot will be uploaded to help locate the issue faster.",
+      "descriptionLabel": "Issue description (optional)",
+      "submit": "Report",
+      "submitted": "Issue reported"
+    },
+    "routePreferences": {
+      "title": "Access preferences",
+      "count": "${used}/${limit} preferences",
+      "requiresConnection": "Use connection",
+      "directConnection": "No connection needed",
+      "domainRequired": "Enter a domain",
+      "domainLabel": "Domain",
+      "cloudSyncHint": "Saved preferences are stored in the cloud. Your other devices will use them the next time they connect.",
+      "cloudSyncSaved": "Saved to the cloud. Other devices will use it the next time they connect.",
+      "limitReached": "Limit reached",
+      "add": "Add",
+      "empty": "No access preferences yet",
+      "deleteTooltip": "Delete",
+      "deleteTitle": "Delete access preference",
+      "deleteConfirm": "Delete \"${value}\"?"
+    },
+    "appVersion": {
+      "updateRequired": "Update required",
+      "newVersion": "New version available",
+      "forceMessage": "This version is no longer supported. Update to continue.",
+      "optionalMessage": "A new version is available.",
+      "currentVersion": "Current version",
+      "latestVersion": "Latest version",
+      "minimumVersion": "Minimum supported",
+      "releaseNotes": "Release notes",
+      "openDownloadPage": "Open download page"
+    },
+    "settings": {
+      "deviceManagement": "Device management",
+      "issueReport": "Report an issue",
+      "logout": "Sign out",
+      "autoConnectOnLaunch": "Connect after launch",
+      "accessPreferences": "Access preferences"
+    },
+    "tray": {
+      "openMainWindow": "Open main window",
+      "disconnected": "Disconnected"
+    },
+    "errors": {
+      "loginRequired": "Sign in before connecting.",
+      "noPlan": "Activate a plan before connecting.",
+      "updateRequired": "Update the app to continue.",
+      "connectFailed": "Connection failed. Please try again later.",
+      "trafficExceeded": "This cycle's traffic has been used up. The connection was stopped automatically.",
+      "sessionEnded": "This connection has ended. Connect again to continue.",
+      "disconnectedTitle": "Disconnected",
+      "cannotConnectTitle": "Unable to connect",
+      "missingSystemPermission": "Allow the required system network permission before connecting.",
+      "missingPrivilege": "System authorization is required before connecting."
+    },
+    "apiError": {
+      "invalidCredentials": "Invalid username or password.",
+      "registrationDisabled": "Account registration is not available right now.",
+      "usernameTaken": "This username is already taken.",
+      "accountDisabled": "This account is currently disabled.",
+      "deviceLimitReached": "The device limit has been reached. Remove an old device and try again.",
+      "activationCodeInvalid": "This activation code is invalid or unavailable.",
+      "activationCodeUsed": "This activation code has already been used.",
+      "activationCodeRevoked": "This activation code has been closed.",
+      "planUnavailable": "This plan is not available right now.",
+      "subscriptionExpired": "Your plan has expired. Activate a new plan to continue.",
+      "noAvailableLocation": "No available location right now. Please try again later.",
+      "routePreferenceConflict": "This access preference already exists.",
+      "routeTargetInvalid": "Enter a valid domain.",
+      "issueReportAlreadyOpen": "You already have an open issue report."
+    }
   }
 }

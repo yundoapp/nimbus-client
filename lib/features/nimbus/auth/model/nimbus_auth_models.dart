@@ -236,14 +236,30 @@ class NimbusDeviceRemoveResult {
 }
 
 class NimbusLocation {
-  const NimbusLocation({required this.code, required this.displayName});
+  const NimbusLocation({required this.code, required this.displayName, this.displayNames = const {}});
 
   factory NimbusLocation.fromJson(Map<String, dynamic> json) {
-    return NimbusLocation(code: json['code'] as String? ?? 'auto', displayName: json['displayName'] as String? ?? '自动');
+    final rawDisplayNames = json['displayNames'];
+    return NimbusLocation(
+      code: json['code'] as String? ?? 'auto',
+      displayName: json['displayName'] as String? ?? '',
+      displayNames: rawDisplayNames is Map
+          ? rawDisplayNames.map((key, value) => MapEntry(key.toString(), value?.toString() ?? ''))
+          : const {},
+    );
   }
 
   final String code;
   final String displayName;
+  final Map<String, String> displayNames;
+
+  String displayNameForLanguage(String languageCode) {
+    if (code == 'auto') return '';
+    final localized = languageCode == 'zh'
+        ? displayNames['zh-CN'] ?? displayNames['zh'] ?? displayName
+        : displayNames[languageCode] ?? displayNames['en'] ?? displayName;
+    return localized.isEmpty ? code : localized;
+  }
 }
 
 class NimbusLocationsList {
@@ -256,7 +272,7 @@ class NimbusLocationsList {
           ? rawItems
                 .map((item) => NimbusLocation.fromJson(Map<String, dynamic>.from(item as Map? ?? const {})))
                 .toList()
-          : const [NimbusLocation(code: 'auto', displayName: '自动')],
+          : const [NimbusLocation(code: 'auto', displayName: '')],
     );
   }
 
@@ -264,7 +280,7 @@ class NimbusLocationsList {
 
   NimbusLocation get fallback => items.firstWhere(
     (item) => item.code == 'auto',
-    orElse: () => const NimbusLocation(code: 'auto', displayName: '自动'),
+    orElse: () => const NimbusLocation(code: 'auto', displayName: ''),
   );
 }
 
@@ -509,7 +525,7 @@ class NimbusConnectPlan {
       planId: json['planId'] as String? ?? '',
       sessionId: json['sessionId'] as String? ?? '',
       expiresAt: _dateTime(json['expiresAt']),
-      locationLabel: json['locationLabel'] as String? ?? '自动',
+      locationLabel: json['locationLabel'] as String? ?? '',
       publicRulesVersion: json['publicRulesVersion'] as String?,
       rulesManifest: NimbusRulesManifest.fromJson(Map<String, dynamic>.from(json['rulesManifest'] as Map? ?? const {})),
       heartbeatIntervalSeconds: _int(json['heartbeatIntervalSeconds']) ?? 60,
