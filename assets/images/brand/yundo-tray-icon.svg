@@ -1,9 +1,8 @@
-<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <title>Yundo macOS status bar icon editable reference</title>
-  <desc>Template-mask reference for the macOS status bar icon. Production PNG assets are generated from yundo-tray-icon-source.png.</desc>
-  <g stroke="white" stroke-width="30" stroke-linecap="round">
-    <path d="M58 42L112 96"/>
-    <path d="M198 42L144 96"/>
-    <path d="M128 122V204"/>
-  </g>
+<?xml version="1.0" encoding="utf-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Yundo tray icon source</title>
+  <desc>Y-only tray icon source copied from the canonical Yundo app icon mark.</desc>
+  <path id="mark-left" d="M 266.091 300.248 L 437.238 471.393" stroke="white" stroke-width="104" stroke-linecap="round"/>
+  <path id="mark-right" d="M 761.908 300.248 L 590.761 471.393" stroke="white" stroke-width="104" stroke-linecap="round"/>
+  <path id="mark-center" d="M 512 593.481 L 512 811.752" stroke="white" stroke-width="104" stroke-linecap="round"/>
 </svg>

@@ -1,20 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <title>Yundo app icon editable reference</title>
-  <desc>Editable vector reference aligned to the selected option 1 visual. Production PNG assets are generated from yundo-app-icon-source.png.</desc>
+  <title>Yundo app icon source</title>
+  <desc>Canonical editable source for all Yundo app icon PNG outputs.</desc>
   <defs>
     <linearGradient id="yundo-bg" x1="512" y1="40" x2="512" y2="984" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#7D98E9"/>
       <stop offset="0.46" stop-color="#4771DE"/>
       <stop offset="1" stop-color="#174ACB"/>
     </linearGradient>
-    <filter id="mark-shadow" x="240" y="260" width="560" height="560" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#10245F" flood-opacity="0.28"/>
-    </filter>
   </defs>
-  <rect x="0" y="0" width="1024" height="1024" rx="190" fill="url(#yundo-bg)"/>
-  <g filter="url(#mark-shadow)" stroke="white" stroke-width="94" stroke-linecap="round">
-    <path d="M338 364L476 502"/>
-    <path d="M686 364L548 502"/>
-    <path d="M512 584V760"/>
-  </g>
+  <rect y="0" width="1024" height="1024" rx="190" fill="url(#yundo-bg)" x="0"/>
+  <path id="mark-left-shadow-outer" d="M 266.091 300.248 L 437.238 471.393" stroke="#10245F" stroke-opacity="0.05" stroke-width="150" stroke-linecap="round"/>
+  <path id="mark-right-shadow-outer" d="M 761.908 300.248 L 590.761 471.393" stroke="#10245F" stroke-opacity="0.05" stroke-width="150" stroke-linecap="round"/>
+  <path id="mark-center-shadow-outer" d="M 512 593.481 L 512 811.752" stroke="#10245F" stroke-opacity="0.05" stroke-width="150" stroke-linecap="round"/>
+  <path id="mark-left-shadow-mid" d="M 266.091 300.248 L 437.238 471.393" stroke="#10245F" stroke-opacity="0.09" stroke-width="136" stroke-linecap="round"/>
+  <path id="mark-right-shadow-mid" d="M 761.908 300.248 L 590.761 471.393" stroke="#10245F" stroke-opacity="0.09" stroke-width="136" stroke-linecap="round"/>
+  <path id="mark-center-shadow-mid" d="M 512 593.481 L 512 811.752" stroke="#10245F" stroke-opacity="0.09" stroke-width="136" stroke-linecap="round"/>
+  <path id="mark-left-shadow-inner" d="M 266.091 300.248 L 437.238 471.393" stroke="#10245F" stroke-opacity="0.14" stroke-width="122" stroke-linecap="round"/>
+  <path id="mark-right-shadow-inner" d="M 761.908 300.248 L 590.761 471.393" stroke="#10245F" stroke-opacity="0.14" stroke-width="122" stroke-linecap="round"/>
+  <path id="mark-center-shadow-inner" d="M 512 593.481 L 512 811.752" stroke="#10245F" stroke-opacity="0.14" stroke-width="122" stroke-linecap="round"/>
+  <path id="mark-left" d="M 266.091 300.248 L 437.238 471.393" stroke="white" stroke-width="104" stroke-linecap="round"/>
+  <path id="mark-right" d="M 761.908 300.248 L 590.761 471.393" stroke="white" stroke-width="104" stroke-linecap="round"/>
+  <path id="mark-center" d="M 512 593.481 L 512 811.752" stroke="white" stroke-width="104" stroke-linecap="round"/>
 </svg>

@@ -13,13 +13,12 @@ enum IconKind {
 }
 
 let repoURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-let appIconSourceURL = repoURL.appendingPathComponent("assets/images/brand/yundo-app-icon-source.png")
-let trayIconSourceURL = repoURL.appendingPathComponent("assets/images/brand/yundo-tray-icon-source.png")
+let appIconSourceURL = repoURL.appendingPathComponent("assets/images/brand/yundo-app-icon.svg")
+let trayIconSourceURL = repoURL.appendingPathComponent("assets/images/brand/yundo-tray-icon.svg")
 
 let outputs: [IconOutput] = [
   .init(path: "assets/images/app_icon.png", size: 1024, kind: .appIcon),
-  .init(path: "assets/images/brand/yundo-app-icon.png", size: 1024, kind: .appIcon),
-  .init(path: "assets/images/source/ic_launcher_border.png", size: 1024, kind: .appIcon),
+  .init(path: "snap/gui/app_icon.png", size: 256, kind: .appIcon),
   .init(path: "assets/images/source/ic_launcher_splash.png", size: 512, kind: .appIcon),
   .init(path: "assets/images/source/ic_launcher_foreground.png", size: 512, kind: .appIcon),
   .init(path: "android/app/src/main/ic_launcher-playstore.png", size: 512, kind: .appIcon),
@@ -34,14 +33,7 @@ let outputs: [IconOutput] = [
   .init(path: "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png", size: 144, kind: .appIcon),
   .init(path: "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png", size: 192, kind: .appIcon),
   .init(path: "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png", size: 192, kind: .appIcon),
-  .init(path: "assets/images/brand/yundo-tray-icon.png", size: 1024, kind: .trayTemplate),
-  .init(path: "assets/images/source/tray_icon.png", size: 2048, kind: .trayTemplate),
-  .init(path: "assets/images/source/tray_icon_connected.png", size: 2048, kind: .trayTemplate),
-  .init(path: "assets/images/source/tray_icon_disconnected.png", size: 2048, kind: .trayTemplate),
   .init(path: "assets/images/tray_icon.png", size: 256, kind: .trayTemplate),
-  .init(path: "assets/images/tray_icon_dark.png", size: 256, kind: .trayTemplate),
-  .init(path: "assets/images/tray_icon_connected.png", size: 256, kind: .trayTemplate),
-  .init(path: "assets/images/tray_icon_disconnected.png", size: 256, kind: .trayTemplate),
   .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_16x16.png", size: 16, kind: .appIcon),
   .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_16x16@2x.png", size: 32, kind: .appIcon),
   .init(path: "macos/Runner/Assets.xcassets/AppIcon.appiconset/icon_32x32.png", size: 32, kind: .appIcon),
@@ -120,6 +112,65 @@ func writePNG(_ image: NSImage, to url: URL) {
   }
 }
 
+func pngData(_ image: NSImage) -> Data {
+  guard let tiff = image.tiffRepresentation,
+        let bitmap = NSBitmapImageRep(data: tiff),
+        let data = bitmap.representation(using: .png, properties: [:]) else {
+    fail("Unable to encode PNG data")
+  }
+  return data
+}
+
+func appendUInt16LE(_ value: UInt16, to data: inout Data) {
+  data.append(UInt8(value & 0xff))
+  data.append(UInt8((value >> 8) & 0xff))
+}
+
+func appendUInt32LE(_ value: UInt32, to data: inout Data) {
+  data.append(UInt8(value & 0xff))
+  data.append(UInt8((value >> 8) & 0xff))
+  data.append(UInt8((value >> 16) & 0xff))
+  data.append(UInt8((value >> 24) & 0xff))
+}
+
+func writeICO(from source: NSImage, to url: URL, sizes: [Int]) {
+  let pngs = sizes.map { size in
+    (size: size, data: pngData(resizedImage(source, size: size)))
+  }
+
+  var data = Data()
+  appendUInt16LE(0, to: &data)
+  appendUInt16LE(1, to: &data)
+  appendUInt16LE(UInt16(pngs.count), to: &data)
+
+  var imageOffset = 6 + (16 * pngs.count)
+  for png in pngs {
+    data.append(UInt8(png.size == 256 ? 0 : png.size))
+    data.append(UInt8(png.size == 256 ? 0 : png.size))
+    data.append(0)
+    data.append(0)
+    appendUInt16LE(1, to: &data)
+    appendUInt16LE(32, to: &data)
+    appendUInt32LE(UInt32(png.data.count), to: &data)
+    appendUInt32LE(UInt32(imageOffset), to: &data)
+    imageOffset += png.data.count
+  }
+
+  for png in pngs {
+    data.append(png.data)
+  }
+
+  do {
+    try FileManager.default.createDirectory(
+      at: url.deletingLastPathComponent(),
+      withIntermediateDirectories: true
+    )
+    try data.write(to: url)
+  } catch {
+    fail("Unable to write ICO \(url.path): \(error)")
+  }
+}
+
 let appIconSource = loadImage(appIconSourceURL)
 let trayIconSource = loadImage(trayIconSourceURL)
 
@@ -133,4 +184,10 @@ for output in outputs {
   writePNG(resizedImage(source, size: output.size), to: repoURL.appendingPathComponent(output.path))
 }
 
-print("Generated \(outputs.count) Yundo logo assets from selected sources")
+writeICO(
+  from: trayIconSource,
+  to: repoURL.appendingPathComponent("assets/images/tray_icon.ico"),
+  sizes: [16, 32, 48, 64, 128]
+)
+
+print("Generated \(outputs.count) Yundo PNG assets and 1 tray ICO file from SVG sources")
