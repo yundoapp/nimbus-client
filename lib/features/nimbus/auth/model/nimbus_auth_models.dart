@@ -394,6 +394,103 @@ class NimbusConnectTraffic {
   final int quotaBytes;
 }
 
+class NimbusRulesManifest {
+  const NimbusRulesManifest({
+    required this.publicRulesVersion,
+    required this.userRulesVersion,
+    required this.configVersion,
+    required this.requiresUpdate,
+    required this.publicRulesChanged,
+    required this.userRulesChanged,
+    required this.configChanged,
+    this.downloadUrl,
+  });
+
+  factory NimbusRulesManifest.fromJson(Map<String, dynamic> json) {
+    final changes = Map<String, dynamic>.from(json['changes'] as Map? ?? const {});
+    return NimbusRulesManifest(
+      publicRulesVersion: json['publicRulesVersion'] as String?,
+      userRulesVersion: json['userRulesVersion'] as String? ?? '',
+      configVersion: json['configVersion'] as String? ?? '',
+      requiresUpdate: json['requiresUpdate'] as bool? ?? true,
+      publicRulesChanged: changes['publicRules'] as bool? ?? true,
+      userRulesChanged: changes['userRules'] as bool? ?? true,
+      configChanged: changes['config'] as bool? ?? true,
+      downloadUrl: json['downloadUrl'] as String?,
+    );
+  }
+
+  final String? publicRulesVersion;
+  final String userRulesVersion;
+  final String configVersion;
+  final bool requiresUpdate;
+  final bool publicRulesChanged;
+  final bool userRulesChanged;
+  final bool configChanged;
+  final String? downloadUrl;
+
+  bool sameVersions(NimbusRulesManifest other) =>
+      publicRulesVersion == other.publicRulesVersion &&
+      userRulesVersion == other.userRulesVersion &&
+      configVersion == other.configVersion;
+
+  Map<String, dynamic> toJson() => {
+    'publicRulesVersion': publicRulesVersion,
+    'userRulesVersion': userRulesVersion,
+    'configVersion': configVersion,
+    'requiresUpdate': requiresUpdate,
+    'changes': {'publicRules': publicRulesChanged, 'userRules': userRulesChanged, 'config': configChanged},
+    'downloadUrl': downloadUrl,
+  };
+}
+
+class NimbusRulePackageItem {
+  const NimbusRulePackageItem({required this.pattern, required this.patternType, required this.action});
+
+  factory NimbusRulePackageItem.fromJson(Map<String, dynamic> json) {
+    return NimbusRulePackageItem(
+      pattern: json['pattern'] as String? ?? '',
+      patternType: json['patternType'] as String? ?? '',
+      action: json['action'] as String? ?? '',
+    );
+  }
+
+  final String pattern;
+  final String patternType;
+  final String action;
+
+  Map<String, dynamic> toJson() => {'pattern': pattern, 'patternType': patternType, 'action': action};
+}
+
+class NimbusRulesPackage {
+  const NimbusRulesPackage({required this.manifest, required this.userRules, required this.publicRules});
+
+  factory NimbusRulesPackage.fromJson(Map<String, dynamic> json) {
+    return NimbusRulesPackage(
+      manifest: NimbusRulesManifest.fromJson(Map<String, dynamic>.from(json['manifest'] as Map? ?? const {})),
+      userRules: _ruleItems(json['userRules']),
+      publicRules: _ruleItems(json['publicRules']),
+    );
+  }
+
+  final NimbusRulesManifest manifest;
+  final List<NimbusRulePackageItem> userRules;
+  final List<NimbusRulePackageItem> publicRules;
+
+  Map<String, dynamic> toJson() => {
+    'manifest': manifest.toJson(),
+    'userRules': userRules.map((item) => item.toJson()).toList(),
+    'publicRules': publicRules.map((item) => item.toJson()).toList(),
+  };
+
+  String encode() => jsonEncode(toJson());
+
+  static List<NimbusRulePackageItem> _ruleItems(Object? raw) {
+    if (raw is! List) return const [];
+    return raw.whereType<Map>().map((item) => NimbusRulePackageItem.fromJson(Map<String, dynamic>.from(item))).toList();
+  }
+}
+
 class NimbusConnectPlan {
   const NimbusConnectPlan({
     required this.planId,
@@ -403,6 +500,7 @@ class NimbusConnectPlan {
     required this.heartbeatIntervalSeconds,
     required this.traffic,
     required this.singBoxConfigPatch,
+    required this.rulesManifest,
     this.publicRulesVersion,
   });
 
@@ -413,6 +511,7 @@ class NimbusConnectPlan {
       expiresAt: _dateTime(json['expiresAt']),
       locationLabel: json['locationLabel'] as String? ?? '自动',
       publicRulesVersion: json['publicRulesVersion'] as String?,
+      rulesManifest: NimbusRulesManifest.fromJson(Map<String, dynamic>.from(json['rulesManifest'] as Map? ?? const {})),
       heartbeatIntervalSeconds: _int(json['heartbeatIntervalSeconds']) ?? 60,
       traffic: NimbusConnectTraffic.fromJson(Map<String, dynamic>.from(json['traffic'] as Map? ?? const {})),
       singBoxConfigPatch: Map<String, dynamic>.from(json['singBoxConfigPatch'] as Map? ?? const {}),
@@ -424,6 +523,7 @@ class NimbusConnectPlan {
   final DateTime? expiresAt;
   final String locationLabel;
   final String? publicRulesVersion;
+  final NimbusRulesManifest rulesManifest;
   final int heartbeatIntervalSeconds;
   final NimbusConnectTraffic traffic;
   final Map<String, dynamic> singBoxConfigPatch;

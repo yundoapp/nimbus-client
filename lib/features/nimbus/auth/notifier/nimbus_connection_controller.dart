@@ -14,6 +14,7 @@ import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_rules_config.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/profile/data/profile_data_mapper.dart';
@@ -176,13 +177,22 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     NimbusConnectPlan plan;
     try {
       final appVersion = _appVersion();
+      var rulesPackage = await _prepareRulesPackage(session);
       plan = await _repository.createConnectPlan(
         session: session,
         selectedLocation: authState.selectedLocationCode,
         appVersion: appVersion,
-        rulesVersion: authState.me?.rules.publicRulesVersion,
+        rulesManifest: rulesPackage.manifest,
       );
-      await _writeManagedProfile(plan);
+      if (plan.rulesManifest.requiresUpdate || !plan.rulesManifest.sameVersions(rulesPackage.manifest)) {
+        rulesPackage = await _repository.fetchRulesPackage(session);
+        _assertSupportedRulesPackage(rulesPackage);
+        await _repository.saveRulesPackage(session.user.id, rulesPackage);
+      }
+      if (!plan.rulesManifest.sameVersions(rulesPackage.manifest)) {
+        throw const FormatException('rules package changed while preparing connection');
+      }
+      await _writeManagedProfile(plan, rulesPackage);
       state = state.copyWith(isPreparing: true, plan: plan, traffic: plan.traffic, connectedReported: false);
     } catch (error) {
       await _fail(_repository.describeError(error), showErrors: showErrors);
@@ -310,7 +320,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         uploadBytesDelta: uploadDelta,
         downloadBytesDelta: downloadDelta,
         appVersion: _appVersion(),
-        rulesVersion: ref.read(nimbusAuthControllerProvider).me?.rules.publicRulesVersion,
+        rulesVersion: plan.rulesManifest.publicRulesVersion,
       );
       state = state.copyWith(traffic: heartbeat.traffic, lastHeartbeatAt: DateTime.now());
       if (heartbeat.disconnectRequired) {
@@ -345,12 +355,32 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     _sessionClosedByServer = false;
   }
 
-  Future<void> _writeManagedProfile(NimbusConnectPlan plan) async {
+  Future<NimbusRulesPackage> _prepareRulesPackage(NimbusAuthSession session) async {
+    final cached = _repository.readRulesPackage(session.user.id);
+    final manifest = await _repository.fetchRulesManifest(session: session, localManifest: cached?.manifest);
+    if (cached != null && !manifest.requiresUpdate && manifest.sameVersions(cached.manifest)) {
+      _assertSupportedRulesPackage(cached);
+      return cached;
+    }
+
+    final rulesPackage = await _repository.fetchRulesPackage(session);
+    _assertSupportedRulesPackage(rulesPackage);
+    await _repository.saveRulesPackage(session.user.id, rulesPackage);
+    return rulesPackage;
+  }
+
+  void _assertSupportedRulesPackage(NimbusRulesPackage rulesPackage) {
+    if (rulesPackage.manifest.configVersion != nimbusRulesConfigVersion) {
+      throw FormatException('unsupported rules config version: ${rulesPackage.manifest.configVersion}');
+    }
+  }
+
+  Future<void> _writeManagedProfile(NimbusConnectPlan plan, NimbusRulesPackage rulesPackage) async {
     final resolver = ref.read(profilePathResolverProvider);
     await resolver.directory.create(recursive: true);
     await resolver
         .file(_managedProfileId)
-        .writeAsString(const JsonEncoder.withIndent('  ').convert(_buildConfig(plan)));
+        .writeAsString(const JsonEncoder.withIndent('  ').convert(_buildConfig(plan, rulesPackage)));
 
     final profile = _managedProfileEntity();
     final dataSource = ref.read(profileDataSourceProvider);
@@ -373,7 +403,8 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     );
   }
 
-  Map<String, dynamic> _buildConfig(NimbusConnectPlan plan) {
+  Map<String, dynamic> _buildConfig(NimbusConnectPlan plan, NimbusRulesPackage rulesPackage) {
+    _assertSupportedRulesPackage(rulesPackage);
     final patch = plan.singBoxConfigPatch;
     final outbounds = _normalizeOutbounds(patch['outbounds']);
     final routePatch = _asMap(patch['route']);
@@ -383,9 +414,16 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     }
 
     final proxyMode = ref.read(Preferences.nimbusProxyMode);
+    final proxyTag = _proxyOutboundTag(routePatch, outbounds);
+    final existingRules = _normalizeRules(routePatch['rules']);
     final routeRules = proxyMode == NimbusProxyMode.global
         ? <Map<String, dynamic>>[]
-        : _normalizeRules(routePatch['rules']);
+        : [
+            ...buildNimbusRouteRules(rulesPackage.userRules, proxyTag),
+            ...buildNimbusRouteRules(rulesPackage.publicRules, proxyTag),
+            nimbusFallbackRouteRule(),
+            ...existingRules,
+          ];
     final finalTag = proxyMode == NimbusProxyMode.global
         ? _proxyOutboundTag(routePatch, outbounds)
         : _finalOutboundTag(routePatch, outbounds);

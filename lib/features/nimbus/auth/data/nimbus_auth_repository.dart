@@ -39,6 +39,7 @@ class NimbusAuthRepository {
   static const _sessionKey = 'nimbus.auth.session';
   static const _deviceIdKey = 'nimbus.auth.device_id';
   static const _selectedLocationKey = 'nimbus.connect.selected_location';
+  static const _rulesPackageKeyPrefix = 'nimbus.rules.package.';
 
   final SharedPreferences _preferences;
   final AppInfoEntity _appInfo;
@@ -135,6 +136,44 @@ class NimbusAuthRepository {
     await _preferences.setString(_selectedLocationKey, code.isEmpty ? 'auto' : code);
   }
 
+  NimbusRulesPackage? readRulesPackage(String userId) {
+    final raw = _preferences.getString('$_rulesPackageKeyPrefix$userId');
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return NimbusRulesPackage.fromJson(Map<String, dynamic>.from(jsonDecode(raw) as Map));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveRulesPackage(String userId, NimbusRulesPackage rulesPackage) async {
+    await _preferences.setString('$_rulesPackageKeyPrefix$userId', rulesPackage.encode());
+  }
+
+  Future<NimbusRulesManifest> fetchRulesManifest({
+    required NimbusAuthSession session,
+    NimbusRulesManifest? localManifest,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      'rules/manifest',
+      queryParameters: {
+        if (localManifest?.publicRulesVersion != null) 'publicRulesVersion': localManifest!.publicRulesVersion,
+        if (localManifest?.userRulesVersion.isNotEmpty ?? false) 'userRulesVersion': localManifest!.userRulesVersion,
+        if (localManifest?.configVersion.isNotEmpty ?? false) 'configVersion': localManifest!.configVersion,
+      },
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+    return NimbusRulesManifest.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
+  }
+
+  Future<NimbusRulesPackage> fetchRulesPackage(NimbusAuthSession session) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      'rules/package',
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+    return NimbusRulesPackage.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
+  }
+
   Future<NimbusLocationsList> fetchLocations(NimbusAuthSession session) async {
     final response = await _dio.get<Map<String, dynamic>>(
       'locations',
@@ -198,7 +237,7 @@ class NimbusAuthRepository {
     required NimbusAuthSession session,
     required String selectedLocation,
     required String appVersion,
-    String? rulesVersion,
+    required NimbusRulesManifest rulesManifest,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       'connect/plan',
@@ -206,7 +245,10 @@ class NimbusAuthRepository {
         'deviceId': session.device.deviceId,
         'selectedLocation': selectedLocation,
         'appVersion': appVersion,
-        'rulesVersion': rulesVersion,
+        'rulesVersion': rulesManifest.publicRulesVersion,
+        'publicRulesVersion': rulesManifest.publicRulesVersion,
+        'userRulesVersion': rulesManifest.userRulesVersion,
+        'configVersion': rulesManifest.configVersion,
       },
       options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
     );
