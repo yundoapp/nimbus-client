@@ -18,7 +18,7 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "缺少必要命令：$1"
 }
 
-for command_name in codesign ditto file git rg shasum unzip; do
+for command_name in codesign ditto file git plutil rg shasum unzip; do
   require_command "$command_name"
 done
 
@@ -64,6 +64,36 @@ assert_compliance_assets() {
     || fail "App 内许可证不是预期的 Hiddify Extended GPLv3"
 }
 
+assert_privileged_helper_assets() {
+  local app_path="$1"
+  local app_info="${app_path}/Contents/Info.plist"
+  local app_bundle_id
+  app_bundle_id="$($plist_buddy -c 'Print :CFBundleIdentifier' "$app_info")"
+  local service_name="${app_bundle_id}.privileged-helper"
+  local helper_path="${app_path}/Contents/Library/HelperTools/YundoPrivilegedHelper"
+  local daemon_plist="${app_path}/Contents/Library/LaunchDaemons/${service_name}.plist"
+  local fixture_path="${repo_root}/test/fixtures/macos_minimal_tunnel_config.json"
+  local rejected_fixture_path="${repo_root}/test/fixtures/macos_rejected_privileged_config.json"
+
+  [[ -x "$helper_path" ]] || fail "App 缺少 macOS 特权辅助进程"
+  [[ -f "$daemon_plist" ]] || fail "App 缺少 macOS LaunchDaemon 配置"
+  [[ "$($plist_buddy -c 'Print :Label' "$daemon_plist")" == "$service_name" ]] \
+    || fail "LaunchDaemon Label 与 Bundle ID 不匹配"
+  [[ "$($plist_buddy -c 'Print :BundleProgram' "$daemon_plist")" == 'Contents/Library/HelperTools/YundoPrivilegedHelper' ]] \
+    || fail "LaunchDaemon BundleProgram 不正确"
+  $plist_buddy -c "Print :MachServices:${service_name}" "$daemon_plist" >/dev/null \
+    || fail "LaunchDaemon 缺少预期 Mach service"
+  plutil -lint "$daemon_plist" >/dev/null
+  codesign --verify --strict "$helper_path"
+  "$helper_path" --self-check | grep -q '^privileged-helper-self-check-ok$' \
+    || fail "特权辅助进程无法加载包内 core"
+  "$helper_path" --validate-config "$fixture_path" | grep -q '^privileged-helper-config-ok$' \
+    || fail "特权辅助进程拒绝最小 TUN 配置基线"
+  if "$helper_path" --validate-config "$rejected_fixture_path" >/dev/null 2>&1; then
+    fail "特权辅助进程错误接受了包含远端出站的配置"
+  fi
+}
+
 display_name="$(read_plist CFBundleDisplayName)"
 bundle_name="$(read_plist CFBundleName)"
 bundle_id="$(read_plist CFBundleIdentifier)"
@@ -81,6 +111,7 @@ executable_path="${source_app}/Contents/MacOS/${executable_name}"
 [[ -x "$executable_path" ]] || fail "找不到 App 可执行文件：${executable_path}"
 assert_no_forbidden_branding "$source_app"
 assert_compliance_assets "$source_app"
+assert_privileged_helper_assets "$source_app"
 
 architecture_output="$(file "$executable_path")"
 if [[ "$architecture_output" != *"arm64"* && "$architecture_output" != *"x86_64"* ]]; then
@@ -121,6 +152,7 @@ ditto -x -k "$artifact_path" "$verification_dir"
 codesign --verify --deep --strict "${verification_dir}/${expected_display_name}.app"
 assert_no_forbidden_branding "${verification_dir}/${expected_display_name}.app"
 assert_compliance_assets "${verification_dir}/${expected_display_name}.app"
+assert_privileged_helper_assets "${verification_dir}/${expected_display_name}.app"
 
 (
   cd "$output_dir"
@@ -142,6 +174,8 @@ source_commit_full=${source_commit_full}
 source_state=${source_state}
 forbidden_branding_scan=passed
 compliance_assets=passed
+privileged_helper_assets=passed
+privileged_helper_service=${bundle_id}.privileged-helper
 license_asset=LICENSE.md
 privacy_policy_asset=docs/legal/privacy-policy.md
 terms_asset=docs/legal/terms-of-service.md

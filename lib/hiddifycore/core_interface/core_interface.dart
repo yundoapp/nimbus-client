@@ -14,6 +14,16 @@ class CoreInterface {
     return const CoreStarted();
   }
 
+  String backgroundConfigPath(String originalPath) => originalPath;
+
+  Future<CoreStatus> prepareRestart(String path, String name) async {
+    return const CoreStarted();
+  }
+
+  Future<CoreStatus> activateTunnel() async {
+    return const CoreStarted();
+  }
+
   Future<bool> restart(String path, String name) async {
     return false;
   }

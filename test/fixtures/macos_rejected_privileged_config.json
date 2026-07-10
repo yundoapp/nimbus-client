@@ -1,0 +1,25 @@
+{
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "yundo-tun",
+      "address": [
+        "172.20.0.1/30",
+        "fdfe:dcba:9876::1/126"
+      ],
+      "auto_route": true,
+      "stack": "system"
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "vless",
+      "tag": "must-be-rejected",
+      "server": "192.0.2.1",
+      "server_port": 443
+    }
+  ],
+  "route": {
+    "final": "must-be-rejected"
+  }
+}

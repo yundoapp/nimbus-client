@@ -158,9 +158,10 @@ class HiddifyCoreService with InfraLogger {
       // final content = await File(path).readAsString();
       // loggy.debug("starting with content: $content");
       try {
+        final backgroundConfigPath = core.backgroundConfigPath(path);
         final res = await core.bgClient.start(
           StartRequest(
-            configPath: path,
+            configPath: backgroundConfigPath,
             configName: name,
             // configContent: content,
             disableMemoryLimit: disableMemoryLimit,
@@ -177,18 +178,30 @@ class HiddifyCoreService with InfraLogger {
 
           statusController.add(currentState);
 
+          await core.stop();
+
           return left(
             currentState.getCoreAlert() ??
                 ConnectionFailure.unexpected("failed to start core ${res.messageType} ${res.message}"),
           );
         }
+
+        final tunnel = await core.activateTunnel();
+        if (tunnel != const CoreStatus.started()) {
+          await core.bgClient.stop(Empty());
+          await core.stop();
+          statusController.add(currentState = const CoreStatus.stopped());
+          return left(tunnel.getCoreAlert() ?? const ConnectionFailure.unexpected('failed to start tunnel'));
+        }
       } on GrpcError catch (e) {
         loggy.error("failed to start bg core: $e");
         ref.read(coreRestartSignalProvider.notifier).restart();
         if (e.code == StatusCode.unavailable) {
+          await core.stop();
           return left(const ConnectionFailure.unexpected("background core is not started yet!"));
         }
         if (_isSystemPermissionError(e.message)) {
+          await core.stop();
           return left(const ConnectionFailure.missingPrivilege());
         }
         // throw InvalidConfig(e.message);
@@ -239,9 +252,13 @@ class HiddifyCoreService with InfraLogger {
       loggy.debug("restarting");
       // if (!await core.restart(path, name)) {
       try {
+        final prepared = await core.prepareRestart(path, name);
+        if (prepared != const CoreStatus.started()) {
+          return left(prepared.getCoreAlert()?.toString() ?? 'failed to prepare tunnel restart');
+        }
         final res = await core.bgClient.restart(
           StartRequest(
-            configPath: path,
+            configPath: core.backgroundConfigPath(path),
             configName: name,
             disableMemoryLimit: disableMemoryLimit,
             delayStart: true,
@@ -249,6 +266,12 @@ class HiddifyCoreService with InfraLogger {
           ),
         );
         if (res.messageType != MessageType.EMPTY) return left("${res.messageType} ${res.message}");
+        final tunnel = await core.activateTunnel();
+        if (tunnel != const CoreStatus.started()) {
+          await core.bgClient.stop(Empty());
+          await core.stop();
+          return left(tunnel.getCoreAlert()?.toString() ?? 'failed to restart tunnel');
+        }
       } on GrpcError catch (e) {
         loggy.error("failed to restart bg core: $e");
         if (e.code == StatusCode.unknown && !(e.message?.contains("HTTP/2 error") ?? false)) {

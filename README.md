@@ -19,7 +19,7 @@ Yundo（云渡）是一个面向个人自用和小范围朋友测试的跨平台
 - 将用户体验收敛为账号、激活、套餐、流量、位置、设备和连接状态。
 - 接入云渡平台的登录、规则包、连接方案、心跳、问题上报和版本检查 API。
 - 普通用户界面隐藏节点、协议、订阅和底层网络配置等技术入口。
-- 增加 macOS 开机启动、自动连接、菜单栏状态和受邀内测打包校验。
+- 增加 macOS 开机启动、自动连接、菜单栏状态、最小权限 TUN helper 和受邀内测打包校验。
 - 保留 Hiddify / sing-box 的跨平台底座，并尽量减少对上游核心代码的改动。
 
 更完整的变更记录以本仓库 Git 历史和 [CHANGELOG.md](./CHANGELOG.md) 为准。
@@ -46,7 +46,7 @@ Yundo（云渡）是一个面向个人自用和小范围朋友测试的跨平台
 
 ## 开发与构建
 
-macOS 当前是第一优先平台。工具链、生成命令、Debug 构建与内测包步骤见 [macOS 开发版构建基线](./docs/development/macos-debug-build.md)。
+macOS 当前是第一优先平台。工具链、生成命令、Debug 构建与内测包步骤见 [macOS 开发版构建基线](./docs/development/macos-debug-build.md)，TUN 权限边界见 [macOS TUN 最小权限辅助进程](./docs/development/macos-privileged-helper.md)。
 
 核心生成与检查命令：
 

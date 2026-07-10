@@ -4,6 +4,8 @@ import window_manager
 import LaunchAtLogin
 
 class MainFlutterWindow: NSWindow {
+  private var privilegedHelperBridge: PrivilegedHelperBridge?
+
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
     let windowFrame = self.frame
@@ -49,6 +51,8 @@ class MainFlutterWindow: NSWindow {
         result(FlutterMethodNotImplemented)
       }
     }
+    privilegedHelperBridge = PrivilegedHelperBridge(binaryMessenger: flutterViewController.engine.binaryMessenger)
+    privilegedHelperBridge?.register()
     //
     RegisterGeneratedPlugins(registry: flutterViewController)
 

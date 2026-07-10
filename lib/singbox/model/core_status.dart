@@ -81,6 +81,8 @@ sealed class CoreStatus with _$CoreStatus {
 
         CoreAlert.requestVPNPermission => ConnectionFailure.missingVpnPermission(message),
 
+        CoreAlert.requestSystemPrivilege => const ConnectionFailure.missingPrivilege(),
+
         CoreAlert.startCommandServer ||
         CoreAlert.createService ||
         CoreAlert.startService ||
@@ -97,6 +99,7 @@ sealed class CoreStatus with _$CoreStatus {
 
 enum CoreAlert {
   requestVPNPermission,
+  requestSystemPrivilege,
   requestNotificationPermission,
   emptyConfiguration,
   startCommandServer,

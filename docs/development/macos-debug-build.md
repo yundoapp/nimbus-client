@@ -28,6 +28,7 @@ dart run build_runner build --delete-conflicting-outputs
 swift scripts/generate_yundo_logo_assets.swift
 flutter analyze --no-fatal-warnings --no-fatal-infos
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer flutter build macos --debug
+scripts/verify_macos_privileged_helper.sh
 ```
 
 Debug 产物应位于：
@@ -41,6 +42,9 @@ build/macos/Build/Products/Debug/Yundo Dev.app
 - 显示名：`Yundo Dev`
 - Bundle ID：`app.yundo.client.dev`
 - 版本：`1.0.0+10000` 或后续递增版本
+- 包内包含独立签名的最小权限 helper 和对应 LaunchDaemon plist
+
+macOS TUN helper 的进程边界、签名要求和授权流程见 [macOS TUN 最小权限辅助进程](./macos-privileged-helper.md)。只读 helper 校验通过不等于 ad hoc Debug 包可以完成真实系统注册。
 
 Android Debug 使用 `app.yundo.client.dev`，并通过独立的 Debug 应用名和 Application ID 与正式版隔离。本阶段只校验身份配置，不开始 Android 功能开发。
 
@@ -58,8 +62,9 @@ scripts/package_macos_internal_test.sh
 source_state=clean
 forbidden_branding_scan=passed
 compliance_assets=passed
+privileged_helper_assets=passed
 ```
 
-脚本会拒绝从 dirty 工作区打包，并校验 App 和解包后的 ZIP 都包含 `LICENSE.md`、隐私说明和使用条款。manifest 同时记录完整源码 commit，便于对应公开 fork 中的精确版本。
+脚本会拒绝从 dirty 工作区打包，并校验 App 和解包后的 ZIP 都包含 `LICENSE.md`、隐私说明、使用条款、特权 helper 和 LaunchDaemon plist。manifest 同时记录完整源码 commit，便于对应公开 fork 中的精确版本。
 
 `build/` 下的 App、ZIP、校验文件和 manifest 均为本地产物，不提交到仓库。

@@ -1,0 +1,47 @@
+{
+  "log": {
+    "level": "warn"
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "yundo-tun",
+      "address": [
+        "172.20.0.1/30",
+        "fdfe:dcba:9876::1/126"
+      ],
+      "mtu": 9000,
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "system",
+      "sniff": true,
+      "sniff_override_destination": true
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "socks",
+      "tag": "yundo-socks",
+      "server": "127.0.0.1",
+      "server_port": 12334,
+      "version": "5"
+    },
+    {
+      "type": "direct",
+      "tag": "yundo-direct"
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "process_name": [
+          "Yundo Dev",
+          "YundoPrivilegedHelper"
+        ],
+        "outbound": "yundo-direct"
+      }
+    ],
+    "final": "yundo-socks",
+    "auto_detect_interface": true
+  }
+}
