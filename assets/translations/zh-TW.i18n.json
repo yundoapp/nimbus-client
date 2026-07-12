@@ -862,7 +862,7 @@
       "cannotConnectTitle": "無法連線",
       "missingSystemPermission": "需要允許系統網路權限後才能連線。",
       "missingPrivilege": "需要系統授權後才能連線。",
-      "otherConnectionActive": "偵測到其他連線服務正在使用網路，請先中斷後再連線雲渡。"
+      "otherConnectionActive": "另一個網路連線 App 正在執行。請先中斷連線或結束該 App，再連線雲渡。"
     },
     "apiError": {
       "invalidCredentials": "使用者名稱或密碼不正確。",

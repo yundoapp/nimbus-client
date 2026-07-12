@@ -854,7 +854,7 @@
       "cannotConnectTitle": "Connexion impossible",
       "missingSystemPermission": "Autorisez le réseau système requis avant de vous connecter.",
       "missingPrivilege": "Une autorisation système est requise avant de vous connecter.",
-      "otherConnectionActive": "Un autre service de connexion utilise le réseau. Déconnectez-le avant de vous connecter à Yundo."
+      "otherConnectionActive": "Une autre application de connexion réseau est en cours d’exécution. Déconnectez-la ou quittez-la avant de vous connecter à Yundo."
     },
     "apiError": {
       "invalidCredentials": "Nom d’utilisateur ou mot de passe incorrect.",
