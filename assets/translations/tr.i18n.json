@@ -861,7 +861,8 @@
       "disconnectedTitle": "Bağlantı kesildi",
       "cannotConnectTitle": "Bağlanılamıyor",
       "missingSystemPermission": "Bağlanmadan önce gerekli sistem ağ iznine izin verin.",
-      "missingPrivilege": "Bağlanmadan önce sistem yetkilendirmesi gerekiyor."
+      "missingPrivilege": "Bağlanmadan önce sistem yetkilendirmesi gerekiyor.",
+      "otherConnectionActive": "Başka bir bağlantı hizmeti ağı kullanıyor. Yundo'ya bağlanmadan önce bağlantısını kesin."
     },
     "apiError": {
       "invalidCredentials": "Kullanıcı adı veya parola hatalı.",

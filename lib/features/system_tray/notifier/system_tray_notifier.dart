@@ -38,13 +38,10 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
           return OutboundInfo(urlTestDelay: 0);
         })
         .then((connection) => connection.urlTestDelay);
-    final connection = await ref
-        .watch(connectionNotifierProvider.future)
-        .catchError((e) {
-          loggy.warning("error getting connection status", e);
-          return const ConnectionStatus.disconnected();
-        })
-        .then((connection) => _modifyConnectionStatus(connection, urlTestDelay));
+    final connection = await ref.watch(connectionNotifierProvider.future).catchError((e) {
+      loggy.warning("error getting connection status", e);
+      return const ConnectionStatus.disconnected();
+    });
 
     await trayManager.setIcon(_trayIconPath(), isTemplate: PlatformUtils.isMacOS);
     if (!PlatformUtils.isLinux) await trayManager.setToolTip(_trayTooltip(t, connection, urlTestDelay));
@@ -79,10 +76,11 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
   String _trayTooltip(Translations t, ConnectionStatus connection, int urlTestDelay) {
     final r = "${Constants.appName} - ${_statusText(t, connection)}";
     if (connection is Connected) {
-      if (Platform.isMacOS) windowManager.setBadgeLabel("${urlTestDelay}ms");
-      return '$r : ${urlTestDelay}ms';
+      final hasDelay = urlTestDelay > 0 && urlTestDelay < 65000;
+      if (Platform.isMacOS) windowManager.setBadgeLabel(hasDelay ? "${urlTestDelay}ms" : "");
+      return hasDelay ? '$r : ${urlTestDelay}ms' : r;
     } else {
-      if (Platform.isMacOS) windowManager.setBadgeLabel("-ms");
+      if (Platform.isMacOS) windowManager.setBadgeLabel("");
       return r;
     }
   }
@@ -93,14 +91,6 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
     Connected() => t.connection.connected,
     Disconnecting() => t.connection.disconnecting,
   };
-
-  ConnectionStatus _modifyConnectionStatus(ConnectionStatus connection, int urlTestDelay) {
-    if (connection is Connected) {
-      return urlTestDelay > 0 && urlTestDelay < 65000 ? const Connected() : const Connecting();
-    } else {
-      return connection;
-    }
-  }
 
   @override
   Future<void> onTrayMenuItemClick(MenuItem menuItem) async {

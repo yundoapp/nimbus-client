@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
@@ -17,6 +18,7 @@ final nimbusDesktopBehaviorControllerProvider = NotifierProvider<NimbusDesktopBe
 class NimbusDesktopBehaviorController extends Notifier<void> with AppLogger {
   Timer? _autoConnectTimer;
   Timer? _debounceTimer;
+  int _failedAttempts = 0;
 
   @override
   void build() {
@@ -28,16 +30,27 @@ class NimbusDesktopBehaviorController extends Notifier<void> with AppLogger {
     });
 
     ref.listen(Preferences.nimbusAutoConnect, (_, enabled) {
-      if (enabled) scheduleAutoConnect(reason: 'auto connect enabled');
+      if (enabled) {
+        scheduleAutoConnect(reason: 'auto connect enabled');
+      } else {
+        _autoConnectTimer?.cancel();
+        _debounceTimer?.cancel();
+        _failedAttempts = 0;
+      }
     });
-    ref.listen(nimbusAuthControllerProvider, (_, __) => scheduleAutoConnect(reason: 'auth changed'));
-    ref.listen(nimbusAppVersionControllerProvider, (_, __) => scheduleAutoConnect(reason: 'version changed'));
-
-    _autoConnectTimer = Timer.periodic(const Duration(minutes: 1), (_) => tryAutoConnect(reason: 'desktop monitor'));
+    ref.listen(nimbusAuthControllerProvider, (previous, next) {
+      final becameReady =
+          next.isAuthenticated &&
+          !next.isRestoring &&
+          (previous == null || !previous.isAuthenticated || previous.isRestoring);
+      if (becameReady) scheduleAutoConnect(reason: 'auth ready');
+    });
     scheduleAutoConnect(reason: 'startup');
   }
 
-  void scheduleAutoConnect({required String reason}) {
+  void scheduleAutoConnect({required String reason, bool resetBackoff = true}) {
+    if (resetBackoff) _failedAttempts = 0;
+    _autoConnectTimer?.cancel();
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(seconds: 2), () => tryAutoConnect(reason: reason));
   }
@@ -53,10 +66,27 @@ class NimbusDesktopBehaviorController extends Notifier<void> with AppLogger {
     if (version?.forceUpdate ?? false) return;
 
     final connection = ref.read(connectionNotifierProvider).valueOrNull;
-    if (connection is Connected || connection is Connecting || connection is Disconnecting) return;
+    if (connection is Connected) {
+      _failedAttempts = 0;
+      _autoConnectTimer?.cancel();
+      return;
+    }
+    if (connection is Connecting || connection is Disconnecting) return;
 
     loggy.info('auto connect [$reason]');
     await ref.read(nimbusConnectionControllerProvider.notifier).connect(showErrors: false);
+    final current = ref.read(connectionNotifierProvider).valueOrNull;
+    if (current is Connected) {
+      _failedAttempts = 0;
+      _autoConnectTimer?.cancel();
+      return;
+    }
+
+    final retryDelay = nimbusAutoConnectRetryDelay(_failedAttempts);
+    _failedAttempts += 1;
+    loggy.info('auto connect retry scheduled in ${retryDelay.inMinutes} minute(s)');
+    _autoConnectTimer?.cancel();
+    _autoConnectTimer = Timer(retryDelay, () => tryAutoConnect(reason: 'retry after failure'));
   }
 
   Future<void> toggleConnectionFromTray() async {
@@ -70,4 +100,9 @@ class NimbusDesktopBehaviorController extends Notifier<void> with AppLogger {
     }
     await ref.read(nimbusConnectionControllerProvider.notifier).toggle();
   }
+}
+
+Duration nimbusAutoConnectRetryDelay(int failedAttempts) {
+  const retryMinutes = [1, 2, 4, 8, 16, 30];
+  return Duration(minutes: retryMinutes[min(max(failedAttempts, 0), retryMinutes.length - 1)]);
 }

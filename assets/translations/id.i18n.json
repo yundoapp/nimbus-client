@@ -861,7 +861,8 @@
       "disconnectedTitle": "Terputus",
       "cannotConnectTitle": "Tidak dapat terhubung",
       "missingSystemPermission": "Izinkan izin jaringan sistem yang diperlukan sebelum terhubung.",
-      "missingPrivilege": "Otorisasi sistem diperlukan sebelum terhubung."
+      "missingPrivilege": "Otorisasi sistem diperlukan sebelum terhubung.",
+      "otherConnectionActive": "Layanan koneksi lain sedang menggunakan jaringan. Putuskan terlebih dahulu sebelum menghubungkan Yundo."
     },
     "apiError": {
       "invalidCredentials": "Nama pengguna atau kata sandi salah.",

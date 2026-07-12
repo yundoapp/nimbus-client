@@ -861,7 +861,8 @@
       "disconnectedTitle": "Disconnected",
       "cannotConnectTitle": "Unable to connect",
       "missingSystemPermission": "Allow the required system network permission before connecting.",
-      "missingPrivilege": "System authorization is required before connecting."
+      "missingPrivilege": "System authorization is required before connecting.",
+      "otherConnectionActive": "Another connection service is using the network. Disconnect it before connecting to Yundo."
     },
     "apiError": {
       "invalidCredentials": "Invalid username or password.",

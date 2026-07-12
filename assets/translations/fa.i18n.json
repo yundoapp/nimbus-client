@@ -861,7 +861,8 @@
       "disconnectedTitle": "قطع شد",
       "cannotConnectTitle": "اتصال ممکن نیست",
       "missingSystemPermission": "پیش از اتصال، مجوز شبکه سیستم را بدهید.",
-      "missingPrivilege": "پیش از اتصال، مجوز سیستم لازم است."
+      "missingPrivilege": "پیش از اتصال، مجوز سیستم لازم است.",
+      "otherConnectionActive": "سرویس اتصال دیگری در حال استفاده از شبکه است. پیش از اتصال به Yundo آن را قطع کنید."
     },
     "apiError": {
       "invalidCredentials": "نام کاربری یا رمز عبور نادرست است.",

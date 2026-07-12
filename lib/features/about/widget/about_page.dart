@@ -1,16 +1,11 @@
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
-import 'package:hiddify/core/directories/directories_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/constants.dart';
-import 'package:hiddify/core/model/failures.dart';
-import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
-import 'package:hiddify/core/widget/adaptive_icon.dart';
-import 'package:hiddify/features/app_update/notifier/app_update_notifier.dart';
-import 'package:hiddify/features/app_update/notifier/app_update_state.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -21,65 +16,10 @@ class AboutPage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
     final appInfo = ref.watch(appInfoProvider).requireValue;
-    final appUpdate = ref.watch(appUpdateNotifierProvider);
-
-    ref.listen(appUpdateNotifierProvider, (_, next) async {
-      if (!context.mounted) return;
-      switch (next) {
-        case AppUpdateStateAvailable(:final versionInfo) || AppUpdateStateIgnored(:final versionInfo):
-          return await ref
-              .read(dialogNotifierProvider.notifier)
-              .showNewVersion(currentVersion: appInfo.presentVersion, newVersion: versionInfo, canIgnore: false);
-        case AppUpdateStateError(:final error):
-          return CustomToast.error(t.presentShortError(error)).show(context);
-        case AppUpdateStateNotAvailable():
-          return CustomToast.success(t.pages.about.notAvailableMsg).show(context);
-      }
-    });
-
-    final conditionalTiles = [
-      if (appInfo.release.allowCustomUpdateChecker)
-        ListTile(
-          title: Text(t.pages.about.checkForUpdate),
-          trailing: switch (appUpdate) {
-            AppUpdateStateChecking() => const SizedBox(width: 24, height: 24, child: CircularProgressIndicator()),
-            _ => const Icon(FluentIcons.arrow_sync_24_regular),
-          },
-          onTap: () async {
-            await ref.read(appUpdateNotifierProvider.notifier).check();
-          },
-        ),
-      if (PlatformUtils.isDesktop)
-        ListTile(
-          title: Text(t.pages.about.openWorkingDir),
-          trailing: const Icon(FluentIcons.open_folder_24_regular),
-          onTap: () async {
-            final path = ref.watch(appDirectoriesProvider).requireValue.workingDir.uri;
-            await UriUtils.tryLaunch(path);
-          },
-        ),
-    ];
+    final appVersion = ref.watch(nimbusAppVersionControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(t.pages.about.title),
-        actions: [
-          PopupMenuButton(
-            icon: Icon(AdaptiveIcon(context).more),
-            itemBuilder: (context) {
-              return [
-                PopupMenuItem(
-                  child: Text(t.common.addToClipboard),
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: appInfo.format()));
-                  },
-                ),
-              ];
-            },
-          ),
-          const Gap(8),
-        ],
-      ),
+      appBar: AppBar(title: Text(t.pages.about.title)),
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
@@ -108,35 +48,52 @@ class AboutPage extends HookConsumerWidget {
           ),
           SliverList(
             delegate: SliverChildListDelegate([
-              ...conditionalTiles,
-              if (conditionalTiles.isNotEmpty) const Divider(),
+              ListTile(
+                title: Text(t.pages.about.checkForUpdate),
+                trailing: appVersion.isChecking
+                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator())
+                    : const Icon(FluentIcons.arrow_sync_24_regular),
+                onTap: appVersion.isChecking
+                    ? null
+                    : () async {
+                        final result = await ref.read(nimbusAppVersionControllerProvider.notifier).check(force: true);
+                        if (!context.mounted) return;
+                        if (result == null) {
+                          CustomToast.error(
+                            ref.read(nimbusAppVersionControllerProvider).errorMessage ??
+                                t.nimbus.common.operationFailed,
+                          ).show(context);
+                        } else if (result.updateAvailable) {
+                          await showDialog<void>(
+                            context: context,
+                            barrierDismissible: !result.forceUpdate,
+                            builder: (_) => NimbusAppVersionDialog(version: result),
+                          );
+                        } else {
+                          CustomToast.success(t.pages.about.notAvailableMsg).show(context);
+                        }
+                      },
+              ),
+              const Divider(),
               ListTile(
                 title: Text(t.pages.about.sourceCode),
                 trailing: const Icon(FluentIcons.open_24_regular),
-                onTap: () async {
-                  await UriUtils.tryLaunch(Uri.parse(Constants.githubUrl));
-                },
+                onTap: () => UriUtils.tryLaunch(Uri.parse(Constants.githubUrl)),
               ),
               ListTile(
                 title: Text(t.pages.about.license),
                 trailing: const Icon(FluentIcons.open_24_regular),
-                onTap: () async {
-                  await UriUtils.tryLaunch(Uri.parse(Constants.licenseUrl));
-                },
+                onTap: () => UriUtils.tryLaunch(Uri.parse(Constants.licenseUrl)),
               ),
               ListTile(
                 title: Text(t.pages.about.termsAndConditions),
                 trailing: const Icon(FluentIcons.open_24_regular),
-                onTap: () async {
-                  await UriUtils.tryLaunch(Uri.parse(Constants.termsAndConditionsUrl));
-                },
+                onTap: () => UriUtils.tryLaunch(Uri.parse(Constants.termsAndConditionsUrl)),
               ),
               ListTile(
                 title: Text(t.pages.about.privacyPolicy),
                 trailing: const Icon(FluentIcons.open_24_regular),
-                onTap: () async {
-                  await UriUtils.tryLaunch(Uri.parse(Constants.privacyPolicyUrl));
-                },
+                onTap: () => UriUtils.tryLaunch(Uri.parse(Constants.privacyPolicyUrl)),
               ),
             ]),
           ),

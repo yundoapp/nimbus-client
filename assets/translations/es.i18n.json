@@ -861,7 +861,8 @@
       "disconnectedTitle": "Desconectado",
       "cannotConnectTitle": "No se puede conectar",
       "missingSystemPermission": "Permite el permiso de red del sistema antes de conectarte.",
-      "missingPrivilege": "Se requiere autorización del sistema antes de conectarte."
+      "missingPrivilege": "Se requiere autorización del sistema antes de conectarte.",
+      "otherConnectionActive": "Otro servicio de conexión está usando la red. Desconéctalo antes de conectarte a Yundo."
     },
     "apiError": {
       "invalidCredentials": "Usuario o contraseña incorrectos.",

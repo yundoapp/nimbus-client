@@ -59,19 +59,13 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
 
   @override
   NimbusAuthState build() {
-    final session = _repository.readSession();
     final selectedLocationCode = _repository.readSelectedLocationCode();
-    if (session == null) return const NimbusAuthState.unauthenticated();
     Future.microtask(restore);
-    return NimbusAuthState.authenticated(
-      session: session,
-      selectedLocationCode: selectedLocationCode,
-      isRestoring: true,
-    );
+    return NimbusAuthState(isAuthenticated: false, selectedLocationCode: selectedLocationCode, isRestoring: true);
   }
 
   Future<void> restore() async {
-    final session = _repository.readSession();
+    final session = await _repository.readSession();
     if (session == null) {
       state = const NimbusAuthState.unauthenticated();
       return;

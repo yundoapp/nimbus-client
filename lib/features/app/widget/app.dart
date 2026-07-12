@@ -14,9 +14,10 @@ import 'package:hiddify/core/router/go_router/go_router_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/theme/app_theme.dart';
 import 'package:hiddify/core/theme/theme_preferences.dart';
-import 'package:hiddify/features/app_update/notifier/app_update_notifier.dart';
 import 'package:hiddify/features/connection/widget/connection_wrapper.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/per_app_proxy/overview/per_app_proxy_service_notifier.dart';
+import 'package:hiddify/features/profile/data/profile_data_providers.dart';
 import 'package:hiddify/features/profile/notifier/profiles_update_notifier.dart';
 import 'package:hiddify/features/shortcut/shortcut_wrapper.dart';
 import 'package:hiddify/features/system_tray/notifier/system_tray_notifier.dart';
@@ -25,7 +26,6 @@ import 'package:hiddify/hiddifycore/hiddify_core_service_provider.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:toastification/toastification.dart';
-import 'package:upgrader/upgrader.dart';
 import 'package:window_manager/window_manager.dart';
 
 bool _debugAccessibility = false;
@@ -62,7 +62,6 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
     final locale = ref.watch(localePreferencesProvider);
     final themeMode = ref.watch(themePreferencesProvider);
     final theme = AppTheme(themeMode, locale.preferredFontFamily);
-    final upgrader = ref.watch(upgraderProvider);
     final activeBreakpoint = Breakpoint(context).activeBreakpoint;
     final environment = ref.watch(environmentProvider);
     final baseAppTitle = ref.watch(translationsProvider).requireValue.common.appTitle;
@@ -79,6 +78,20 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
       });
       return null;
     }, [activeBreakpoint]);
+
+    useEffect(() {
+      if (PlatformUtils.isMacOS) {
+        Future.microtask(() async {
+          try {
+            await deleteNimbusManagedProfileFile(ref.read(profilePathResolverProvider));
+            await deleteLegacyNimbusManagedProfileFiles();
+          } catch (error) {
+            loggy.warning('failed to remove stale managed connection config on startup', error);
+          }
+        });
+      }
+      return null;
+    }, const []);
 
     useEffect(() {
       if (PlatformUtils.isDesktop) {
@@ -110,11 +123,7 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
                   title: appTitle,
                   builder: (context, child) {
                     final theme = Theme.of(context);
-                    child = UpgradeAlert(
-                      upgrader: upgrader,
-                      navigatorKey: router.routerDelegate.navigatorKey,
-                      child: child ?? const SizedBox(),
-                    );
+                    child = child ?? const SizedBox();
                     if (kDebugMode && _debugAccessibility) {
                       return AccessibilityTools(checkFontOverflows: true, child: child);
                     }
@@ -137,68 +146,6 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
       ),
     );
   }
-
-  // @override
-  // Widget build1(BuildContext context, WidgetRef ref) {
-  //   setupStateListener(ref);
-  //   // setupQuickSettings(ref);
-  //   final router = ref.watch(routerProvider);
-  //   final locale = ref.watch(localePreferencesProvider);
-  //   final themeMode = ref.watch(themePreferencesProvider);
-  //   final theme = AppTheme(themeMode, locale.preferredFontFamily);
-  //   final upgrader = ref.watch(upgraderProvider);
-
-  //   ref.listen(foregroundProfilesUpdateNotifierProvider, (_, __) {});
-
-  //   return WindowWrapper(
-  //     TrayWrapper(
-  //       ShortcutWrapper(
-  //         ConnectionWrapper(
-  //           PlatformProvider(
-  //               settings: PlatformSettingsData(
-  //                 iosUsesMaterialWidgets: true,
-  //               ),
-  //               builder: (context) => DynamicColorBuilder(
-  //                     builder: (ColorScheme? lightColorScheme, ColorScheme? darkColorScheme) {
-  //                       return PlatformApp.router(
-  //                         routerConfig: router,
-  //                         locale: locale.flutterLocale,
-  //                         supportedLocales: AppLocaleUtils.supportedLocales,
-  //                         localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  //                         debugShowCheckedModeBanner: false,
-  //                         material: (context, platform) => MaterialAppRouterData(
-  //                           theme: theme.lightTheme(lightColorScheme),
-  //                           darkTheme: theme.darkTheme(darkColorScheme),
-  //                           themeMode: themeMode.flutterThemeMode,
-  //                         ),
-  //                         cupertino: (context, platform) {
-  //                           final sysDark = MediaQuery.of(context).platformBrightness == Brightness.dark;
-
-  //                           return CupertinoAppRouterData(theme: theme.cupertinoThemeData(sysDark, lightColorScheme, darkColorScheme));
-  //                         },
-  //                         title: Constants.appName,
-  //                         builder: (context, child) {
-  //                           child = UpgradeAlert(
-  //                             upgrader: upgrader,
-  //                             navigatorKey: router.routerDelegate.navigatorKey,
-  //                             child: child ?? const SizedBox(),
-  //                           );
-  //                           if (kDebugMode && _debugAccessibility) {
-  //                             return AccessibilityTools(
-  //                               checkFontOverflows: true,
-  //                               child: child,
-  //                             );
-  //                           }
-  //                           return child;
-  //                         },
-  //                       );
-  //                     },
-  //                   )),
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
 
   void setupStateListener(WidgetRef ref) {
     final appLifecycleState = useAppLifecycleState();

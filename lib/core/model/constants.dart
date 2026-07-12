@@ -6,9 +6,6 @@ abstract class Constants {
   static const appName = "Yundo";
   static final githubUrl = _sourceUrl('/tree/develop');
   static final licenseUrl = _sourceUrl('/blob/develop/LICENSE.md');
-  static const githubReleasesApiUrl = "https://yundo.app/releases.json";
-  static const githubLatestReleaseUrl = "https://yundo.app/download";
-  static const appCastUrl = "https://yundo.app/appcast.xml";
   static final privacyPolicyUrl = _sourceUrl('/blob/develop/docs/legal/privacy-policy.md');
   static final termsAndConditionsUrl = _sourceUrl('/blob/develop/docs/legal/terms-of-service.md');
   static const cfWarpPrivacyPolicy = "https://www.cloudflare.com/application/privacypolicy/";

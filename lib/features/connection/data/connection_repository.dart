@@ -116,10 +116,13 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
           .mapLeft((l) => ConnectionFailure.invalidConfigOption(null, l))
           .flatMap(
             (overridedOptions) => TaskEither.tryCatch(() async {
-              if (!overridedOptions.chainStatus.isOff()) {
+              final effectiveOptions = _isNimbusRawProfile(prof)
+                  ? nimbusManagedConfigOptions(overridedOptions)
+                  : overridedOptions;
+              if (!effectiveOptions.chainStatus.isOff()) {
                 final isWarpLicenseAgreed = ref.read(Preferences.warpConsentGiven) == true;
                 final isWarpEnabled =
-                    overridedOptions.unblocker.mode.isWarp() || overridedOptions.extraSecurity.mode.isWarp();
+                    effectiveOptions.unblocker.mode.isWarp() || effectiveOptions.extraSecurity.mode.isWarp();
                 if (!isWarpLicenseAgreed && isWarpEnabled) {
                   final isAgreed = await ref.read(dialogNotifierProvider.notifier).showWarpLicense();
                   if (isAgreed == true) {
@@ -132,7 +135,7 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
 
                 final isPsiphonLicenseAgreed = ref.read(Preferences.psiphonConsentGiven) == true;
                 final isPsiphonEnabled =
-                    overridedOptions.unblocker.mode.isPsiphon() || overridedOptions.extraSecurity.mode.isPsiphon();
+                    effectiveOptions.unblocker.mode.isPsiphon() || effectiveOptions.extraSecurity.mode.isPsiphon();
                 if (!isPsiphonLicenseAgreed && isPsiphonEnabled) {
                   final isAgreed = await ref.read(dialogNotifierProvider.notifier).showPsiphonLicense();
                   if (isAgreed == true) {
@@ -143,9 +146,23 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
                 }
               }
 
-              _configOptionsSnapshot = overridedOptions;
-              await singbox.changeOptions(overridedOptions).run();
+              _configOptionsSnapshot = effectiveOptions;
+              await singbox.changeOptions(effectiveOptions).run();
               return unit;
             }, (err, st) => err is ConnectionFailure ? err : ConnectionFailure.unexpected(err, st)),
           );
+}
+
+@visibleForTesting
+SingboxConfigOption nimbusManagedConfigOptions(SingboxConfigOption options) {
+  return options.copyWith(
+    allowConnectionFromLan: false,
+    enableClashApi: false,
+    enableDirectPort: false,
+    enableMixedPort: true,
+    enableRedirectPort: false,
+    enableTproxyPort: false,
+    enableTun: false,
+    setSystemProxy: false,
+  );
 }

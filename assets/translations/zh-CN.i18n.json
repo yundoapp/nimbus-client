@@ -861,7 +861,8 @@
       "disconnectedTitle": "已断开",
       "cannotConnectTitle": "无法连接",
       "missingSystemPermission": "需要允许系统网络权限后才能连接。",
-      "missingPrivilege": "需要系统授权后才能连接。"
+      "missingPrivilege": "需要系统授权后才能连接。",
+      "otherConnectionActive": "检测到其他连接服务正在使用网络，请先断开后再连接云渡。"
     },
     "apiError": {
       "invalidCredentials": "用户名或密码不正确。",

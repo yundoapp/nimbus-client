@@ -7,6 +7,7 @@ import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/app_info_entity.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
+import 'package:hiddify/features/nimbus/auth/data/nimbus_session_store.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,27 +16,35 @@ import 'package:uuid/uuid.dart';
 const nimbusApiBaseUrl = String.fromEnvironment('NIMBUS_API_BASE_URL', defaultValue: 'http://localhost:4000/api/v1');
 
 final nimbusAuthRepositoryProvider = Provider<NimbusAuthRepository>((ref) {
+  final preferences = ref.watch(sharedPreferencesProvider).requireValue;
   return NimbusAuthRepository(
-    preferences: ref.watch(sharedPreferencesProvider).requireValue,
+    preferences: preferences,
     appInfo: ref.watch(appInfoProvider).requireValue,
+    sessionStore: !kIsWeb && Platform.isMacOS ? const MacOSKeychainNimbusSessionStore() : null,
   );
 });
 
 class NimbusAuthRepository {
-  NimbusAuthRepository({required SharedPreferences preferences, required AppInfoEntity appInfo, Dio? dio})
-    : _preferences = preferences,
-      _appInfo = appInfo,
-      _dio =
-          dio ??
-          Dio(
-            BaseOptions(
-              baseUrl: _normalizeApiBaseUrl(nimbusApiBaseUrl),
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 20),
-              sendTimeout: const Duration(seconds: 20),
-              headers: const {'accept': 'application/json', 'content-type': 'application/json'},
-            ),
-          );
+  NimbusAuthRepository({
+    required SharedPreferences preferences,
+    required AppInfoEntity appInfo,
+    NimbusSessionStore? sessionStore,
+    Dio? dio,
+  }) : _preferences = preferences,
+       _appInfo = appInfo,
+       _sessionStore = sessionStore ?? PreferencesNimbusSessionStore(preferences, _sessionKey),
+       _migrateLegacySession = sessionStore != null,
+       _dio =
+           dio ??
+           Dio(
+             BaseOptions(
+               baseUrl: _normalizeApiBaseUrl(nimbusApiBaseUrl),
+               connectTimeout: const Duration(seconds: 10),
+               receiveTimeout: const Duration(seconds: 20),
+               sendTimeout: const Duration(seconds: 20),
+               headers: const {'accept': 'application/json', 'content-type': 'application/json'},
+             ),
+           );
 
   static const _sessionKey = 'nimbus.auth.session';
   static const _deviceIdKey = 'nimbus.auth.device_id';
@@ -44,23 +53,37 @@ class NimbusAuthRepository {
 
   final SharedPreferences _preferences;
   final AppInfoEntity _appInfo;
+  final NimbusSessionStore _sessionStore;
+  final bool _migrateLegacySession;
   final Dio _dio;
 
-  NimbusAuthSession? readSession() {
-    final raw = _preferences.getString(_sessionKey);
+  Future<NimbusAuthSession?> readSession() async {
+    var raw = await _sessionStore.read();
+    if ((raw == null || raw.isEmpty) && _migrateLegacySession) {
+      final legacy = _preferences.getString(_sessionKey);
+      if (legacy != null && legacy.isNotEmpty) {
+        await _sessionStore.write(legacy);
+        await _preferences.remove(_sessionKey);
+        raw = legacy;
+      }
+    }
     if (raw == null || raw.isEmpty) return null;
     try {
       return NimbusAuthSession.fromJson(Map<String, dynamic>.from(jsonDecode(raw) as Map));
     } catch (_) {
+      await _sessionStore.delete();
+      await _preferences.remove(_sessionKey);
       return null;
     }
   }
 
   Future<void> saveSession(NimbusAuthSession session) async {
-    await _preferences.setString(_sessionKey, session.encode());
+    await _sessionStore.write(session.encode());
+    await _preferences.remove(_sessionKey);
   }
 
   Future<void> clearSession() async {
+    await _sessionStore.delete();
     await _preferences.remove(_sessionKey);
   }
 

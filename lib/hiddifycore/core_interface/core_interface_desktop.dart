@@ -78,6 +78,7 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
   @override
   Future<String> setup(Directories directories, bool debug, int mode) async {
     _directories = directories;
+    await discardPreparedConfig();
     // Generate a random password for the grpc service
     // final errPtr2 = _box.stop();
     // final err = errPtr2.cast<Utf8>().toDartString();
@@ -147,6 +148,20 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
   }
 
   @override
+  Future<void> discardPreparedConfig() async {
+    final preparedPath =
+        _preparedConfigPath ??
+        (_directories == null ? null : p.join(_directories!.tempDir.path, 'yundo-user-core.json'));
+    _preparedSourcePath = null;
+    _preparedConfigPath = null;
+    if (preparedPath == null) return;
+    final file = File(preparedPath);
+    if (await file.exists()) {
+      await file.delete();
+    }
+  }
+
+  @override
   Future<CoreStatus> prepareRestart(String path, String name) async {
     if (!Platform.isMacOS) return const CoreStatus.started();
     return _prepareMacOSTunnel(path);
@@ -208,6 +223,9 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
     } catch (error) {
       loggy.warning('failed to stop macOS privileged helper: $error');
       return false;
+    } finally {
+      await discardPreparedConfig();
+      _tunnelConfig = null;
     }
   }
 }

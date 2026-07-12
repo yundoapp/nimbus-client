@@ -16,6 +16,8 @@ class CoreInterface {
 
   String backgroundConfigPath(String originalPath) => originalPath;
 
+  Future<void> discardPreparedConfig() async {}
+
   Future<CoreStatus> prepareRestart(String path, String name) async {
     return const CoreStarted();
   }

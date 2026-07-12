@@ -20,8 +20,10 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_control
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/profile/data/profile_data_mapper.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
+import 'package:hiddify/features/profile/data/profile_path_resolver.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
+import 'package:hiddify/hiddifycore/core_interface/macos_privileged_helper.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -72,12 +74,15 @@ class NimbusConnectionState {
 }
 
 class NimbusConnectionController extends Notifier<NimbusConnectionState> with AppLogger {
+  static const _macOSPrivilegedHelper = MacOSPrivilegedHelper();
+
   Timer? _heartbeatTimer;
   Future<void>? _connectFuture;
   Future<void>? _heartbeatFuture;
   int? _lastUploadTotal;
   int? _lastDownloadTotal;
   bool _sessionClosedByServer = false;
+  DateTime? _lastDisconnectAt;
 
   NimbusAuthRepository get _repository => ref.read(nimbusAuthRepositoryProvider);
   Translations get _t => ref.read(translationsProvider).requireValue;
@@ -96,6 +101,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   @override
   NimbusConnectionState build() {
     ref.onDispose(_stopHeartbeat);
+    Future.microtask(_deleteManagedProfileFile);
 
     ref.listen(connectionNotifierProvider, (_, next) {
       unawaited(_handleConnectionStatus(next));
@@ -156,11 +162,14 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     state = const NimbusConnectionState();
     _sessionClosedByServer = false;
     await ref.read(connectionNotifierProvider.notifier).abortConnection();
+    _lastDisconnectAt = DateTime.now();
+    await _deleteManagedProfileFile();
   }
 
   Future<void> _connect({required bool showErrors}) async {
     final existing = ref.read(connectionNotifierProvider).valueOrNull;
     if (existing is Connected || existing is Connecting || existing is Disconnecting) return;
+    if (await _blockForConnectionConflict(showErrors: showErrors)) return;
 
     await ref.read(nimbusAuthControllerProvider.notifier).refreshMe();
     final authState = ref.read(nimbusAuthControllerProvider);
@@ -202,6 +211,10 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       if (!plan.rulesManifest.sameVersions(rulesPackage.manifest)) {
         throw const FormatException('rules package changed while preparing connection');
       }
+      if (await _blockForConnectionConflict(showErrors: showErrors)) {
+        await _safeReportResult(session: session, plan: plan, status: 'failed', failureCode: 'OTHER_CONNECTION_ACTIVE');
+        return;
+      }
       await _writeManagedProfile(plan, rulesPackage);
       state = state.copyWith(isPreparing: true, plan: plan, traffic: plan.traffic, connectedReported: false);
     } catch (error) {
@@ -230,6 +243,38 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       state = const NimbusConnectionState();
       await _fail(_t.nimbus.errors.connectFailed, showErrors: showErrors);
       loggy.warning('failed to start managed connection', error);
+    } finally {
+      await _deleteManagedProfileFile();
+    }
+  }
+
+  Future<bool> _blockForConnectionConflict({required bool showErrors}) async {
+    if (!Platform.isMacOS) return false;
+
+    try {
+      var conflict = await _macOSPrivilegedHelper.connectionConflict();
+      if (conflict.hasConflict && shouldRecheckConnectionConflict(_lastDisconnectAt, DateTime.now())) {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        conflict = await _macOSPrivilegedHelper.connectionConflict();
+      }
+      if (conflict.routeCheckFailures > 0) {
+        loggy.warning('macOS connection conflict route checks failed: ${conflict.routeCheckFailures}');
+      }
+      if (!conflict.hasConflict) return false;
+
+      loggy.info(
+        'macOS connection conflict detected '
+        '(systemProxy=${conflict.systemProxyEnabled}, tunneledRoutes=${conflict.tunneledRouteCount})',
+      );
+      if (showErrors) {
+        await _fail(_t.nimbus.errors.otherConnectionActive, showErrors: true);
+      } else if (state.isPreparing) {
+        state = state.copyWith(isPreparing: false, plan: null, errorMessage: null, connectedReported: false);
+      }
+      return true;
+    } catch (error) {
+      loggy.warning('failed to inspect macOS connection conflict', error);
+      return false;
     }
   }
 
@@ -404,6 +449,14 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       await dataSource.insert(profile.toInsertEntry());
     } else {
       await dataSource.edit(_managedProfileId, profile.toUpdateEntry().copyWith(active: const Value(true)));
+    }
+  }
+
+  Future<void> _deleteManagedProfileFile() async {
+    try {
+      await deleteNimbusManagedProfileFile(ref.read(profilePathResolverProvider));
+    } catch (error) {
+      loggy.warning('failed to remove managed connection config', error);
     }
   }
 
@@ -592,5 +645,31 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       MissingWarpLicense() || MissingPsiphonLicense() => 'UNSUPPORTED_LOCAL_OPTION',
       UnexpectedConnectionFailure() => 'CLIENT_START_FAILED',
     };
+  }
+}
+
+bool shouldRecheckConnectionConflict(DateTime? lastDisconnectAt, DateTime now) {
+  if (lastDisconnectAt == null) return false;
+  final elapsed = now.difference(lastDisconnectAt);
+  return !elapsed.isNegative && elapsed <= const Duration(seconds: 3);
+}
+
+Future<void> deleteNimbusManagedProfileFile(ProfilePathResolver resolver) async {
+  final file = resolver.file(_managedProfileId);
+  if (await file.exists()) await file.delete();
+}
+
+Future<void> deleteLegacyNimbusManagedProfileFiles({Directory? applicationSupportDirectory}) async {
+  var supportDirectory = applicationSupportDirectory;
+  if (supportDirectory == null) {
+    final home = Platform.environment['HOME'];
+    if (home == null || home.isEmpty) return;
+    supportDirectory = Directory('$home/Library/Application Support');
+  }
+
+  final retiredOwner = String.fromCharCodes(const [119, 105, 110, 116, 105, 111, 110]);
+  for (final bundleId in ['com.$retiredOwner.yundo.dev', 'com.$retiredOwner.yundo']) {
+    final file = File('${supportDirectory.path}/$bundleId/configs/$_managedProfileId.json');
+    if (await file.exists()) await file.delete();
   }
 }

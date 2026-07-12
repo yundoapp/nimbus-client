@@ -5,6 +5,7 @@ import LaunchAtLogin
 
 class MainFlutterWindow: NSWindow {
   private var privilegedHelperBridge: PrivilegedHelperBridge?
+  private var secureSessionBridge: SecureSessionBridge?
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
@@ -53,6 +54,8 @@ class MainFlutterWindow: NSWindow {
     }
     privilegedHelperBridge = PrivilegedHelperBridge(binaryMessenger: flutterViewController.engine.binaryMessenger)
     privilegedHelperBridge?.register()
+    secureSessionBridge = SecureSessionBridge(binaryMessenger: flutterViewController.engine.binaryMessenger)
+    secureSessionBridge?.register()
     //
     RegisterGeneratedPlugins(registry: flutterViewController)
 

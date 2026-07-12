@@ -31,4 +31,32 @@ void main() {
 
     expect(await helper.status(), {'status': 'requiresApproval'});
   });
+
+  test('maps the native connection conflict inspection', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+      expect(call.method, 'connectionConflict');
+      return {'hasConflict': true, 'systemProxyEnabled': true, 'tunneledRouteCount': 2, 'routeCheckFailures': 1};
+    });
+
+    final conflict = await helper.connectionConflict();
+
+    expect(conflict.hasConflict, isTrue);
+    expect(conflict.systemProxyEnabled, isTrue);
+    expect(conflict.tunneledRouteCount, 2);
+    expect(conflict.routeCheckFailures, 1);
+  });
+
+  test('uses safe defaults for an incomplete conflict response', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      (_) async => const <Object?, Object?>{},
+    );
+
+    final conflict = await helper.connectionConflict();
+
+    expect(conflict.hasConflict, isFalse);
+    expect(conflict.systemProxyEnabled, isFalse);
+    expect(conflict.tunneledRouteCount, 0);
+    expect(conflict.routeCheckFailures, 0);
+  });
 }

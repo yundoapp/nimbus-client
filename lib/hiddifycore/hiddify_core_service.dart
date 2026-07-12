@@ -209,6 +209,8 @@ class HiddifyCoreService with InfraLogger {
 
         // throw DioException(requestOptions: RequestOptions(), error: e);
         return left(const ConnectionFailure.unexpected("failed to start background core"));
+      } finally {
+        await core.discardPreparedConfig();
       }
 
       // if (res.messageType != MessageType.EMPTY) return left(res);
@@ -277,6 +279,8 @@ class HiddifyCoreService with InfraLogger {
         if (e.code == StatusCode.unknown && !(e.message?.contains("HTTP/2 error") ?? false)) {
           return left("${e.message}");
         }
+      } finally {
+        await core.discardPreparedConfig();
       }
 
       return right(unit);

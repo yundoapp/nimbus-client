@@ -55,11 +55,6 @@ class SettingsPage extends HookConsumerWidget {
             ),
           if (Breakpoint(context).isMobile()) ...[
             SettingsSection(
-              title: t.pages.logs.title,
-              icon: Icons.description_rounded,
-              namedLocation: context.namedLocation('logs'),
-            ),
-            SettingsSection(
               title: t.pages.about.title,
               icon: Icons.info_rounded,
               namedLocation: context.namedLocation('about'),

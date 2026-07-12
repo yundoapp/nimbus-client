@@ -1,6 +1,7 @@
 import FlutterMacOS
 import Foundation
 import ServiceManagement
+import SystemConfiguration
 
 @objc private protocol YundoPrivilegedHelperProtocol {
   func startTunnel(_ config: String, withReply reply: @escaping (String?) -> Void)
@@ -40,6 +41,8 @@ final class PrivilegedHelperBridge {
         self.stopTunnel(result: result)
       case "status":
         self.readStatus(result: result)
+      case "connectionConflict":
+        self.inspectConnectionConflict(result: result)
       case "openSystemSettings":
         self.openSystemSettings(result: result)
       default:
@@ -176,6 +179,15 @@ final class PrivilegedHelperBridge {
     result(["status": status])
   }
 
+  private func inspectConnectionConflict(result: @escaping FlutterResult) {
+    DispatchQueue.global(qos: .userInitiated).async {
+      let inspection = NetworkConflictInspector.inspect()
+      DispatchQueue.main.async {
+        result(inspection)
+      }
+    }
+  }
+
   private func openSystemSettings(result: @escaping FlutterResult) {
     guard #available(macOS 13.0, *) else {
       result(FlutterError(code: "helper_unsupported_macos", message: nil, details: nil))
@@ -183,5 +195,71 @@ final class PrivilegedHelperBridge {
     }
     SMAppService.openSystemSettingsLoginItems()
     result(nil)
+  }
+}
+
+private enum NetworkConflictInspector {
+  private static let publicDestinations = ["1.1.1.1", "8.8.8.8", "9.9.9.9", "223.5.5.5"]
+  private static let tunnelInterfacePrefixes = ["utun", "ppp", "ipsec", "tun", "tap"]
+
+  static func inspect() -> [String: Any] {
+    let systemProxyEnabled = isSystemProxyEnabled()
+    var tunneledRouteCount = 0
+    var routeCheckFailures = 0
+    for destination in publicDestinations {
+      guard let interface = routeInterface(for: destination) else {
+        routeCheckFailures += 1
+        continue
+      }
+      if tunnelInterfacePrefixes.contains(where: { interface.hasPrefix($0) }) {
+        tunneledRouteCount += 1
+      }
+    }
+
+    return [
+      "hasConflict": systemProxyEnabled || tunneledRouteCount > 0,
+      "systemProxyEnabled": systemProxyEnabled,
+      "tunneledRouteCount": tunneledRouteCount,
+      "routeCheckFailures": routeCheckFailures,
+    ]
+  }
+
+  private static func isSystemProxyEnabled() -> Bool {
+    guard let proxies = SCDynamicStoreCopyProxies(nil) as? [String: Any] else { return false }
+    let enabledKeys = [
+      kSCPropNetProxiesHTTPEnable as String,
+      kSCPropNetProxiesHTTPSEnable as String,
+      kSCPropNetProxiesSOCKSEnable as String,
+      kSCPropNetProxiesProxyAutoConfigEnable as String,
+      kSCPropNetProxiesProxyAutoDiscoveryEnable as String,
+    ]
+    return enabledKeys.contains { (proxies[$0] as? NSNumber)?.boolValue == true }
+  }
+
+  private static func routeInterface(for destination: String) -> String? {
+    let process = Process()
+    let output = Pipe()
+    process.executableURL = URL(fileURLWithPath: "/sbin/route")
+    process.arguments = ["-n", "get", destination]
+    process.standardOutput = output
+    process.standardError = Pipe()
+
+    do {
+      try process.run()
+      process.waitUntilExit()
+    } catch {
+      return nil
+    }
+    guard process.terminationStatus == 0 else { return nil }
+
+    let data = output.fileHandleForReading.readDataToEndOfFile()
+    guard let text = String(data: data, encoding: .utf8) else { return nil }
+    for line in text.split(whereSeparator: \Character.isNewline) {
+      let fields = line.split(whereSeparator: \Character.isWhitespace)
+      if fields.count == 2, fields[0] == "interface:" {
+        return String(fields[1])
+      }
+    }
+    return nil
   }
 }
