@@ -48,6 +48,33 @@ assert_no_forbidden_branding() {
   [[ -z "$matches" ]] || fail "构建产物包含禁用品牌标识：${matches}"
 }
 
+strip_embedded_signatures() {
+  local app_path="$1"
+  local candidate
+
+  while IFS= read -r -d '' candidate; do
+    if file -b "$candidate" | rg -q '^Mach-O'; then
+      codesign --remove-signature "$candidate" >/dev/null 2>&1 || true
+    fi
+  done < <(find "$app_path" -type f -print0)
+
+  find "$app_path" -depth -type d -name _CodeSignature -exec rm -rf {} +
+  find "$app_path" -type f \( -name embedded.provisionprofile -o -name embedded.mobileprovision \) -delete
+}
+
+sign_macho_binaries() {
+  local app_path="$1"
+  local root_executable="$2"
+  local candidate
+
+  while IFS= read -r -d '' candidate; do
+    [[ "$candidate" == "$root_executable" ]] && continue
+    if file -b "$candidate" | rg -q '^Mach-O'; then
+      codesign --force --sign - "$candidate"
+    fi
+  done < <(find "$app_path" -type f -print0)
+}
+
 assert_compliance_assets() {
   local app_path="$1"
   local flutter_assets="${app_path}/Contents/Frameworks/App.framework/Resources/flutter_assets"
@@ -109,7 +136,6 @@ executable_path="${source_app}/Contents/MacOS/${executable_name}"
 [[ "$build_number" =~ ^[0-9]+$ ]] || fail "构建号格式不正确：${build_number}"
 (( build_number >= 10000 )) || fail "构建号不能小于 10000"
 [[ -x "$executable_path" ]] || fail "找不到 App 可执行文件：${executable_path}"
-assert_no_forbidden_branding "$source_app"
 assert_compliance_assets "$source_app"
 assert_privileged_helper_assets "$source_app"
 
@@ -138,10 +164,15 @@ trap cleanup EXIT
 staged_app="${staging_root}/${expected_display_name}.app"
 ditto "$source_app" "$staged_app"
 
-# Debug 构建可能残留不完整的嵌套 ad hoc 签名。这里只重签临时副本，
-# 并在压缩后重新解包，验证最终归档中的实际内容。
+# Debug 构建的嵌套 Framework、Helper 和插件可能保留开发证书元数据。
+# 这里只清理并重签临时副本，再通过解包验证最终归档中的实际内容。
+strip_embedded_signatures "$staged_app"
+sign_macho_binaries "$staged_app" "${staged_app}/Contents/MacOS/${executable_name}"
 codesign --force --deep --sign - "$staged_app"
 codesign --verify --deep --strict "$staged_app"
+# Apple Development 的证书元数据可能包含开发账号标识。最终归档使用
+# ad hoc 临时副本，并继续要求整个 App 原始字节零命中禁用品牌字符串。
+assert_no_forbidden_branding "$staged_app"
 
 ditto -c -k --sequesterRsrc --keepParent "$staged_app" "$artifact_path"
 unzip -tq "$artifact_path" >/dev/null
