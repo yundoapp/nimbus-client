@@ -1,18 +1,18 @@
 # macOS TUN 最小权限辅助进程
 
-最后更新：`2026-07-10`
+最后更新：`2026-07-12`
 
 ## 当前结论
 
 云渡不会让整个 App 以管理员身份运行。macOS 13 及以上版本使用 `SMAppService` 注册 App 包内的 `LaunchDaemon`，只有独立的 `YundoPrivilegedHelper` 以 root 身份承载 TUN。
 
-当前代码、Xcode 包结构、静态验证和 Debug 构建已经完成。真实授权仍需同时满足：
+当前代码、Xcode 包结构、静态验证和 Apple Development Debug 构建已经完成。本机个人自用验证已确认：
 
-- App 和 helper 使用同一 Apple Developer Team 的 Developer ID 正式签名。
-- App 完成 hardened runtime、公证和 stapling。
-- 管理员在“系统设置 -> 通用 -> 登录项与扩展”批准后台项目。
+- App 和 helper 使用同一 Apple Development Team 签名后，`SMAppService` 可以注册包内 LaunchDaemon。
+- 管理员在“系统设置 -> 通用 -> 登录项与扩展”批准后台项目后，helper 可以由系统以 root 身份启动。
+- helper 可以创建 TUN、接管目标路由，并在 App 退出后停止子进程和恢复路由。
 
-ad hoc Debug 包可以验证代码和包结构，但不作为 `SMAppService` 真实注册成功的证据。
+ad hoc Debug 包仍只用于代码和包结构验证，不能证明真实注册成功。对外分发则必须使用 Developer ID 签名，并完成 hardened runtime、公证和 stapling；本机 Apple Development 验证不能替代分发验收。
 
 正式签名包生成后先运行只读发行就绪检查：
 
@@ -36,9 +36,11 @@ Flutter / 普通用户进程
 YundoPrivilegedHelper / root
   |- 只接受同一 App 包、同一 Bundle ID 的运行中主进程
   |- 只接受一个 TUN 入站 + 本机 SOCKS 出站 + direct 绕行的白名单配置
+  |- 把校验后的配置写入 root 私有目录，再启动同一签名 helper 的 raw-run 子进程
+  |- 子进程通过包内 hiddify-core 的 `parseCli srun -c` 执行原始 sing-box 配置
   |- 不接收真实节点、账号、激活码或远端密钥
   |- 不开放 TCP/gRPC 管理端口
-  `- App/XPC 失联时停止 TUN 并退出
+  `- App/XPC 失联时终止 raw-run 子进程、删除活动配置并退出
 ```
 
 客户端在启动连接前把受管 sing-box 配置拆成两份：
@@ -80,14 +82,16 @@ scripts/verify_macos_privileged_helper.sh
 4. 管理员批准后再次点击“启用”，App 通过 privileged XPC 启动最小 TUN 转发器。
 5. 普通 core 或 helper 启动失败时，两侧都会执行停止清理，不能留下只接管路由但没有出口的状态。
 
+连接状态与延迟探测是两条独立信号。只要普通 core 和 TUN 均已启动，首页就显示“已连接”；延迟暂不可用、探测超时或当前配置没有延迟选择组时，只影响延迟显示，不得把成功连接回退成“连接中”。
+
 ## 停止与恢复
 
 - 主动断开：先停止普通 core，再通过 XPC 停止 TUN。
 - App 正常退出或异常结束：XPC 连接失效，helper 停止 TUN 后退出。
-- helper 配置只保存在 root 私有目录，停止后删除活动配置文件。
+- helper 配置和子进程日志只保存在 root 私有目录，停止后删除活动配置文件。
 - 不在 `/Library/LaunchDaemons` 复制自维护 plist；注册状态由 `SMAppService` 管理。
 
-真实签名包可用后，仍需完成连接前、连接后、断开后三阶段网络采证，以及退出、异常结束、睡眠唤醒和网络切换恢复验证。
+当前 Apple Development 包已完成干净基线下的连接前、连接后、主动断开后三阶段采证。严格对比结果为 `ready`：连接时新增 TUN、目标公网路由命中新接口、断开后默认路由和公网路由恢复、额外 TUN 清理均通过。后续仍需继续验证异常结束、睡眠唤醒和网络切换恢复。
 
 三阶段快照完成后运行只读对比：
 

@@ -65,10 +65,17 @@ final class PrivilegedHelperBridge {
     }
 
     do {
-      if service.status == .notRegistered {
+      if service.status == .notRegistered || service.status == .notFound {
         try service.register()
       }
     } catch {
+      let registrationError = error as NSError
+      NSLog(
+        "Privileged helper registration failed: domain=%@ code=%ld description=%@",
+        registrationError.domain,
+        registrationError.code,
+        registrationError.localizedDescription
+      )
       result(
         FlutterError(
           code: "helper_registration_failed",
@@ -108,6 +115,7 @@ final class PrivilegedHelperBridge {
     helper.startTunnel(config) { error in
       DispatchQueue.main.async {
         if let error {
+          NSLog("Privileged helper start failed: %@", error)
           result(FlutterError(code: "helper_start_failed", message: error, details: nil))
         } else {
           result(nil)

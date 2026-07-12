@@ -84,6 +84,15 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
 
   String _describeError(Object error) => _repository.describeError(error, _t);
 
+  String _diagnosticError(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      final code = data is Map && data['code'] is String ? data['code'] as String : 'none';
+      return 'DioException(type=${error.type.name}, status=${error.response?.statusCode}, code=$code)';
+    }
+    return error.runtimeType.toString();
+  }
+
   @override
   NimbusConnectionState build() {
     ref.onDispose(_stopHeartbeat);
@@ -153,11 +162,8 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     final existing = ref.read(connectionNotifierProvider).valueOrNull;
     if (existing is Connected || existing is Connecting || existing is Disconnecting) return;
 
-    var authState = ref.read(nimbusAuthControllerProvider);
-    if (authState.session != null && authState.me == null) {
-      await ref.read(nimbusAuthControllerProvider.notifier).refreshMe();
-      authState = ref.read(nimbusAuthControllerProvider);
-    }
+    await ref.read(nimbusAuthControllerProvider.notifier).refreshMe();
+    final authState = ref.read(nimbusAuthControllerProvider);
 
     final session = authState.session;
     if (!authState.isAuthenticated || session == null) {
@@ -199,6 +205,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       await _writeManagedProfile(plan, rulesPackage);
       state = state.copyWith(isPreparing: true, plan: plan, traffic: plan.traffic, connectedReported: false);
     } catch (error) {
+      loggy.warning('failed to prepare managed connection: ${_diagnosticError(error)}');
       await _fail(_describeError(error), showErrors: showErrors);
       if (_repository.isUnauthorized(error)) {
         await ref.read(nimbusAuthControllerProvider.notifier).restore();

@@ -8,7 +8,6 @@ import 'package:hiddify/core/widget/animated_text.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
-import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -22,9 +21,6 @@ class ConnectionButton extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
     final connectionStatus = ref.watch(connectionNotifierProvider);
-    final activeProxy = ref.watch(activeProxyNotifierProvider);
-    final delay = activeProxy.valueOrNull?.urlTestDelay ?? 0;
-
     final requiresReconnect = ref.watch(configOptionNotifierProvider).valueOrNull;
     // final animationController = useAnimationController(
     //   duration: const Duration(seconds: 1),
@@ -104,10 +100,7 @@ class ConnectionButton extends HookConsumerWidget {
     //     (ref.watch(ConfigOptions.enableWarp) && ref.watch(ConfigOptions.warpDetourMode) == WarpDetourMode.warpOverProxy)
     //     ? t.connection.secure
     //     : "";
-    var secureLabel = '';
-    if (delay <= 0 || delay > 65000 || connectionStatus.value != const Connected()) {
-      secureLabel = "";
-    }
+    const secureLabel = '';
     return _ConnectionButton(
       onTap: switch (connectionStatus) {
         AsyncData(value: Connected()) when requiresReconnect == true => () async {
@@ -133,14 +126,12 @@ class ConnectionButton extends HookConsumerWidget {
       },
       label: switch (connectionStatus) {
         AsyncData(value: Connected()) when requiresReconnect == true => t.connection.reconnect,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => t.connection.connecting,
         AsyncData(value: final status) => status.present(t),
         _ => "",
       },
       buttonColor: _yundoLogoColor,
       animated: switch (connectionStatus) {
         AsyncData(value: Connected()) when requiresReconnect == true => false,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => false,
         AsyncData(value: Connected()) => true,
         AsyncData(value: _) => true,
         _ => false,
