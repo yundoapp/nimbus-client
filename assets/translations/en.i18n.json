@@ -862,7 +862,7 @@
       "cannotConnectTitle": "Unable to connect",
       "missingSystemPermission": "Allow the required system network permission before connecting.",
       "missingPrivilege": "System authorization is required before connecting.",
-      "otherConnectionActive": "Another network connection app is running. Disconnect or quit it before connecting to Yundo."
+      "otherConnectionActive": "The system detected another proxy app running. Disconnect or quit it before connecting to Yundo."
     },
     "apiError": {
       "invalidCredentials": "Invalid username or password.",

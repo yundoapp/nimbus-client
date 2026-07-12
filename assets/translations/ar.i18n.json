@@ -868,7 +868,7 @@
       "cannotConnectTitle": "تعذر الاتصال",
       "missingSystemPermission": "اسمح بإذن شبكة النظام المطلوب قبل الاتصال.",
       "missingPrivilege": "يلزم تفويض النظام قبل الاتصال.",
-      "otherConnectionActive": "يوجد تطبيق آخر للاتصال بالشبكة قيد التشغيل. افصله أو أغلقه قبل الاتصال بـ Yundo."
+      "otherConnectionActive": "اكتشف النظام تطبيق بروكسي آخر قيد التشغيل. افصله أو أغلقه قبل الاتصال بـ Yundo."
     },
     "apiError": {
       "invalidCredentials": "اسم المستخدم أو كلمة المرور غير صحيحة.",

@@ -862,7 +862,7 @@
       "cannotConnectTitle": "Bağlanılamıyor",
       "missingSystemPermission": "Bağlanmadan önce gerekli sistem ağ iznine izin verin.",
       "missingPrivilege": "Bağlanmadan önce sistem yetkilendirmesi gerekiyor.",
-      "otherConnectionActive": "Başka bir ağ bağlantısı uygulaması çalışıyor. Yundo'ya bağlanmadan önce bağlantısını kesin veya uygulamadan çıkın."
+      "otherConnectionActive": "Sistem başka bir proxy uygulamasının çalıştığını algıladı. Yundo'ya bağlanmadan önce bağlantısını kesin veya uygulamadan çıkın."
     },
     "apiError": {
       "invalidCredentials": "Kullanıcı adı veya parola hatalı.",

@@ -862,7 +862,7 @@
       "cannotConnectTitle": "无法连接",
       "missingSystemPermission": "需要允许系统网络权限后才能连接。",
       "missingPrivilege": "需要系统授权后才能连接。",
-      "otherConnectionActive": "另一款网络连接 App 正在运行。请先断开或退出它，再连接云渡。"
+      "otherConnectionActive": "系统检测到另一款代理 App 正在运行。请先断开或退出该 App，再连接云渡。"
     },
     "apiError": {
       "invalidCredentials": "用户名或密码不正确。",

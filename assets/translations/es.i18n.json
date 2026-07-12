@@ -862,7 +862,7 @@
       "cannotConnectTitle": "No se puede conectar",
       "missingSystemPermission": "Permite el permiso de red del sistema antes de conectarte.",
       "missingPrivilege": "Se requiere autorización del sistema antes de conectarte.",
-      "otherConnectionActive": "Hay otra aplicación de conexión de red en ejecución. Desconéctala o ciérrala antes de conectarte a Yundo."
+      "otherConnectionActive": "El sistema detectó otra aplicación proxy en ejecución. Desconéctala o ciérrala antes de conectarte a Yundo."
     },
     "apiError": {
       "invalidCredentials": "Usuario o contraseña incorrectos.",

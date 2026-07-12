@@ -862,7 +862,7 @@
       "cannotConnectTitle": "اتصال ممکن نیست",
       "missingSystemPermission": "پیش از اتصال، مجوز شبکه سیستم را بدهید.",
       "missingPrivilege": "پیش از اتصال، مجوز سیستم لازم است.",
-      "otherConnectionActive": "برنامه دیگری برای اتصال به شبکه در حال اجراست. پیش از اتصال به Yundo، آن را قطع یا ببندید."
+      "otherConnectionActive": "سیستم یک برنامه پراکسی دیگر را در حال اجرا تشخیص داد. پیش از اتصال به Yundo، آن را قطع یا ببندید."
     },
     "apiError": {
       "invalidCredentials": "نام کاربری یا رمز عبور نادرست است.",

@@ -862,7 +862,7 @@
       "cannotConnectTitle": "Tidak dapat terhubung",
       "missingSystemPermission": "Izinkan izin jaringan sistem yang diperlukan sebelum terhubung.",
       "missingPrivilege": "Otorisasi sistem diperlukan sebelum terhubung.",
-      "otherConnectionActive": "Aplikasi koneksi jaringan lain sedang berjalan. Putuskan atau tutup aplikasi tersebut sebelum menghubungkan Yundo."
+      "otherConnectionActive": "Sistem mendeteksi aplikasi proxy lain sedang berjalan. Putuskan atau tutup aplikasi tersebut sebelum menghubungkan Yundo."
     },
     "apiError": {
       "invalidCredentials": "Nama pengguna atau kata sandi salah.",
