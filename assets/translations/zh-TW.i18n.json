@@ -814,19 +814,19 @@
       "submitted": "問題已回報"
     },
     "routePreferences": {
-      "title": "存取偏好",
-      "count": "${used}/${limit} 條偏好",
-      "requiresConnection": "需要連線",
-      "directConnection": "不需要連線",
-      "domainRequired": "請輸入網域",
-      "domainLabel": "網域",
-      "cloudSyncHint": "偏好會儲存在雲端，其他裝置下次連線時也會自動套用。",
-      "cloudSyncSaved": "已儲存到雲端，其他裝置下次連線時也會自動套用。",
+      "title": "存取規則",
+      "count": "${used}/${limit} 條規則",
+      "requiresConnection": "透過雲渡存取",
+      "directConnection": "直接存取",
+      "domainRequired": "請輸入網站網域",
+      "domainLabel": "網站網域",
+      "cloudSyncHint": "儲存後，這些網站的存取方式會同步到你的其他裝置，並在下次連線雲渡時生效。",
+      "cloudSyncSaved": "已儲存，其他裝置下次連線雲渡時也會使用這條規則。",
       "limitReached": "已達上限",
       "add": "新增",
-      "empty": "暫無存取偏好",
+      "empty": "暫未新增存取規則",
       "deleteTooltip": "刪除",
-      "deleteTitle": "刪除存取偏好",
+      "deleteTitle": "刪除存取規則",
       "deleteConfirm": "確定刪除「${value}」嗎？"
     },
     "appVersion": {
@@ -845,7 +845,7 @@
       "issueReport": "回報問題",
       "logout": "登出",
       "autoConnectOnLaunch": "啟動後自動連線",
-      "accessPreferences": "存取偏好"
+      "accessPreferences": "存取規則"
     },
     "tray": {
       "openMainWindow": "開啟主視窗",

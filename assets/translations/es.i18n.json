@@ -814,19 +814,19 @@
       "submitted": "Problema reportado"
     },
     "routePreferences": {
-      "title": "Preferencias de acceso",
-      "count": "${used}/${limit} preferencias",
-      "requiresConnection": "Usar conexión",
-      "directConnection": "No necesita conexión",
-      "domainRequired": "Introduce un dominio",
-      "domainLabel": "Dominio",
-      "cloudSyncHint": "Las preferencias se guardan en la nube. Tus otros dispositivos las usarán la próxima vez que se conecten.",
-      "cloudSyncSaved": "Guardado en la nube. Tus otros dispositivos lo usarán la próxima vez que se conecten.",
+      "title": "Reglas de acceso",
+      "count": "${used}/${limit} reglas",
+      "requiresConnection": "Acceder mediante Yundo",
+      "directConnection": "Acceso directo",
+      "domainRequired": "Introduce el dominio del sitio",
+      "domainLabel": "Dominio del sitio",
+      "cloudSyncHint": "Tras guardarlas, estas reglas se sincronizan con tus otros dispositivos y se aplican la próxima vez que se conecten a Yundo.",
+      "cloudSyncSaved": "Guardado. Tus otros dispositivos usarán esta regla la próxima vez que se conecten a Yundo.",
       "limitReached": "Límite alcanzado",
       "add": "Añadir",
-      "empty": "Aún no hay preferencias de acceso",
+      "empty": "Aún no hay reglas de acceso",
       "deleteTooltip": "Eliminar",
-      "deleteTitle": "Eliminar preferencia de acceso",
+      "deleteTitle": "Eliminar regla de acceso",
       "deleteConfirm": "¿Eliminar \"${value}\"?"
     },
     "appVersion": {
@@ -845,7 +845,7 @@
       "issueReport": "Reportar un problema",
       "logout": "Cerrar sesión",
       "autoConnectOnLaunch": "Conectar al iniciar",
-      "accessPreferences": "Preferencias de acceso"
+      "accessPreferences": "Reglas de acceso"
     },
     "tray": {
       "openMainWindow": "Abrir ventana principal",

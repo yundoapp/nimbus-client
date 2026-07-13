@@ -814,19 +814,19 @@
       "submitted": "Issue reported"
     },
     "routePreferences": {
-      "title": "Access preferences",
-      "count": "${used}/${limit} preferences",
-      "requiresConnection": "Use connection",
-      "directConnection": "No connection needed",
-      "domainRequired": "Enter a domain",
-      "domainLabel": "Domain",
-      "cloudSyncHint": "Saved preferences are stored in the cloud. Your other devices will use them the next time they connect.",
-      "cloudSyncSaved": "Saved to the cloud. Other devices will use it the next time they connect.",
+      "title": "Access rules",
+      "count": "${used}/${limit} rules",
+      "requiresConnection": "Access through Yundo",
+      "directConnection": "Direct access",
+      "domainRequired": "Enter a website domain",
+      "domainLabel": "Website domain",
+      "cloudSyncHint": "Saved rules sync to your other devices and take effect the next time they connect to Yundo.",
+      "cloudSyncSaved": "Saved. Your other devices will use this rule the next time they connect to Yundo.",
       "limitReached": "Limit reached",
       "add": "Add",
-      "empty": "No access preferences yet",
+      "empty": "No access rules added yet",
       "deleteTooltip": "Delete",
-      "deleteTitle": "Delete access preference",
+      "deleteTitle": "Delete access rule",
       "deleteConfirm": "Delete \"${value}\"?"
     },
     "appVersion": {
@@ -845,7 +845,7 @@
       "issueReport": "Report an issue",
       "logout": "Sign out",
       "autoConnectOnLaunch": "Connect after launch",
-      "accessPreferences": "Access preferences"
+      "accessPreferences": "Access rules"
     },
     "tray": {
       "openMainWindow": "Open main window",

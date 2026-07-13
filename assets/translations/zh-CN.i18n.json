@@ -814,19 +814,19 @@
       "submitted": "问题已上报"
     },
     "routePreferences": {
-      "title": "访问偏好",
-      "count": "${used}/${limit} 条偏好",
-      "requiresConnection": "需要连接",
-      "directConnection": "不需要连接",
-      "domainRequired": "请输入域名",
-      "domainLabel": "域名",
-      "cloudSyncHint": "保存后会同步到云端，你的其他设备下次连接时也会自动生效。",
-      "cloudSyncSaved": "已保存到云端，其他设备下次连接时也会自动生效。",
+      "title": "访问规则",
+      "count": "${used}/${limit} 条规则",
+      "requiresConnection": "通过云渡访问",
+      "directConnection": "直接访问",
+      "domainRequired": "请输入网站域名",
+      "domainLabel": "网站域名",
+      "cloudSyncHint": "保存后，这些网站的访问方式会同步到你的其他设备，并在下次连接云渡时生效。",
+      "cloudSyncSaved": "已保存，其他设备下次连接云渡时也会使用这条规则。",
       "limitReached": "已达上限",
       "add": "添加",
-      "empty": "暂无访问偏好",
+      "empty": "暂未添加访问规则",
       "deleteTooltip": "删除",
-      "deleteTitle": "删除访问偏好",
+      "deleteTitle": "删除访问规则",
       "deleteConfirm": "确定删除“${value}”吗？"
     },
     "appVersion": {
@@ -845,7 +845,7 @@
       "issueReport": "上报问题",
       "logout": "退出登录",
       "autoConnectOnLaunch": "启动后自动连接",
-      "accessPreferences": "访问偏好"
+      "accessPreferences": "访问规则"
     },
     "tray": {
       "openMainWindow": "打开主窗口",

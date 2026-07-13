@@ -814,19 +814,19 @@
       "submitted": "Masalah dilaporkan"
     },
     "routePreferences": {
-      "title": "Preferensi akses",
-      "count": "${used}/${limit} preferensi",
-      "requiresConnection": "Gunakan koneksi",
-      "directConnection": "Tidak perlu koneksi",
-      "domainRequired": "Masukkan domain",
-      "domainLabel": "Domain",
-      "cloudSyncHint": "Preferensi disimpan di cloud. Perangkat lain Anda akan menggunakannya saat terhubung berikutnya.",
-      "cloudSyncSaved": "Tersimpan di cloud. Perangkat lain Anda akan menggunakannya saat terhubung berikutnya.",
+      "title": "Aturan akses",
+      "count": "${used}/${limit} aturan",
+      "requiresConnection": "Akses melalui Yundo",
+      "directConnection": "Akses langsung",
+      "domainRequired": "Masukkan domain situs",
+      "domainLabel": "Domain situs",
+      "cloudSyncHint": "Setelah disimpan, aturan ini disinkronkan ke perangkat lain Anda dan berlaku saat perangkat tersebut terhubung lagi ke Yundo.",
+      "cloudSyncSaved": "Tersimpan. Perangkat lain Anda akan menggunakan aturan ini saat terhubung lagi ke Yundo.",
       "limitReached": "Batas tercapai",
       "add": "Tambah",
-      "empty": "Belum ada preferensi akses",
+      "empty": "Belum ada aturan akses",
       "deleteTooltip": "Hapus",
-      "deleteTitle": "Hapus preferensi akses",
+      "deleteTitle": "Hapus aturan akses",
       "deleteConfirm": "Hapus \"${value}\"?"
     },
     "appVersion": {
@@ -845,7 +845,7 @@
       "issueReport": "Laporkan masalah",
       "logout": "Keluar",
       "autoConnectOnLaunch": "Hubungkan setelah dibuka",
-      "accessPreferences": "Preferensi akses"
+      "accessPreferences": "Aturan akses"
     },
     "tray": {
       "openMainWindow": "Buka jendela utama",

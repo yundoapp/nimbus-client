@@ -814,19 +814,19 @@
       "submitted": "مشکل گزارش شد"
     },
     "routePreferences": {
-      "title": "ترجیحات دسترسی",
-      "count": "${used}/${limit} ترجیح",
-      "requiresConnection": "استفاده از اتصال",
-      "directConnection": "اتصال لازم نیست",
-      "domainRequired": "دامنه را وارد کنید",
-      "domainLabel": "دامنه",
-      "cloudSyncHint": "تنظیمات در فضای ابری ذخیره می‌شوند و دستگاه‌های دیگر شما در اتصال بعدی از آن‌ها استفاده می‌کنند.",
-      "cloudSyncSaved": "در فضای ابری ذخیره شد و دستگاه‌های دیگر شما در اتصال بعدی از آن استفاده می‌کنند.",
+      "title": "قوانین دسترسی",
+      "count": "${used}/${limit} قانون",
+      "requiresConnection": "دسترسی از طریق Yundo",
+      "directConnection": "دسترسی مستقیم",
+      "domainRequired": "دامنه وب‌سایت را وارد کنید",
+      "domainLabel": "دامنه وب‌سایت",
+      "cloudSyncHint": "پس از ذخیره، روش دسترسی این وب‌سایت‌ها با دستگاه‌های دیگر شما همگام می‌شود و هنگام اتصال بعدی به Yundo اعمال خواهد شد.",
+      "cloudSyncSaved": "ذخیره شد. دستگاه‌های دیگر شما هنگام اتصال بعدی به Yundo از این قانون استفاده خواهند کرد.",
       "limitReached": "به حد مجاز رسید",
       "add": "افزودن",
-      "empty": "هنوز ترجیح دسترسی وجود ندارد",
+      "empty": "هنوز قانون دسترسی اضافه نشده است",
       "deleteTooltip": "حذف",
-      "deleteTitle": "حذف ترجیح دسترسی",
+      "deleteTitle": "حذف قانون دسترسی",
       "deleteConfirm": "«${value}» حذف شود؟"
     },
     "appVersion": {
@@ -845,7 +845,7 @@
       "issueReport": "گزارش مشکل",
       "logout": "خروج",
       "autoConnectOnLaunch": "اتصال پس از اجرا",
-      "accessPreferences": "ترجیحات دسترسی"
+      "accessPreferences": "قوانین دسترسی"
     },
     "tray": {
       "openMainWindow": "باز کردن پنجره اصلی",

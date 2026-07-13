@@ -127,12 +127,12 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
               segments: [
                 ButtonSegment(
                   value: 'accelerate',
-                  icon: const Icon(Icons.check_circle_outline_rounded),
+                  icon: const Icon(Icons.cloud_outlined),
                   label: Text(t.nimbus.routePreferences.requiresConnection),
                 ),
                 ButtonSegment(
                   value: 'direct',
-                  icon: const Icon(Icons.remove_circle_outline_rounded),
+                  icon: const Icon(Icons.language_rounded),
                   label: Text(t.nimbus.routePreferences.directConnection),
                 ),
               ],
@@ -247,7 +247,7 @@ class _RoutePreferenceTile extends ConsumerWidget {
     final t = ref.watch(translationsProvider).requireValue;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(preference.requiresConnection ? Icons.check_circle_outline_rounded : Icons.remove_circle_outline),
+      leading: Icon(preference.requiresConnection ? Icons.cloud_outlined : Icons.language_rounded),
       title: Text(preference.value, overflow: TextOverflow.ellipsis),
       subtitle: Text('${_preferenceLabel(t, preference)} · ${_formatDateTime(preference.createdAt)}'),
       trailing: IconButton(

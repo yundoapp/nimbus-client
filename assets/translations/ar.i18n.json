@@ -820,19 +820,19 @@
       "submitted": "تم الإبلاغ عن المشكلة"
     },
     "routePreferences": {
-      "title": "تفضيلات الوصول",
-      "count": "${used}/${limit} تفضيلات",
-      "requiresConnection": "استخدام الاتصال",
-      "directConnection": "لا يحتاج إلى اتصال",
-      "domainRequired": "أدخل نطاقًا",
-      "domainLabel": "النطاق",
-      "cloudSyncHint": "تُحفظ التفضيلات في السحابة، وستستخدمها أجهزتك الأخرى عند الاتصال في المرة القادمة.",
-      "cloudSyncSaved": "تم الحفظ في السحابة، وستستخدمه أجهزتك الأخرى عند الاتصال في المرة القادمة.",
+      "title": "قواعد الوصول",
+      "count": "${used}/${limit} قاعدة",
+      "requiresConnection": "الوصول عبر Yundo",
+      "directConnection": "الوصول المباشر",
+      "domainRequired": "أدخل نطاق الموقع",
+      "domainLabel": "نطاق الموقع",
+      "cloudSyncHint": "بعد الحفظ، تتم مزامنة طرق الوصول إلى هذه المواقع مع أجهزتك الأخرى وتُطبّق عند اتصالها التالي بـ Yundo.",
+      "cloudSyncSaved": "تم الحفظ. ستستخدم أجهزتك الأخرى هذه القاعدة عند اتصالها التالي بـ Yundo.",
       "limitReached": "تم بلوغ الحد",
       "add": "إضافة",
-      "empty": "لا توجد تفضيلات وصول بعد",
+      "empty": "لم تتم إضافة قواعد وصول بعد",
       "deleteTooltip": "حذف",
-      "deleteTitle": "حذف تفضيل الوصول",
+      "deleteTitle": "حذف قاعدة الوصول",
       "deleteConfirm": "هل تريد حذف \"${value}\"؟"
     },
     "appVersion": {
@@ -851,7 +851,7 @@
       "issueReport": "الإبلاغ عن مشكلة",
       "logout": "تسجيل الخروج",
       "autoConnectOnLaunch": "الاتصال بعد التشغيل",
-      "accessPreferences": "تفضيلات الوصول"
+      "accessPreferences": "قواعد الوصول"
     },
     "tray": {
       "openMainWindow": "فتح النافذة الرئيسية",

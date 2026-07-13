@@ -814,19 +814,19 @@
       "submitted": "Sorun bildirildi"
     },
     "routePreferences": {
-      "title": "Erişim tercihleri",
-      "count": "${used}/${limit} tercih",
-      "requiresConnection": "Bağlantıyı kullan",
-      "directConnection": "Bağlantı gerekmiyor",
-      "domainRequired": "Alan adı girin",
-      "domainLabel": "Alan adı",
-      "cloudSyncHint": "Tercihler buluta kaydedilir. Diğer cihazlarınız bir sonraki bağlantıda bunları kullanır.",
-      "cloudSyncSaved": "Buluta kaydedildi. Diğer cihazlarınız bir sonraki bağlantıda bu tercihi kullanır.",
+      "title": "Erişim kuralları",
+      "count": "${used}/${limit} kural",
+      "requiresConnection": "Yundo üzerinden eriş",
+      "directConnection": "Doğrudan eriş",
+      "domainRequired": "Site alan adını girin",
+      "domainLabel": "Site alan adı",
+      "cloudSyncHint": "Kaydedilen kurallar diğer cihazlarınızla eşitlenir ve Yundo'ya bir sonraki bağlanışlarında uygulanır.",
+      "cloudSyncSaved": "Kaydedildi. Diğer cihazlarınız Yundo'ya bir sonraki bağlanışlarında bu kuralı kullanır.",
       "limitReached": "Sınıra ulaşıldı",
       "add": "Ekle",
-      "empty": "Henüz erişim tercihi yok",
+      "empty": "Henüz erişim kuralı eklenmedi",
       "deleteTooltip": "Sil",
-      "deleteTitle": "Erişim tercihini sil",
+      "deleteTitle": "Erişim kuralını sil",
       "deleteConfirm": "\"${value}\" silinsin mi?"
     },
     "appVersion": {
@@ -845,7 +845,7 @@
       "issueReport": "Sorun bildir",
       "logout": "Oturumu kapat",
       "autoConnectOnLaunch": "Başlatınca bağlan",
-      "accessPreferences": "Erişim tercihleri"
+      "accessPreferences": "Erişim kuralları"
     },
     "tray": {
       "openMainWindow": "Ana pencereyi aç",
