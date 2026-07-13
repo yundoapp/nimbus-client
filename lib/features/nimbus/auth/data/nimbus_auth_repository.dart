@@ -228,6 +228,20 @@ class NimbusAuthRepository {
     return NimbusRoutePreference.fromJson(Map<String, dynamic>.from(data['item'] as Map? ?? const {}));
   }
 
+  Future<NimbusRoutePreference> updateRoutePreference({
+    required NimbusAuthSession session,
+    required String id,
+    required String type,
+  }) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      'route-preferences/${Uri.encodeComponent(id)}',
+      data: {'type': type},
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+    final data = Map<String, dynamic>.from(response.data ?? const {});
+    return NimbusRoutePreference.fromJson(Map<String, dynamic>.from(data['item'] as Map? ?? const {}));
+  }
+
   Future<void> deleteRoutePreference({required NimbusAuthSession session, required String id}) async {
     await _dio.delete<void>(
       'route-preferences/${Uri.encodeComponent(id)}',
@@ -384,6 +398,14 @@ class NimbusAuthRepository {
     return t.nimbus.common.operationFailed;
   }
 
+  String? apiErrorCode(Object error) {
+    if (error is! DioException) return null;
+    final data = error.response?.data;
+    if (data is! Map) return null;
+    final code = data['code'];
+    return code is String && code.isNotEmpty ? code : null;
+  }
+
   String? _describeApiCode(Object? rawCode, Translations t) {
     if (rawCode is! String || rawCode.isEmpty) return null;
     return switch (rawCode) {
@@ -402,6 +424,12 @@ class NimbusAuthRepository {
       'NO_AVAILABLE_NODE' => t.nimbus.apiError.noAvailableLocation,
       'CONNECT_PLAN_EXPIRED' || 'CONNECT_SESSION_CLOSED' => t.nimbus.errors.sessionEnded,
       'ROUTE_PREFERENCE_LIMIT_REACHED' => t.nimbus.routePreferences.limitReached,
+      'ROUTE_PREFERENCE_ALREADY_ACCELERATED' => t.nimbus.routePreferences.alreadyInCategory(
+        category: t.nimbus.routePreferences.requiresConnection,
+      ),
+      'ROUTE_PREFERENCE_ALREADY_DIRECT' => t.nimbus.routePreferences.alreadyInCategory(
+        category: t.nimbus.routePreferences.directConnection,
+      ),
       'ROUTE_PREFERENCE_CONFLICT' => t.nimbus.apiError.routePreferenceConflict,
       'ROUTE_TARGET_INVALID' => t.nimbus.apiError.routeTargetInvalid,
       'ISSUE_REPORT_ALREADY_OPEN' => t.nimbus.apiError.issueReportAlreadyOpen,

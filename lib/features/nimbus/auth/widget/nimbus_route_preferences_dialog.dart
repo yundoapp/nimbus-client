@@ -7,6 +7,7 @@ import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_input_validation.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_route_preference_logic.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -58,20 +59,59 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
       final session = ref.read(nimbusAuthControllerProvider).session;
       if (session == null) return;
 
+      final currentPreferences = preferences.value;
+      if (currentPreferences == null) return;
+      final resolution = resolveNimbusRoutePreference(
+        items: currentPreferences.items,
+        limit: currentPreferences.limit,
+        domain: domain,
+        requestedType: selectedType.value,
+      );
+      if (resolution.decision == NimbusRoutePreferenceDecision.duplicate) {
+        errorMessage.value = t.nimbus.routePreferences.alreadyInCategory(
+          category: _preferenceTypeLabel(t, selectedType.value),
+        );
+        return;
+      }
+      if (resolution.decision == NimbusRoutePreferenceDecision.limitReached) {
+        errorMessage.value = t.nimbus.routePreferences.limitReached;
+        return;
+      }
+
+      final existing = resolution.existing;
+      if (resolution.decision == NimbusRoutePreferenceDecision.switchType && existing != null) {
+        final confirmed = await _confirmSwitch(context, t, existing, selectedType.value);
+        if (!confirmed || !context.mounted) return;
+      }
+
       isSubmitting.value = true;
       errorMessage.value = null;
       try {
-        await repository.createRoutePreference(session: session, type: selectedType.value, input: domain);
+        if (existing == null) {
+          await repository.createRoutePreference(session: session, type: selectedType.value, input: domain);
+        } else {
+          await repository.updateRoutePreference(session: session, id: existing.id, type: selectedType.value);
+        }
         inputController.clear();
         await loadPreferences();
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.nimbus.routePreferences.cloudSyncSaved)));
+          final message = existing == null
+              ? t.nimbus.routePreferences.cloudSyncSaved
+              : t.nimbus.routePreferences.switchSaved;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
         }
       } catch (error) {
         if (repository.isUnauthorized(error)) {
           await ref.read(nimbusAuthControllerProvider.notifier).restore();
         } else {
-          errorMessage.value = repository.describeError(error, t);
+          final message = repository.describeError(error, t);
+          final code = repository.apiErrorCode(error);
+          if (code == 'ROUTE_PREFERENCE_ALREADY_ACCELERATED' ||
+              code == 'ROUTE_PREFERENCE_ALREADY_DIRECT' ||
+              code == 'ROUTE_PREFERENCE_CONFLICT') {
+            await loadPreferences();
+          }
+          errorMessage.value = message;
         }
       } finally {
         isSubmitting.value = false;
@@ -117,7 +157,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
 
     final items = preferences.value?.items ?? const <NimbusRoutePreference>[];
     final limit = preferences.value?.limit ?? 0;
-    final reachedLimit = limit > 0 && items.length >= limit;
+    final formReady = preferences.value != null;
 
     return AlertDialog(
       title: Text(t.nimbus.routePreferences.title),
@@ -160,7 +200,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
             const Gap(12),
             TextField(
               controller: inputController,
-              enabled: !isSubmitting.value && !reachedLimit,
+              enabled: !isSubmitting.value && formReady,
               autofocus: true,
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.done,
@@ -171,7 +211,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
                 prefixIcon: const Icon(Icons.language_rounded),
               ),
               onChanged: (_) => errorMessage.value = null,
-              onSubmitted: (_) => reachedLimit || isSubmitting.value ? null : submit(),
+              onSubmitted: (_) => isSubmitting.value || !formReady ? null : submit(),
             ),
             if (errorMessage.value != null) ...[
               const Gap(10),
@@ -184,11 +224,11 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
             Align(
               alignment: Alignment.centerRight,
               child: FilledButton.icon(
-                onPressed: reachedLimit || isSubmitting.value ? null : submit,
+                onPressed: isSubmitting.value || !formReady ? null : submit,
                 icon: isSubmitting.value
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.add_rounded),
-                label: Text(reachedLimit ? t.nimbus.routePreferences.limitReached : t.nimbus.routePreferences.add),
+                label: Text(t.nimbus.routePreferences.add),
               ),
             ),
             const Divider(height: 28),
@@ -290,9 +330,41 @@ Future<bool> _confirmDelete(BuildContext context, Translations t, NimbusRoutePre
       false;
 }
 
+Future<bool> _confirmSwitch(
+  BuildContext context,
+  Translations t,
+  NimbusRoutePreference preference,
+  String requestedType,
+) async {
+  return await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(t.nimbus.routePreferences.switchTitle),
+          content: Text(
+            t.nimbus.routePreferences.switchConfirm(
+              domain: preference.value,
+              from: _preferenceTypeLabel(t, preference.type),
+              to: _preferenceTypeLabel(t, requestedType),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(t.common.cancel)),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(t.nimbus.routePreferences.switchAction),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+}
+
 String _preferenceLabel(Translations t, NimbusRoutePreference preference) => preference.requiresConnection
     ? t.nimbus.routePreferences.requiresConnection
     : t.nimbus.routePreferences.directConnection;
+
+String _preferenceTypeLabel(Translations t, String type) =>
+    type == 'accelerate' ? t.nimbus.routePreferences.requiresConnection : t.nimbus.routePreferences.directConnection;
 
 String _formatDateTime(DateTime? value) {
   if (value == null) return '--';
