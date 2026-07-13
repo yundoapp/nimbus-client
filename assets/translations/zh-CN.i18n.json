@@ -789,6 +789,7 @@
       "passwordRequired": "请输入密码",
       "passwordsDoNotMatch": "两次输入的密码不一致",
       "passwordTooShort": "密码至少 10 位",
+      "passwordTooLong": "密码过长，请缩短后重试",
       "passwordNeedsLetter": "密码需要包含字母",
       "passwordNeedsNumber": "密码需要包含数字",
       "passwordNeedsSymbol": "密码需要包含特殊字符"
@@ -821,6 +822,7 @@
       "requiresConnectionDescription": "添加到这里的网站，连接云渡后会强制通过云渡访问。",
       "directConnectionDescription": "添加到这里的网站，即使已连接云渡也会绕过云渡直接访问。",
       "domainRequired": "请输入网站域名",
+      "domainInvalid": "请输入正确的网站域名，例如 openai.com，不要包含 http://、路径或端口",
       "domainLabel": "网站域名",
       "cloudSyncHint": "保存后，这些网站的访问方式会同步到你的其他设备，并在下次连接云渡时生效。",
       "cloudSyncSaved": "已保存，其他设备下次连接云渡时也会使用这条规则。",

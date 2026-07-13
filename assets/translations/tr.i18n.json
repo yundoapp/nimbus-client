@@ -789,6 +789,7 @@
       "passwordRequired": "Parolanızı girin",
       "passwordsDoNotMatch": "Parolalar eşleşmiyor",
       "passwordTooShort": "Parola en az 10 karakter olmalı",
+      "passwordTooLong": "Parola çok uzun; daha kısa bir parola kullanın",
       "passwordNeedsLetter": "Parola bir harf içermeli",
       "passwordNeedsNumber": "Parola bir rakam içermeli",
       "passwordNeedsSymbol": "Parola özel karakter içermeli"
@@ -821,6 +822,7 @@
       "requiresConnectionDescription": "Buraya eklenen sitelere Yundo bağlıyken her zaman Yundo üzerinden erişilir.",
       "directConnectionDescription": "Buraya eklenen siteler Yundo bağlı olsa bile Yundo'yu atlayarak doğrudan açılır.",
       "domainRequired": "Site alan adını girin",
+      "domainInvalid": "openai.com gibi geçerli bir alan adı girin; http://, yol veya bağlantı noktası eklemeyin",
       "domainLabel": "Site alan adı",
       "cloudSyncHint": "Kaydedilen kurallar diğer cihazlarınızla eşitlenir ve Yundo'ya bir sonraki bağlanışlarında uygulanır.",
       "cloudSyncSaved": "Kaydedildi. Diğer cihazlarınız Yundo'ya bir sonraki bağlanışlarında bu kuralı kullanır.",

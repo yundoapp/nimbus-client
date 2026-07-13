@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_input_validation.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -47,6 +49,11 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
         errorMessage.value = t.nimbus.routePreferences.domainRequired;
         return;
       }
+      final domain = normalizeNimbusDomain(input);
+      if (domain == null) {
+        errorMessage.value = t.nimbus.routePreferences.domainInvalid;
+        return;
+      }
 
       final session = ref.read(nimbusAuthControllerProvider).session;
       if (session == null) return;
@@ -54,7 +61,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
       isSubmitting.value = true;
       errorMessage.value = null;
       try {
-        await repository.createRoutePreference(session: session, type: selectedType.value, input: input);
+        await repository.createRoutePreference(session: session, type: selectedType.value, input: domain);
         inputController.clear();
         await loadPreferences();
         if (context.mounted) {
@@ -157,6 +164,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
               autofocus: true,
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.done,
+              inputFormatters: [LengthLimitingTextInputFormatter(nimbusDomainMaxLength)],
               decoration: InputDecoration(
                 labelText: t.nimbus.routePreferences.domainLabel,
                 hintText: 'openai.com',

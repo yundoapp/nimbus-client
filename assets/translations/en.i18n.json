@@ -789,6 +789,7 @@
       "passwordRequired": "Enter your password",
       "passwordsDoNotMatch": "Passwords do not match",
       "passwordTooShort": "Password must be at least 10 characters",
+      "passwordTooLong": "Password is too long; use a shorter password",
       "passwordNeedsLetter": "Password must include a letter",
       "passwordNeedsNumber": "Password must include a number",
       "passwordNeedsSymbol": "Password must include a special character"
@@ -821,6 +822,7 @@
       "requiresConnectionDescription": "Websites added here will always use Yundo while Yundo is connected.",
       "directConnectionDescription": "Websites added here will bypass Yundo and connect directly, even while Yundo is connected.",
       "domainRequired": "Enter a website domain",
+      "domainInvalid": "Enter a valid domain such as openai.com, without http://, a path, or a port",
       "domainLabel": "Website domain",
       "cloudSyncHint": "Saved rules sync to your other devices and take effect the next time they connect to Yundo.",
       "cloudSyncSaved": "Saved. Your other devices will use this rule the next time they connect to Yundo.",

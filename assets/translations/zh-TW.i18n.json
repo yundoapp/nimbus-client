@@ -789,6 +789,7 @@
       "passwordRequired": "請輸入密碼",
       "passwordsDoNotMatch": "兩次輸入的密碼不一致",
       "passwordTooShort": "密碼至少 10 位",
+      "passwordTooLong": "密碼過長，請縮短後再試",
       "passwordNeedsLetter": "密碼需要包含字母",
       "passwordNeedsNumber": "密碼需要包含數字",
       "passwordNeedsSymbol": "密碼需要包含特殊字元"
@@ -821,6 +822,7 @@
       "requiresConnectionDescription": "新增到這裡的網站，連線雲渡後會強制透過雲渡存取。",
       "directConnectionDescription": "新增到這裡的網站，即使已連線雲渡也會略過雲渡直接存取。",
       "domainRequired": "請輸入網站網域",
+      "domainInvalid": "請輸入正確的網站網域，例如 openai.com，不要包含 http://、路徑或連接埠",
       "domainLabel": "網站網域",
       "cloudSyncHint": "儲存後，這些網站的存取方式會同步到你的其他裝置，並在下次連線雲渡時生效。",
       "cloudSyncSaved": "已儲存，其他裝置下次連線雲渡時也會使用這條規則。",

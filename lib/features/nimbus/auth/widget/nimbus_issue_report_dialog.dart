@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
@@ -41,7 +43,7 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
             'platform': appInfo?.operatingSystem,
             'osVersion': appInfo?.operatingSystemVersion,
             'rulesVersion': authState.me?.rules.publicRulesVersion,
-            'connectionStatus': connectionStatus?.format() ?? 'UNKNOWN',
+            'connectionStatus': _safeConnectionStatus(connectionStatus),
             'selectedLocation': authState.selectedLocationCode,
             'subscriptionStatus': authState.me?.subscription.status,
             'uplink': stats?.uplink.toInt() ?? 0,
@@ -94,6 +96,9 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
               minLines: 3,
               maxLines: 5,
               maxLength: 1000,
+              inputFormatters: [
+                FilteringTextInputFormatter.deny(RegExp(r'[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]')),
+              ],
               decoration: InputDecoration(
                 labelText: t.nimbus.issueReport.descriptionLabel,
                 alignLabelWithHint: true,
@@ -127,3 +132,11 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
     );
   }
 }
+
+String _safeConnectionStatus(ConnectionStatus? status) => switch (status) {
+  Disconnected() => 'DISCONNECTED',
+  Connecting() => 'CONNECTING',
+  Connected() => 'CONNECTED',
+  Disconnecting() => 'DISCONNECTING',
+  null => 'UNKNOWN',
+};

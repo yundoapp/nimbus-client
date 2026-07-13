@@ -795,6 +795,7 @@
       "passwordRequired": "أدخل كلمة المرور",
       "passwordsDoNotMatch": "كلمتا المرور غير متطابقتين",
       "passwordTooShort": "يجب أن تكون كلمة المرور 10 أحرف على الأقل",
+      "passwordTooLong": "كلمة المرور طويلة جدًا؛ استخدم كلمة مرور أقصر",
       "passwordNeedsLetter": "يجب أن تحتوي كلمة المرور على حرف",
       "passwordNeedsNumber": "يجب أن تحتوي كلمة المرور على رقم",
       "passwordNeedsSymbol": "يجب أن تحتوي كلمة المرور على رمز خاص"
@@ -827,6 +828,7 @@
       "requiresConnectionDescription": "سيتم دائمًا الوصول إلى المواقع المضافة هنا عبر Yundo عند اتصال Yundo.",
       "directConnectionDescription": "ستتجاوز المواقع المضافة هنا Yundo وتُفتح مباشرةً حتى عند اتصال Yundo.",
       "domainRequired": "أدخل نطاق الموقع",
+      "domainInvalid": "أدخل نطاقًا صالحًا مثل openai.com بدون http:// أو مسار أو منفذ",
       "domainLabel": "نطاق الموقع",
       "cloudSyncHint": "بعد الحفظ، تتم مزامنة طرق الوصول إلى هذه المواقع مع أجهزتك الأخرى وتُطبّق عند اتصالها التالي بـ Yundo.",
       "cloudSyncSaved": "تم الحفظ. ستستخدم أجهزتك الأخرى هذه القاعدة عند اتصالها التالي بـ Yundo.",

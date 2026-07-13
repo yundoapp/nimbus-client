@@ -789,6 +789,7 @@
       "passwordRequired": "Masukkan kata sandi Anda",
       "passwordsDoNotMatch": "Kata sandi tidak cocok",
       "passwordTooShort": "Kata sandi minimal 10 karakter",
+      "passwordTooLong": "Kata sandi terlalu panjang; gunakan kata sandi yang lebih pendek",
       "passwordNeedsLetter": "Kata sandi harus berisi huruf",
       "passwordNeedsNumber": "Kata sandi harus berisi angka",
       "passwordNeedsSymbol": "Kata sandi harus berisi karakter khusus"
@@ -821,6 +822,7 @@
       "requiresConnectionDescription": "Situs yang ditambahkan di sini akan selalu diakses melalui Yundo saat Yundo terhubung.",
       "directConnectionDescription": "Situs yang ditambahkan di sini akan melewati Yundo dan diakses langsung, meski Yundo terhubung.",
       "domainRequired": "Masukkan domain situs",
+      "domainInvalid": "Masukkan domain yang valid seperti openai.com, tanpa http://, jalur, atau port",
       "domainLabel": "Domain situs",
       "cloudSyncHint": "Setelah disimpan, aturan ini disinkronkan ke perangkat lain Anda dan berlaku saat perangkat tersebut terhubung lagi ke Yundo.",
       "cloudSyncSaved": "Tersimpan. Perangkat lain Anda akan menggunakan aturan ini saat terhubung lagi ke Yundo.",

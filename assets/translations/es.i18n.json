@@ -789,6 +789,7 @@
       "passwordRequired": "Introduce tu contraseña",
       "passwordsDoNotMatch": "Las contraseñas no coinciden",
       "passwordTooShort": "La contraseña debe tener al menos 10 caracteres",
+      "passwordTooLong": "La contraseña es demasiado larga; usa una más corta",
       "passwordNeedsLetter": "La contraseña debe incluir una letra",
       "passwordNeedsNumber": "La contraseña debe incluir un número",
       "passwordNeedsSymbol": "La contraseña debe incluir un carácter especial"
@@ -821,6 +822,7 @@
       "requiresConnectionDescription": "Los sitios añadidos aquí siempre accederán mediante Yundo cuando Yundo esté conectado.",
       "directConnectionDescription": "Los sitios añadidos aquí omitirán Yundo y accederán directamente, incluso cuando Yundo esté conectado.",
       "domainRequired": "Introduce el dominio del sitio",
+      "domainInvalid": "Introduce un dominio válido como openai.com, sin http://, ruta ni puerto",
       "domainLabel": "Dominio del sitio",
       "cloudSyncHint": "Tras guardarlas, estas reglas se sincronizan con tus otros dispositivos y se aplican la próxima vez que se conecten a Yundo.",
       "cloudSyncSaved": "Guardado. Tus otros dispositivos usarán esta regla la próxima vez que se conecten a Yundo.",

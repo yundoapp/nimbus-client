@@ -5,6 +5,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/constants.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_input_validation.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -95,6 +96,10 @@ class NimbusAuthPage extends HookConsumerWidget {
                       controller: passwordController,
                       autofillHints: [if (isRegister) AutofillHints.newPassword else AutofillHints.password],
                       obscureText: obscurePassword.value,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(RegExp(r'[\u0000-\u001F\u007F]')),
+                        LengthLimitingTextInputFormatter(72),
+                      ],
                       textInputAction: isRegister ? TextInputAction.next : TextInputAction.done,
                       onFieldSubmitted: (_) {
                         if (!isRegister) submit();
@@ -116,6 +121,10 @@ class NimbusAuthPage extends HookConsumerWidget {
                         controller: confirmPasswordController,
                         autofillHints: const [AutofillHints.newPassword],
                         obscureText: obscurePassword.value,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.deny(RegExp(r'[\u0000-\u001F\u007F]')),
+                          LengthLimitingTextInputFormatter(72),
+                        ],
                         textInputAction: TextInputAction.done,
                         onFieldSubmitted: (_) => submit(),
                         decoration: InputDecoration(
@@ -203,12 +212,14 @@ String? _validateUsername(Translations t, String? value) {
 
 String? _validatePassword(Translations t, String? value) {
   if (value == null || value.isEmpty) return t.nimbus.auth.passwordRequired;
+  if (!isNimbusPasswordWithinByteLimit(value)) return t.nimbus.auth.passwordTooLong;
   return null;
 }
 
 String? _validateNewPassword(Translations t, String? value) {
   final password = value ?? '';
   if (password.length < 10) return t.nimbus.auth.passwordTooShort;
+  if (!isNimbusPasswordWithinByteLimit(password)) return t.nimbus.auth.passwordTooLong;
   if (!RegExp('[A-Za-z]').hasMatch(password)) return t.nimbus.auth.passwordNeedsLetter;
   if (!RegExp('[0-9]').hasMatch(password)) return t.nimbus.auth.passwordNeedsNumber;
   if (!RegExp('[^A-Za-z0-9]').hasMatch(password)) return t.nimbus.auth.passwordNeedsSymbol;
