@@ -818,6 +818,8 @@
       "count": "${used}/${limit} 條規則",
       "requiresConnection": "透過雲渡存取",
       "directConnection": "直接存取",
+      "requiresConnectionDescription": "新增到這裡的網站，連線雲渡後會強制透過雲渡存取。",
+      "directConnectionDescription": "新增到這裡的網站，即使已連線雲渡也會略過雲渡直接存取。",
       "domainRequired": "請輸入網站網域",
       "domainLabel": "網站網域",
       "cloudSyncHint": "儲存後，這些網站的存取方式會同步到你的其他裝置，並在下次連線雲渡時生效。",

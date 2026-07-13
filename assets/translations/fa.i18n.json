@@ -818,6 +818,8 @@
       "count": "${used}/${limit} قانون",
       "requiresConnection": "دسترسی از طریق Yundo",
       "directConnection": "دسترسی مستقیم",
+      "requiresConnectionDescription": "وب‌سایت‌های افزوده‌شده در اینجا هنگام اتصال Yundo همیشه از طریق Yundo باز می‌شوند.",
+      "directConnectionDescription": "وب‌سایت‌های افزوده‌شده در اینجا حتی هنگام اتصال Yundo، Yundo را دور می‌زنند و مستقیم باز می‌شوند.",
       "domainRequired": "دامنه وب‌سایت را وارد کنید",
       "domainLabel": "دامنه وب‌سایت",
       "cloudSyncHint": "پس از ذخیره، روش دسترسی این وب‌سایت‌ها با دستگاه‌های دیگر شما همگام می‌شود و هنگام اتصال بعدی به Yundo اعمال خواهد شد.",

@@ -818,6 +818,8 @@
       "count": "${used}/${limit} aturan",
       "requiresConnection": "Akses melalui Yundo",
       "directConnection": "Akses langsung",
+      "requiresConnectionDescription": "Situs yang ditambahkan di sini akan selalu diakses melalui Yundo saat Yundo terhubung.",
+      "directConnectionDescription": "Situs yang ditambahkan di sini akan melewati Yundo dan diakses langsung, meski Yundo terhubung.",
       "domainRequired": "Masukkan domain situs",
       "domainLabel": "Domain situs",
       "cloudSyncHint": "Setelah disimpan, aturan ini disinkronkan ke perangkat lain Anda dan berlaku saat perangkat tersebut terhubung lagi ke Yundo.",

@@ -818,6 +818,8 @@
       "count": "${used}/${limit} kural",
       "requiresConnection": "Yundo üzerinden eriş",
       "directConnection": "Doğrudan eriş",
+      "requiresConnectionDescription": "Buraya eklenen sitelere Yundo bağlıyken her zaman Yundo üzerinden erişilir.",
+      "directConnectionDescription": "Buraya eklenen siteler Yundo bağlı olsa bile Yundo'yu atlayarak doğrudan açılır.",
       "domainRequired": "Site alan adını girin",
       "domainLabel": "Site alan adı",
       "cloudSyncHint": "Kaydedilen kurallar diğer cihazlarınızla eşitlenir ve Yundo'ya bir sonraki bağlanışlarında uygulanır.",

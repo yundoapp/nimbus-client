@@ -818,6 +818,8 @@
       "count": "${used}/${limit} regras",
       "requiresConnection": "Acessar pelo Yundo",
       "directConnection": "Acesso direto",
+      "requiresConnectionDescription": "Os sites adicionados aqui sempre serão acessados pelo Yundo quando ele estiver conectado.",
+      "directConnectionDescription": "Os sites adicionados aqui ignorarão o Yundo e terão acesso direto, mesmo quando ele estiver conectado.",
       "domainRequired": "Digite o domínio do site",
       "domainLabel": "Domínio do site",
       "cloudSyncHint": "Depois de salvas, essas regras são sincronizadas com seus outros dispositivos e aplicadas na próxima conexão ao Yundo.",

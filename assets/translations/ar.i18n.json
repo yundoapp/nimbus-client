@@ -824,6 +824,8 @@
       "count": "${used}/${limit} قاعدة",
       "requiresConnection": "الوصول عبر Yundo",
       "directConnection": "الوصول المباشر",
+      "requiresConnectionDescription": "سيتم دائمًا الوصول إلى المواقع المضافة هنا عبر Yundo عند اتصال Yundo.",
+      "directConnectionDescription": "ستتجاوز المواقع المضافة هنا Yundo وتُفتح مباشرةً حتى عند اتصال Yundo.",
       "domainRequired": "أدخل نطاق الموقع",
       "domainLabel": "نطاق الموقع",
       "cloudSyncHint": "بعد الحفظ، تتم مزامنة طرق الوصول إلى هذه المواقع مع أجهزتك الأخرى وتُطبّق عند اتصالها التالي بـ Yundo.",

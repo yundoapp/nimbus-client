@@ -818,6 +818,8 @@
       "count": "${used}/${limit} rules",
       "requiresConnection": "Access through Yundo",
       "directConnection": "Direct access",
+      "requiresConnectionDescription": "Websites added here will always use Yundo while Yundo is connected.",
+      "directConnectionDescription": "Websites added here will bypass Yundo and connect directly, even while Yundo is connected.",
       "domainRequired": "Enter a website domain",
       "domainLabel": "Website domain",
       "cloudSyncHint": "Saved rules sync to your other devices and take effect the next time they connect to Yundo.",

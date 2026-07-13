@@ -822,6 +822,8 @@
       "count": "${used}/${limit} правил",
       "requiresConnection": "Через Yundo",
       "directConnection": "Прямой доступ",
+      "requiresConnectionDescription": "Добавленные здесь сайты всегда будут открываться через Yundo, когда Yundo подключён.",
+      "directConnectionDescription": "Добавленные здесь сайты будут обходить Yundo и открываться напрямую, даже когда Yundo подключён.",
       "domainRequired": "Введите домен сайта",
       "domainLabel": "Домен сайта",
       "cloudSyncHint": "После сохранения правила синхронизируются с другими устройствами и применяются при следующем подключении к Yundo.",

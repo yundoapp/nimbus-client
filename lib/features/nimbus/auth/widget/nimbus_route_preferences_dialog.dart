@@ -115,7 +115,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
     return AlertDialog(
       title: Text(t.nimbus.routePreferences.title),
       content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
+        constraints: const BoxConstraints(minWidth: 520, maxWidth: 520, maxHeight: 560),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -138,6 +138,15 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
               ],
               selected: {selectedType.value},
               onSelectionChanged: isSubmitting.value ? null : (values) => selectedType.value = values.first,
+            ),
+            const Gap(8),
+            Text(
+              selectedType.value == 'accelerate'
+                  ? t.nimbus.routePreferences.requiresConnectionDescription
+                  : t.nimbus.routePreferences.directConnectionDescription,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const Gap(12),
             _CloudSyncHint(message: t.nimbus.routePreferences.cloudSyncHint),
@@ -185,7 +194,6 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
             else
               Flexible(
                 child: ListView.separated(
-                  shrinkWrap: true,
                   itemCount: items.length,
                   separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, index) => _RoutePreferenceTile(
