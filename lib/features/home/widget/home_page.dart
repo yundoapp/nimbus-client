@@ -13,7 +13,6 @@ import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
-import 'package:hiddify/features/proxy/active/active_proxy_delay_indicator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 const _yundoLogoColor = Color(0xFF4F67AA);
@@ -167,8 +166,6 @@ class HomePage extends HookConsumerWidget {
                       _ActivationConnectionButton(label: t.nimbus.home.connect, onTap: showNoPlanDialog),
                     const Gap(16),
                     _HomeQuickControls(rulesVersion: authState.me?.rules.publicRulesVersion),
-                    const Gap(8),
-                    const ActiveProxyDelayIndicator(),
                     const Spacer(),
                     _NimbusStatusPanel(theme: theme, me: authState.me, onActivate: showActivationDialog),
                     const Gap(16),
