@@ -11,11 +11,9 @@ abstract class Constants {
   static const cfWarpPrivacyPolicy = "https://www.cloudflare.com/application/privacypolicy/";
   static const cfWarpTermsOfService = "https://www.cloudflare.com/application/terms/";
 
-  // Keep the retired organization marker out of packaged binaries while the
-  // public fork remains directly reachable from the app.
+  // Keep all in-app source and legal entry points anchored to the public fork.
   static String _sourceUrl(String path) {
-    final owner = String.fromCharCodes(const [119, 105, 110, 116, 105, 111, 110]);
-    return 'https://github.com/$owner/nimbus-client$path';
+    return 'https://github.com/yundoapp/nimbus-client$path';
   }
 }
 
