@@ -6,7 +6,7 @@ Yundo（云渡）是一个面向个人自用和小范围朋友测试的跨平台
 
 本仓库是 [Hiddify App](https://github.com/hiddify/hiddify-app) 的公开 fork，并继续遵守仓库根目录 [Hiddify Extended GNU General Public License v3](./LICENSE.md)。Hiddify 原项目及其贡献者保留原有归属；Yundo / 云渡是基于该项目修改的独立版本。
 
-- 云渡公开源码：<https://github.com/wintion/nimbus-client>
+- 云渡公开源码：<https://github.com/yundoapp/nimbus-client>
 - Hiddify 原始仓库：<https://github.com/hiddify/hiddify-app>
 - 许可证正文：[LICENSE.md](./LICENSE.md)
 - 开源归属与发布边界：[docs/legal/open-source-compliance.md](./docs/legal/open-source-compliance.md)

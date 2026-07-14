@@ -1,10 +1,10 @@
 # 云渡客户端开源归属与发布边界
 
-最后更新：`2026-07-10`
+最后更新：`2026-07-14`
 
 ## 当前来源
 
-- 云渡客户端仓库：<https://github.com/wintion/nimbus-client>
+- 云渡客户端仓库：<https://github.com/yundoapp/nimbus-client>
 - 原始项目：<https://github.com/hiddify/hiddify-app>
 - GitHub 状态：云渡仓库是原始项目的公开 fork。
 - 许可证：仓库根目录 [LICENSE.md](../../LICENSE.md) 保留 Hiddify Extended GNU General Public License v3 原文，本任务不修改许可证正文。
@@ -19,7 +19,7 @@
 
 ## Extended GPLv3 对应措施
 
-1. **公开 fork**：安装包对应源码必须先存在于公开的 `wintion/nimbus-client` fork。
+1. **公开 fork**：安装包对应源码必须先存在于公开的 `yundoapp/nimbus-client` fork。
 2. **自动化发布**：正式 release 只能通过 GitHub Actions 发布；本地 `package_macos_internal_test.sh` 仅用于受邀开发内测，不是正式 release，也不得用于 App Store 或公开发布。
 3. **归属**：README、App 关于页和安装包内许可证均明确指向 Hiddify App 与原始许可证。
 4. **变更说明**：README 和本文记录云渡主要修改范围。
