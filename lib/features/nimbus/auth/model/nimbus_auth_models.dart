@@ -493,21 +493,46 @@ class NimbusRulesManifest {
 }
 
 class NimbusRulePackageItem {
-  const NimbusRulePackageItem({required this.pattern, required this.patternType, required this.action});
+  const NimbusRulePackageItem({
+    required this.pattern,
+    required this.patternType,
+    required this.action,
+    this.kind = 'custom',
+    this.sourceUrl,
+    this.format,
+    this.updateInterval,
+  });
 
   factory NimbusRulePackageItem.fromJson(Map<String, dynamic> json) {
+    final sourceUrl = json['sourceUrl'] as String?;
     return NimbusRulePackageItem(
       pattern: json['pattern'] as String? ?? '',
       patternType: json['patternType'] as String? ?? '',
       action: json['action'] as String? ?? '',
+      kind: json['kind'] as String? ?? (sourceUrl?.isNotEmpty == true ? 'rule_set' : 'custom'),
+      sourceUrl: sourceUrl,
+      format: json['format'] as String?,
+      updateInterval: json['updateInterval'] as String?,
     );
   }
 
   final String pattern;
   final String patternType;
   final String action;
+  final String kind;
+  final String? sourceUrl;
+  final String? format;
+  final String? updateInterval;
 
-  Map<String, dynamic> toJson() => {'pattern': pattern, 'patternType': patternType, 'action': action};
+  Map<String, dynamic> toJson() => {
+    'kind': kind,
+    'pattern': pattern,
+    'patternType': patternType,
+    'action': action,
+    'sourceUrl': sourceUrl,
+    'format': format,
+    'updateInterval': updateInterval,
+  };
 }
 
 class NimbusRulesPackage {

@@ -1,24 +1,69 @@
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 
-const nimbusRulesConfigVersion = 'sing-box-rules-v1';
+const nimbusRulesConfigVersion = 'sing-box-rules-v3';
+
+List<NimbusRulePackageItem> selectActiveNimbusUserRules({
+  required bool isAutomaticMode,
+  required bool customWebsiteAccessEnabled,
+  required List<NimbusRulePackageItem> userRules,
+}) {
+  if (!isAutomaticMode || !customWebsiteAccessEnabled) {
+    return const <NimbusRulePackageItem>[];
+  }
+  return userRules;
+}
 
 List<Map<String, dynamic>> buildNimbusRouteRules(List<NimbusRulePackageItem> rules, String proxyTag) {
   final normalized = <Map<String, dynamic>>[];
   for (final rule in rules) {
     final outbound = rule.action == 'direct' ? 'nimbus-direct' : proxyTag;
-    if (rule.patternType == 'domain' && rule.pattern.isNotEmpty) {
-      normalized.add({
+    if (rule.pattern.isEmpty) continue;
+    final match = switch (rule.patternType) {
+      'domain' => <String, dynamic>{
         'domain_suffix': [rule.pattern],
-        'outbound': outbound,
-      });
-    } else if ((rule.patternType == 'ip' || rule.patternType == 'cidr') && rule.pattern.isNotEmpty) {
-      normalized.add({
+      },
+      'domain_exact' => <String, dynamic>{
+        'domain': [rule.pattern],
+      },
+      'ip' || 'cidr' => <String, dynamic>{
         'ip_cidr': [rule.pattern],
-        'outbound': outbound,
-      });
-    }
+      },
+      'geosite' || 'geoip' => <String, dynamic>{
+        'rule_set': [rule.pattern],
+      },
+      'process' => <String, dynamic>{
+        'process_name': [rule.pattern],
+      },
+      _ => null,
+    };
+    if (match == null) continue;
+    normalized.add({...match, if (rule.action == 'block') 'action': 'reject' else 'outbound': outbound});
   }
   return normalized;
+}
+
+List<Map<String, dynamic>> buildNimbusRuleSets(List<NimbusRulePackageItem> rules, String downloadDetour) {
+  final definitions = <String, Map<String, dynamic>>{};
+  for (final rule in rules) {
+    if (rule.kind != 'rule_set' || rule.pattern.isEmpty || definitions.containsKey(rule.pattern)) continue;
+    final sourceUrl = rule.sourceUrl?.trim() ?? '';
+    final sourceUri = Uri.tryParse(sourceUrl);
+    if (sourceUrl.isEmpty || sourceUri == null || sourceUri.scheme != 'https' || sourceUri.host.isEmpty) {
+      throw FormatException('远程规则库 ${rule.pattern} 缺少有效的 HTTPS 下载地址');
+    }
+    if (rule.format != null && rule.format != 'binary') {
+      throw FormatException('远程规则库 ${rule.pattern} 使用了不支持的格式 ${rule.format}');
+    }
+    definitions[rule.pattern] = {
+      'tag': rule.pattern,
+      'type': 'remote',
+      'format': rule.format ?? 'binary',
+      'url': sourceUrl,
+      'update_interval': rule.updateInterval ?? '1d',
+      'download_detour': downloadDetour,
+    };
+  }
+  return definitions.values.toList(growable: false);
 }
 
 Map<String, dynamic> nimbusFallbackRouteRule() => {'ip_is_private': true, 'outbound': 'nimbus-direct'};

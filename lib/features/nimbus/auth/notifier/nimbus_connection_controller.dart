@@ -35,6 +35,17 @@ final nimbusConnectionControllerProvider = NotifierProvider<NimbusConnectionCont
   NimbusConnectionController.new,
 );
 
+bool shouldReapplyNimbusConnection({
+  required ConnectionStatus? connection,
+  required bool userRulesOnly,
+  required NimbusProxyMode proxyMode,
+  required bool customWebsiteAccessEnabled,
+}) {
+  if (connection is! Connected) return false;
+  if (!userRulesOnly) return true;
+  return proxyMode == NimbusProxyMode.auto && customWebsiteAccessEnabled;
+}
+
 class NimbusConnectionState {
   const NimbusConnectionState({
     this.isPreparing = false,
@@ -140,10 +151,31 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     }
   }
 
-  Future<void> reconnect({bool showErrors = true}) async {
-    await disconnect(reason: 'CLIENT_RECONNECT');
+  Future<void> reconnect({bool showErrors = true, String reason = 'CLIENT_RECONNECT'}) async {
+    await disconnect(reason: reason);
     await Future<void>.delayed(const Duration(milliseconds: 300));
     await connect(showErrors: showErrors);
+  }
+
+  Future<bool> reapplyIfConnected({bool userRulesOnly = false}) async {
+    final shouldReapply = shouldReapplyNimbusConnection(
+      connection: ref.read(connectionNotifierProvider).valueOrNull,
+      userRulesOnly: userRulesOnly,
+      proxyMode: ref.read(Preferences.nimbusProxyMode),
+      customWebsiteAccessEnabled: ref.read(Preferences.nimbusCustomWebsiteAccessEnabled),
+    );
+    if (!shouldReapply) return false;
+
+    await reconnect(reason: 'CLIENT_SETTINGS_CHANGED');
+    return true;
+  }
+
+  Future<void> selectLocation(NimbusLocation location) async {
+    final authState = ref.read(nimbusAuthControllerProvider);
+    if (authState.selectedLocationCode == location.code) return;
+
+    await ref.read(nimbusAuthControllerProvider.notifier).selectLocation(location);
+    await reapplyIfConnected();
   }
 
   Future<void> disconnect({String reason = 'CLIENT_DISCONNECTED', bool reportToServer = true}) async {
@@ -482,12 +514,25 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     }
 
     final proxyMode = ref.read(Preferences.nimbusProxyMode);
+    final customWebsiteAccessEnabled = ref.read(Preferences.nimbusCustomWebsiteAccessEnabled);
+    final activeUserRules = selectActiveNimbusUserRules(
+      isAutomaticMode: proxyMode == NimbusProxyMode.auto,
+      customWebsiteAccessEnabled: customWebsiteAccessEnabled,
+      userRules: rulesPackage.userRules,
+    );
     final proxyTag = _proxyOutboundTag(routePatch, outbounds);
     final existingRules = _normalizeRules(routePatch['rules']);
+    final existingRuleSets = _normalizeRules(routePatch['rule_set']);
+    final existingRuleSetTags = existingRuleSets.map((ruleSet) => ruleSet['tag']).whereType<String>().toSet();
+    final managedRuleSets = buildNimbusRuleSets([
+      ...activeUserRules,
+      ...rulesPackage.publicRules,
+    ], proxyTag).where((ruleSet) => !existingRuleSetTags.contains(ruleSet['tag']));
+    final routeRuleSets = [...managedRuleSets, ...existingRuleSets];
     final routeRules = proxyMode == NimbusProxyMode.global
         ? <Map<String, dynamic>>[]
         : [
-            ...buildNimbusRouteRules(rulesPackage.userRules, proxyTag),
+            ...buildNimbusRouteRules(activeUserRules, proxyTag),
             ...buildNimbusRouteRules(rulesPackage.publicRules, proxyTag),
             nimbusFallbackRouteRule(),
             ...existingRules,
@@ -528,7 +573,13 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         },
       ],
       'outbounds': outbounds,
-      'route': {...routePatch, 'rules': routeRules, 'auto_detect_interface': true, 'final': finalTag},
+      'route': {
+        ...routePatch,
+        'rules': routeRules,
+        if (routeRuleSets.isNotEmpty) 'rule_set': routeRuleSets,
+        'auto_detect_interface': true,
+        'final': finalTag,
+      },
       'experimental': {
         'cache_file': {'enabled': true},
       },

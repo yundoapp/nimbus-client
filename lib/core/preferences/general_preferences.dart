@@ -92,6 +92,11 @@ abstract class Preferences {
     mapTo: (value) => value.name,
   );
 
+  static final nimbusCustomWebsiteAccessEnabled = PreferencesNotifier.create<bool, bool>(
+    "nimbus_custom_website_access_enabled",
+    true,
+  );
+
   static final disableMemoryLimit = PreferencesNotifier.create<bool, bool>(
     "disable_memory_limit",
     // disable memory limit on desktop by default
