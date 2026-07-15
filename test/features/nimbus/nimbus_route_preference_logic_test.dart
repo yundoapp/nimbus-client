@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_route_preference_logic.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_rules_config.dart';
 
 void main() {
   const existing = NimbusRoutePreference(
@@ -51,5 +52,37 @@ void main() {
       requestedType: 'direct',
     );
     expect(result.decision, NimbusRoutePreferenceDecision.limitReached);
+  });
+
+  group('自定义网站规则启用状态', () {
+    const rules = [NimbusRulePackageItem(pattern: 'openai.com', patternType: 'domain', action: 'proxy')];
+
+    test('自动模式且开关开启时应用用户规则', () {
+      final result = selectActiveNimbusUserRules(
+        isAutomaticMode: true,
+        customWebsiteAccessEnabled: true,
+        userRules: rules,
+      );
+      expect(result, same(rules));
+    });
+
+    test('自动模式关闭开关时保留数据但不应用规则', () {
+      final result = selectActiveNimbusUserRules(
+        isAutomaticMode: true,
+        customWebsiteAccessEnabled: false,
+        userRules: rules,
+      );
+      expect(result, isEmpty);
+      expect(rules, hasLength(1));
+    });
+
+    test('全局模式不应用用户规则', () {
+      final result = selectActiveNimbusUserRules(
+        isAutomaticMode: false,
+        customWebsiteAccessEnabled: true,
+        userRules: rules,
+      );
+      expect(result, isEmpty);
+    });
   });
 }
