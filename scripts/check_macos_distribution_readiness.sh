@@ -3,13 +3,33 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "${script_dir}/.." && pwd)"
-app_path="${1:-${repo_root}/build/macos/Build/Products/Release/Yundo.app}"
-strict="${2:-}"
+app_path="${repo_root}/build/macos/Build/Products/Release/Yundo.app"
+strict=""
 expected_bundle_id="${YUNDO_EXPECTED_RELEASE_BUNDLE_ID:-app.yundo.client}"
 expected_identity="${YUNDO_DEVELOPER_ID_APPLICATION:-}"
 notary_profile="${YUNDO_NOTARY_PROFILE:-}"
 plist_buddy="/usr/libexec/PlistBuddy"
 blockers=()
+
+for argument in "$@"; do
+  case "$argument" in
+    --strict)
+      strict="--strict"
+      ;;
+    --help|-h)
+      cat <<EOF
+用法：$(basename "$0") [--strict] [App 路径]
+
+默认 App 路径：${app_path}
+说明：本检查只读，不执行签名、公证提交、helper 注册或系统网络变更。
+EOF
+      exit 0
+      ;;
+    *)
+      app_path="$argument"
+      ;;
+  esac
+done
 
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -17,7 +37,13 @@ require_command() {
   fi
 }
 
-for command_name in codesign security spctl xcrun; do
+require_flutter_asset() {
+  local flutter_assets="$1"
+  local relative_path="$2"
+  [[ -f "${flutter_assets}/${relative_path}" ]] || blockers+=("App 缺少合规文档：${relative_path}")
+}
+
+for command_name in codesign plutil rg security spctl xcrun; do
   require_command "$command_name"
 done
 [[ -x "$plist_buddy" ]] || blockers+=("缺少命令：${plist_buddy}")
@@ -50,6 +76,24 @@ else
     daemon_plist="${app_path}/Contents/Library/LaunchDaemons/${bundle_id}.privileged-helper.plist"
     [[ -x "$helper_path" ]] || blockers+=("App 缺少特权辅助进程")
     [[ -f "$daemon_plist" ]] || blockers+=("App 缺少匹配 Bundle ID 的 LaunchDaemon plist")
+    if [[ -f "$daemon_plist" ]]; then
+      service_name="${bundle_id}.privileged-helper"
+      daemon_label="$($plist_buddy -c 'Print :Label' "$daemon_plist" 2>/dev/null || true)"
+      daemon_program="$($plist_buddy -c 'Print :BundleProgram' "$daemon_plist" 2>/dev/null || true)"
+      [[ "$daemon_label" == "$service_name" ]] || blockers+=("LaunchDaemon Label 与正式 Bundle ID 不匹配")
+      [[ "$daemon_program" == "Contents/Library/HelperTools/YundoPrivilegedHelper" ]] || blockers+=("LaunchDaemon BundleProgram 不正确")
+      $plist_buddy -c "Print :MachServices:${service_name}" "$daemon_plist" >/dev/null 2>&1 \
+        || blockers+=("LaunchDaemon 缺少正式 Mach service")
+      plutil -lint "$daemon_plist" >/dev/null 2>&1 || blockers+=("LaunchDaemon plist 格式无效")
+    fi
+    flutter_assets="${app_path}/Contents/Frameworks/App.framework/Resources/flutter_assets"
+    require_flutter_asset "$flutter_assets" "LICENSE.md"
+    require_flutter_asset "$flutter_assets" "docs/legal/privacy-policy.md"
+    require_flutter_asset "$flutter_assets" "docs/legal/terms-of-service.md"
+    if [[ -f "${flutter_assets}/LICENSE.md" ]] \
+      && ! rg -q "Hiddify Extended GNU General Public License v3" "${flutter_assets}/LICENSE.md"; then
+      blockers+=("App 内许可证不是预期的 Hiddify Extended GPLv3")
+    fi
 
     app_signature="$(codesign -d --verbose=4 "$app_path" 2>&1 || true)"
     app_team="$(printf '%s\n' "$app_signature" | sed -n 's/^TeamIdentifier=//p' | head -1)"
