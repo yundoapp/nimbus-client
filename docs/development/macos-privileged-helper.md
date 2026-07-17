@@ -1,6 +1,6 @@
 # macOS TUN 最小权限辅助进程
 
-最后更新：`2026-07-12`
+最后更新：`2026-07-16`
 
 ## 当前结论
 
@@ -23,7 +23,14 @@ scripts/check_macos_distribution_readiness.sh \
   'build/macos/Build/Products/Release/Yundo.app' --strict
 ```
 
-脚本检查 Developer ID identity、notarytool 凭据可用性、App/helper 同 Team、hardened runtime、深度签名、Gatekeeper 和 stapling。它只读取公证历史以验证凭据，不会签名、提交公证、注册 helper 或修改网络；未加 `--strict` 时只输出结构化阻塞项，适合证书尚未准备好的本机检查。
+也可以把 `--strict` 放在第一个参数：
+
+```bash
+scripts/check_macos_distribution_readiness.sh --strict \
+  'build/macos/Build/Products/Release/Yundo.app'
+```
+
+脚本检查 Developer ID identity、notarytool 凭据可用性、App/helper 同 Team、hardened runtime、深度签名、LaunchDaemon 与 Mach service、包内许可证/条款/隐私资产、Gatekeeper 和 stapling。它只读取公证历史以验证凭据，不会签名、提交公证、注册 helper 或修改网络；未加 `--strict` 时只输出结构化阻塞项，适合证书尚未准备好的本机检查。
 
 ## 进程边界
 
@@ -82,11 +89,13 @@ scripts/verify_macos_privileged_helper.sh
 4. 管理员批准后再次点击“启用”，App 通过 privileged XPC 启动最小 TUN 转发器。
 5. 普通 core 或 helper 启动失败时，两侧都会执行停止清理，不能留下只接管路由但没有出口的状态。
 
-连接状态与延迟探测是两条独立信号。只要普通 core 和 TUN 均已启动，首页就显示“已连接”；延迟暂不可用、探测超时或当前配置没有延迟选择组时，只影响延迟显示，不得把成功连接回退成“连接中”。
+连接状态与延迟探测是两条独立信号。只要普通 core 和 TUN 均已启动，首页就显示“加速已开启”；延迟暂不可用、探测超时或当前配置没有延迟选择组时，只影响延迟显示，不得把成功连接回退成“加速中”。
 
 ## 停止与恢复
 
 - 主动断开：先停止普通 core，再通过 XPC 停止 TUN。
+- 主动断开期间首页保持“正在停止加速”并禁用重复点击，至少展示 500ms；helper 返回后继续轮询代表性公网路由和系统代理状态，确认连接资源释放后才恢复“加速”。
+- 所有连接入口共用同一断开 Future；断开清理期间收到连接请求时先等待清理完成。断开后立即连接不再依赖固定 300ms/500ms 延时猜测。
 - App 正常退出或异常结束：XPC 连接失效，helper 停止 TUN 后退出。
 - helper 配置和子进程日志只保存在 root 私有目录，停止后删除活动配置文件。
 - 不在 `/Library/LaunchDaemons` 复制自维护 plist；注册状态由 `SMAppService` 管理。
@@ -95,9 +104,15 @@ scripts/verify_macos_privileged_helper.sh
 
 睡眠/唤醒和网络切换也已完成真机验证：
 
-- Mac 睡眠约 13 分钟并完整唤醒后，App、root helper、raw-run 子进程和 TUN 路由均保持，首页继续显示“已连接”。
-- Wi-Fi 链路连续中断约 15 秒期间，helper 子进程与 TUN 路由保持；Wi-Fi 恢复后首页仍显示“已连接”并继续刷新流量。
+- Mac 睡眠约 13 分钟并完整唤醒后，App、root helper、raw-run 子进程和 TUN 路由均保持，首页继续显示“加速已开启”。
+- Wi-Fi 链路连续中断约 15 秒期间，helper 子进程与 TUN 路由保持；Wi-Fi 恢复后首页仍显示“加速已开启”并继续刷新流量。
 - 测试时临时开启的自动连接已恢复为测试前的关闭状态。
+
+2026-07-16 交互补充验收：
+
+- 点击“加速”后立即显示不可重复点击的“加速中”和旋转状态环；普通 core 先返回 `CONNECTED` 时仍保持该状态，helper/TUN 就绪后才切换为“加速已开启”。
+- 首页圆形按钮统一使用小火箭加速图标；加速中和停止中使用旋转状态环，加速已开启时保留常驻细环，并使用低强度呼吸环和图标缩放表达加速仍在工作。浅色和深色主题均未出现遮挡或尺寸跳动。
+- 真实日本节点完成“连接 -> 断开 -> 按钮恢复后立即连接”，第二次连接成功，未出现其他连接冲突、helper 错误或失败弹窗；最终断开后公网路由恢复物理接口，TUN 子进程为 0。
 
 这些结果验证的是 `direct-mock` 下的系统权限、进程和路由恢复，不替代真实节点连通、节点切换和远端流量验收。
 

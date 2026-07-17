@@ -107,6 +107,35 @@ class NimbusAuthRepository {
     return NimbusAuthSession.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
   }
 
+  Future<NimbusAuthSession> completePasswordReset({
+    required String username,
+    required String temporaryPassword,
+    required String newPassword,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      'auth/complete-password-reset',
+      data: {
+        'username': username,
+        'temporaryPassword': temporaryPassword,
+        'newPassword': newPassword,
+        'device': _devicePayload(),
+      },
+    );
+    return NimbusAuthSession.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
+  }
+
+  Future<void> changePassword({
+    required NimbusAuthSession session,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _dio.post<void>(
+      'account/change-password',
+      data: {'currentPassword': currentPassword, 'newPassword': newPassword},
+      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+    );
+  }
+
   Future<NimbusAuthSession> refresh(NimbusAuthSession session) async {
     final response = await _dio.post<Map<String, dynamic>>(
       'auth/refresh',
@@ -410,8 +439,16 @@ class NimbusAuthRepository {
     if (rawCode is! String || rawCode.isEmpty) return null;
     return switch (rawCode) {
       'AUTH_INVALID_CREDENTIALS' => t.nimbus.apiError.invalidCredentials,
+      'AUTH_CURRENT_PASSWORD_INVALID' => t.nimbus.changePassword.currentPasswordInvalid,
+      'AUTH_PASSWORD_CHANGED' => t.nimbus.changePassword.passwordChangedElsewhere,
+      'AUTH_PASSWORD_CHANGE_REQUIRED' => t.nimbus.apiError.passwordChangeRequired,
+      'AUTH_PASSWORD_CHANGE_NOT_REQUIRED' => t.nimbus.apiError.passwordChangeNotRequired,
+      'AUTH_PASSWORD_MUST_DIFFER' => t.nimbus.apiError.passwordMustDiffer,
+      'AUTH_WEAK_PASSWORD' => t.nimbus.auth.weakPassword,
       'AUTH_REGISTRATION_DISABLED' => t.nimbus.apiError.registrationDisabled,
       'AUTH_USERNAME_TAKEN' => t.nimbus.apiError.usernameTaken,
+      'RATE_LIMIT_USER_LOGIN_ACCOUNT' => t.nimbus.apiError.loginRateLimited,
+      'RATE_LIMIT_USER_LOGIN_IP' => t.nimbus.apiError.networkLoginRateLimited,
       'ACCOUNT_DISABLED' => t.nimbus.apiError.accountDisabled,
       'DEVICE_LIMIT_REACHED' || 'DEVICE_NEW_LOGIN_DISABLED' => t.nimbus.apiError.deviceLimitReached,
       'ACTIVATION_CODE_INVALID' || 'ACTIVATION_CODE_NOT_FOUND' => t.nimbus.apiError.activationCodeInvalid,

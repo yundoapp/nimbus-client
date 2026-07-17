@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
@@ -46,9 +47,24 @@ bool shouldReapplyNimbusConnection({
   return proxyMode == NimbusProxyMode.auto && customWebsiteAccessEnabled;
 }
 
+bool shouldReportNimbusConnected({required bool transportReady, required ConnectionStatus? connection}) {
+  return transportReady && connection is Connected;
+}
+
+bool shouldPresentNimbusAsConnecting({
+  required bool isPreparing,
+  required bool connectedReported,
+  required ConnectionStatus? connection,
+}) {
+  return isPreparing && !connectedReported && connection is! Disconnecting;
+}
+
+bool shouldPresentNimbusAsDisconnecting({required bool isDisconnecting}) => isDisconnecting;
+
 class NimbusConnectionState {
   const NimbusConnectionState({
     this.isPreparing = false,
+    this.isDisconnecting = false,
     this.plan,
     this.traffic,
     this.errorMessage,
@@ -57,6 +73,7 @@ class NimbusConnectionState {
   });
 
   final bool isPreparing;
+  final bool isDisconnecting;
   final NimbusConnectPlan? plan;
   final NimbusConnectTraffic? traffic;
   final String? errorMessage;
@@ -67,6 +84,7 @@ class NimbusConnectionState {
 
   NimbusConnectionState copyWith({
     bool? isPreparing,
+    bool? isDisconnecting,
     Object? plan = _stateSentinel,
     Object? traffic = _stateSentinel,
     Object? errorMessage = _stateSentinel,
@@ -75,6 +93,7 @@ class NimbusConnectionState {
   }) {
     return NimbusConnectionState(
       isPreparing: isPreparing ?? this.isPreparing,
+      isDisconnecting: isDisconnecting ?? this.isDisconnecting,
       plan: identical(plan, _stateSentinel) ? this.plan : plan as NimbusConnectPlan?,
       traffic: identical(traffic, _stateSentinel) ? this.traffic : traffic as NimbusConnectTraffic?,
       errorMessage: identical(errorMessage, _stateSentinel) ? this.errorMessage : errorMessage as String?,
@@ -89,10 +108,12 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
 
   Timer? _heartbeatTimer;
   Future<void>? _connectFuture;
+  Future<void>? _disconnectFuture;
   Future<void>? _heartbeatFuture;
   int? _lastUploadTotal;
   int? _lastDownloadTotal;
   bool _sessionClosedByServer = false;
+  bool _transportReady = false;
   DateTime? _lastDisconnectAt;
 
   NimbusAuthRepository get _repository => ref.read(nimbusAuthRepositoryProvider);
@@ -141,6 +162,8 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   }
 
   Future<void> connect({bool showErrors = true}) async {
+    final disconnectFuture = _disconnectFuture;
+    if (disconnectFuture != null) await disconnectFuture;
     if (_connectFuture != null) return _connectFuture;
     final future = _connect(showErrors: showErrors);
     _connectFuture = future;
@@ -153,7 +176,6 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
 
   Future<void> reconnect({bool showErrors = true, String reason = 'CLIENT_RECONNECT'}) async {
     await disconnect(reason: reason);
-    await Future<void>.delayed(const Duration(milliseconds: 300));
     await connect(showErrors: showErrors);
   }
 
@@ -179,28 +201,53 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   }
 
   Future<void> disconnect({String reason = 'CLIENT_DISCONNECTED', bool reportToServer = true}) async {
-    if (state.connectedReported && !_sessionClosedByServer) {
+    final active = _disconnectFuture;
+    if (active != null) return active;
+    final future = _disconnect(reason: reason, reportToServer: reportToServer);
+    _disconnectFuture = future;
+    try {
+      await future;
+    } finally {
+      _disconnectFuture = null;
+    }
+  }
+
+  Future<void> _disconnect({required String reason, required bool reportToServer}) async {
+    if (state.isDisconnecting) return;
+    final transitionStopwatch = Stopwatch()..start();
+    final plan = state.plan;
+    final session = ref.read(nimbusAuthControllerProvider).session;
+    final connectedReported = state.connectedReported;
+    state = state.copyWith(isPreparing: false, isDisconnecting: true);
+
+    if (connectedReported && !_sessionClosedByServer) {
       await _sendHeartbeat();
     }
     _stopHeartbeat();
-    final plan = state.plan;
-    final session = ref.read(nimbusAuthControllerProvider).session;
-    state = state.copyWith(isPreparing: false);
 
     if (reportToServer && plan != null && session != null && !_sessionClosedByServer) {
       await _safeReportDisconnect(session: session, plan: plan, reason: reason);
     }
 
-    state = const NimbusConnectionState();
+    state = const NimbusConnectionState(isDisconnecting: true);
     _sessionClosedByServer = false;
+    _transportReady = false;
     await ref.read(connectionNotifierProvider.notifier).abortConnection();
     _lastDisconnectAt = DateTime.now();
+    await _waitForMacOSConnectionRelease();
     await _deleteManagedProfileFile();
+    const minimumTransitionDuration = Duration(milliseconds: 500);
+    final remainingTransition = minimumTransitionDuration - transitionStopwatch.elapsed;
+    if (remainingTransition > Duration.zero) {
+      await Future<void>.delayed(remainingTransition);
+    }
+    state = const NimbusConnectionState();
   }
 
   Future<void> _connect({required bool showErrors}) async {
     final existing = ref.read(connectionNotifierProvider).valueOrNull;
     if (existing is Connected || existing is Connecting || existing is Disconnecting) return;
+    state = state.copyWith(isPreparing: true, isDisconnecting: false, errorMessage: null, connectedReported: false);
     if (await _blockForConnectionConflict(showErrors: showErrors)) return;
 
     await ref.read(nimbusAuthControllerProvider.notifier).refreshMe();
@@ -222,8 +269,8 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       return;
     }
 
-    state = state.copyWith(isPreparing: true, errorMessage: null, connectedReported: false);
     _sessionClosedByServer = false;
+    _transportReady = false;
 
     NimbusConnectPlan plan;
     try {
@@ -253,7 +300,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       loggy.warning('failed to prepare managed connection: ${_diagnosticError(error)}');
       await _fail(_describeError(error), showErrors: showErrors);
       if (_repository.isUnauthorized(error)) {
-        await ref.read(nimbusAuthControllerProvider.notifier).restore();
+        await ref.read(nimbusAuthControllerProvider.notifier).refreshAfterUnauthorized(session);
       }
       return;
     }
@@ -265,12 +312,15 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
           .connect(profile, ref.read(Preferences.disableMemoryLimit))
           .run();
       result.match((failure) => throw failure, (_) => null);
+      _transportReady = true;
       await _handleConnectionStatus(ref.read(connectionNotifierProvider));
     } on ConnectionFailure catch (failure) {
+      _transportReady = false;
       await _safeReportResult(session: session, plan: plan, status: 'failed', failureCode: _failureCode(failure));
       state = const NimbusConnectionState();
       await _fail(_friendlyConnectionFailure(failure), showErrors: showErrors);
     } catch (error) {
+      _transportReady = false;
       await _safeReportResult(session: session, plan: plan, status: 'failed', failureCode: 'CLIENT_START_FAILED');
       state = const NimbusConnectionState();
       await _fail(_t.nimbus.errors.connectFailed, showErrors: showErrors);
@@ -284,11 +334,9 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     if (!Platform.isMacOS) return false;
 
     try {
-      var conflict = await _macOSPrivilegedHelper.connectionConflict();
-      if (conflict.hasConflict && shouldRecheckConnectionConflict(_lastDisconnectAt, DateTime.now())) {
-        await Future<void>.delayed(const Duration(milliseconds: 500));
-        conflict = await _macOSPrivilegedHelper.connectionConflict();
-      }
+      final conflict = shouldRecheckConnectionConflict(_lastDisconnectAt, DateTime.now())
+          ? await waitForMacOSConnectionRelease(inspect: _macOSPrivilegedHelper.connectionConflict)
+          : await _macOSPrivilegedHelper.connectionConflict();
       if (conflict.routeCheckFailures > 0) {
         loggy.warning('macOS connection conflict route checks failed: ${conflict.routeCheckFailures}');
       }
@@ -310,12 +358,29 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     }
   }
 
+  Future<void> _waitForMacOSConnectionRelease() async {
+    if (!Platform.isMacOS) return;
+    try {
+      final conflict = await waitForMacOSConnectionRelease(inspect: _macOSPrivilegedHelper.connectionConflict);
+      if (conflict.hasConflict) {
+        loggy.warning(
+          'macOS connection resources did not fully release '
+          '(systemProxy=${conflict.systemProxyEnabled}, tunneledRoutes=${conflict.tunneledRouteCount})',
+        );
+      }
+    } catch (error) {
+      loggy.warning('failed to wait for macOS connection resources to release', error);
+    }
+  }
+
   Future<void> _handleConnectionStatus(AsyncValue<ConnectionStatus> next) async {
     final plan = state.plan;
     final session = ref.read(nimbusAuthControllerProvider).session;
     if (plan == null || session == null) return;
 
-    if (next case AsyncData(value: Connected())) {
+    if (next case AsyncData(
+      :final value,
+    ) when shouldReportNimbusConnected(transportReady: _transportReady, connection: value)) {
       await _reportConnected(session: session, plan: plan);
       return;
     }
@@ -360,6 +425,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     }
     state = const NimbusConnectionState();
     _sessionClosedByServer = false;
+    _transportReady = false;
   }
 
   void _startHeartbeat() {
@@ -417,7 +483,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     } catch (error) {
       loggy.warning('failed to send connection heartbeat', error);
       if (_repository.isUnauthorized(error)) {
-        await ref.read(nimbusAuthControllerProvider.notifier).restore();
+        await ref.read(nimbusAuthControllerProvider.notifier).refreshAfterUnauthorized(session);
       }
       if (error is DioException && {403, 410}.contains(error.response?.statusCode)) {
         await _handleServerDisconnect(
@@ -440,11 +506,13 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         : _t.nimbus.errors.sessionEnded;
     state = state.copyWith(isPreparing: false, traffic: heartbeat.traffic, errorMessage: message);
     await ref.read(connectionNotifierProvider.notifier).abortConnection();
-    await ref
-        .read(dialogNotifierProvider.notifier)
-        .showCustomAlert(title: _t.nimbus.errors.disconnectedTitle, message: message);
     state = NimbusConnectionState(traffic: heartbeat.traffic, errorMessage: message);
     _sessionClosedByServer = false;
+  }
+
+  void clearNotice() {
+    if (state.errorMessage == null) return;
+    state = state.copyWith(errorMessage: null);
   }
 
   Future<NimbusRulesPackage> _prepareRulesPackage(NimbusAuthSession session) async {
@@ -524,6 +592,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     final existingRules = _normalizeRules(routePatch['rules']);
     final existingRuleSets = _normalizeRules(routePatch['rule_set']);
     final existingRuleSetTags = existingRuleSets.map((ruleSet) => ruleSet['tag']).whereType<String>().toSet();
+    final httpClients = buildNimbusHttpClients(proxyTag);
     final managedRuleSets = buildNimbusRuleSets([
       ...activeUserRules,
       ...rulesPackage.publicRules,
@@ -573,16 +642,17 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         },
       ],
       'outbounds': outbounds,
+      if (httpClients.isNotEmpty) 'http_clients': httpClients,
       'route': {
         ...routePatch,
         'rules': routeRules,
         if (routeRuleSets.isNotEmpty) 'rule_set': routeRuleSets,
+        if (routeRuleSets.isNotEmpty && useNimbusRuleSetHttpClient(nimbusRuleSetDownloadMode))
+          'default_http_client': nimbusRuleSetHttpClientTag,
         'auto_detect_interface': true,
         'final': finalTag,
       },
-      'experimental': {
-        'cache_file': {'enabled': true},
-      },
+      'experimental': buildNimbusExperimentalConfig(isDebugBuild: kDebugMode),
     };
   }
 
@@ -702,7 +772,21 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
 bool shouldRecheckConnectionConflict(DateTime? lastDisconnectAt, DateTime now) {
   if (lastDisconnectAt == null) return false;
   final elapsed = now.difference(lastDisconnectAt);
-  return !elapsed.isNegative && elapsed <= const Duration(seconds: 3);
+  return !elapsed.isNegative && elapsed <= const Duration(seconds: 5);
+}
+
+Future<MacOSConnectionConflict> waitForMacOSConnectionRelease({
+  required Future<MacOSConnectionConflict> Function() inspect,
+  Duration timeout = const Duration(milliseconds: 2500),
+  Duration pollInterval = const Duration(milliseconds: 150),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  var conflict = await inspect();
+  while (conflict.hasConflict && DateTime.now().isBefore(deadline)) {
+    await Future<void>.delayed(pollInterval);
+    conflict = await inspect();
+  }
+  return conflict;
 }
 
 Future<void> deleteNimbusManagedProfileFile(ProfilePathResolver resolver) async {

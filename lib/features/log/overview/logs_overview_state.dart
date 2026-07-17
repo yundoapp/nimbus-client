@@ -10,7 +10,7 @@ class LogsOverviewState with _$LogsOverviewState {
   const LogsOverviewState._();
 
   const factory LogsOverviewState({
-    @Default(AsyncLoading()) AsyncValue<List<LogEntity>> logs,
+    @Default(AsyncData<List<LogEntity>>([])) AsyncValue<List<LogEntity>> logs,
     @Default(false) bool paused,
     @Default("") String filter,
     LogLevel? levelFilter,

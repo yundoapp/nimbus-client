@@ -15,6 +15,7 @@ class AboutPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
+    final appTitle = ref.watch(appDisplayNameProvider);
     final appInfo = ref.watch(appInfoProvider).requireValue;
     final appVersion = ref.watch(nimbusAppVersionControllerProvider);
 
@@ -34,7 +35,7 @@ class AboutPage extends HookConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(t.common.appTitle, style: Theme.of(context).textTheme.titleLarge),
+                        Text(appTitle, style: Theme.of(context).textTheme.titleLarge),
                         const Gap(4),
                         Text("${t.common.version} ${appInfo.presentVersion}"),
                         const Gap(4),

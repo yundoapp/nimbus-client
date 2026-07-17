@@ -90,6 +90,7 @@ class NimbusSubscription {
   const NimbusSubscription({
     required this.status,
     this.planName,
+    this.startedAt,
     this.expiresAt,
     this.cycleStartAt,
     this.cycleEndAt,
@@ -102,6 +103,7 @@ class NimbusSubscription {
     return NimbusSubscription(
       status: json['status'] as String? ?? 'none',
       planName: json['planName'] as String?,
+      startedAt: _dateTime(json['startedAt']),
       expiresAt: _dateTime(json['expiresAt']),
       cycleStartAt: _dateTime(json['cycleStartAt']),
       cycleEndAt: _dateTime(json['cycleEndAt']),
@@ -113,6 +115,7 @@ class NimbusSubscription {
 
   final String status;
   final String? planName;
+  final DateTime? startedAt;
   final DateTime? expiresAt;
   final DateTime? cycleStartAt;
   final DateTime? cycleEndAt;
@@ -255,9 +258,14 @@ class NimbusLocation {
 
   String displayNameForLanguage(String languageCode) {
     if (code == 'auto') return '';
-    final localized = languageCode == 'zh'
-        ? displayNames['zh-CN'] ?? displayNames['zh'] ?? displayName
-        : displayNames[languageCode] ?? displayNames['en'] ?? displayName;
+    final english = (displayNames['en'] ?? '').trim();
+    final chinese = (displayNames['zh-CN'] ?? displayNames['zh'] ?? displayName).trim();
+    if (languageCode.toLowerCase().startsWith('zh')) {
+      if (english.isNotEmpty && chinese.isNotEmpty && english != chinese) return '$english · $chinese';
+      final localized = chinese.isNotEmpty ? chinese : english;
+      return localized.isEmpty ? code : localized;
+    }
+    final localized = english.isNotEmpty ? english : displayName.trim();
     return localized.isEmpty ? code : localized;
   }
 }

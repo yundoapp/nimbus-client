@@ -3,9 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_change_password_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_devices_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.dart';
-import 'package:hiddify/features/nimbus/auth/widget/nimbus_route_preferences_dialog.dart';
 import 'package:hiddify/features/settings/notifier/reset_tunnel/reset_tunnel_notifier.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -25,18 +25,17 @@ class SettingsPage extends HookConsumerWidget {
             icon: Icons.layers_rounded,
             namedLocation: context.namedLocation('general'),
           ),
-          ListTile(
-            title: Text(t.nimbus.settings.accessPreferences),
-            leading: const Icon(Icons.tune_rounded),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => showDialog<void>(context: context, builder: (_) => const NimbusRoutePreferencesDialog()),
-          ),
           SettingsSection(
             title: t.pages.logs.title,
             icon: Icons.description_rounded,
             namedLocation: context.namedLocation('logs'),
           ),
           const Divider(height: 16),
+          ListTile(
+            title: Text(t.nimbus.changePassword.title),
+            leading: const Icon(Icons.password_rounded),
+            onTap: () => showDialog<void>(context: context, builder: (_) => const NimbusChangePasswordDialog()),
+          ),
           ListTile(
             title: Text(t.nimbus.settings.deviceManagement),
             leading: const Icon(Icons.devices_rounded),

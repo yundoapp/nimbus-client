@@ -5,7 +5,16 @@ import Security
 final class SecureSessionBridge {
   private let account = "nimbus.auth.session"
   private let channel: FlutterMethodChannel
+  private let debugDefaultsKey = "nimbus.auth.session.debug"
   private let service: String
+
+  private var usesDebugLocalStore: Bool {
+    #if DEBUG
+      return true
+    #else
+      return false
+    #endif
+  }
 
   init(binaryMessenger: FlutterBinaryMessenger) {
     channel = FlutterMethodChannel(
@@ -51,6 +60,11 @@ final class SecureSessionBridge {
   }
 
   private func read(result: @escaping FlutterResult) {
+    if usesDebugLocalStore {
+      result(UserDefaults.standard.string(forKey: debugDefaultsKey))
+      return
+    }
+
     var request = query
     request[kSecReturnData as String] = true
     request[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -68,23 +82,45 @@ final class SecureSessionBridge {
   }
 
   private func write(value: String, result: @escaping FlutterResult) {
+    if usesDebugLocalStore {
+      UserDefaults.standard.set(value, forKey: debugDefaultsKey)
+      result(nil)
+      return
+    }
+
     guard let data = value.data(using: .utf8) else {
       result(FlutterError(code: "secure_session_encoding_failed", message: nil, details: nil))
       return
     }
-    SecItemDelete(query as CFDictionary)
+    let values = [kSecValueData as String: data]
+    let updateStatus = SecItemUpdate(query as CFDictionary, values as CFDictionary)
+    if updateStatus == errSecSuccess {
+      result(nil)
+      return
+    }
+    guard updateStatus == errSecItemNotFound else {
+      result(keychainError(updateStatus))
+      return
+    }
+
     var request = query
     request[kSecValueData as String] = data
     request[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-    let status = SecItemAdd(request as CFDictionary, nil)
-    guard status == errSecSuccess else {
-      result(keychainError(status))
+    let addStatus = SecItemAdd(request as CFDictionary, nil)
+    guard addStatus == errSecSuccess else {
+      result(keychainError(addStatus))
       return
     }
     result(nil)
   }
 
   private func delete(result: @escaping FlutterResult) {
+    if usesDebugLocalStore {
+      UserDefaults.standard.removeObject(forKey: debugDefaultsKey)
+      result(nil)
+      return
+    }
+
     let status = SecItemDelete(query as CFDictionary)
     guard status == errSecSuccess || status == errSecItemNotFound else {
       result(keychainError(status))

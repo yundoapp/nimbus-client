@@ -5,11 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/locale_extensions.dart';
 import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
-import 'package:hiddify/core/model/environment.dart';
 import 'package:hiddify/core/router/go_router/go_router_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/theme/app_theme.dart';
@@ -63,9 +61,7 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
     final themeMode = ref.watch(themePreferencesProvider);
     final theme = AppTheme(themeMode, locale.preferredFontFamily);
     final activeBreakpoint = Breakpoint(context).activeBreakpoint;
-    final environment = ref.watch(environmentProvider);
-    final baseAppTitle = ref.watch(translationsProvider).requireValue.common.appTitle;
-    final appTitle = environment == Environment.dev ? '$baseAppTitle Dev' : baseAppTitle;
+    final appTitle = ref.watch(appDisplayNameProvider);
 
     ref.listen(foregroundProfilesUpdateNotifierProvider, (_, _) {});
     if (PlatformUtils.isAndroid) ref.listen(perAppProxyServiceProvider, (_, _) {});

@@ -1,6 +1,19 @@
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 
 const nimbusRulesConfigVersion = 'sing-box-rules-v3';
+const nimbusRuleSetHttpClientTag = 'nimbus-rule-download';
+const nimbusRuleSetDownloadMode = NimbusRuleSetDownloadMode.legacyDownloadDetour;
+
+enum NimbusRuleSetDownloadMode { legacyDownloadDetour, httpClient }
+
+const nimbusRouteDiagnosticsController = '127.0.0.1:19090';
+const nimbusRouteDiagnosticsSecret = 'yundo-dev-route-diagnostics';
+
+Map<String, dynamic> buildNimbusExperimentalConfig({required bool isDebugBuild}) => {
+  'cache_file': {'enabled': true},
+  if (isDebugBuild)
+    'clash_api': {'external_controller': nimbusRouteDiagnosticsController, 'secret': nimbusRouteDiagnosticsSecret},
+};
 
 List<NimbusRulePackageItem> selectActiveNimbusUserRules({
   required bool isAutomaticMode,
@@ -42,7 +55,22 @@ List<Map<String, dynamic>> buildNimbusRouteRules(List<NimbusRulePackageItem> rul
   return normalized;
 }
 
-List<Map<String, dynamic>> buildNimbusRuleSets(List<NimbusRulePackageItem> rules, String downloadDetour) {
+bool useNimbusRuleSetHttpClient(NimbusRuleSetDownloadMode mode) => mode == NimbusRuleSetDownloadMode.httpClient;
+
+List<Map<String, dynamic>> buildNimbusHttpClients(
+  String detourTag, {
+  NimbusRuleSetDownloadMode mode = nimbusRuleSetDownloadMode,
+}) => useNimbusRuleSetHttpClient(mode)
+    ? [
+        {'tag': nimbusRuleSetHttpClientTag, 'detour': detourTag},
+      ]
+    : const [];
+
+List<Map<String, dynamic>> buildNimbusRuleSets(
+  List<NimbusRulePackageItem> rules,
+  String downloadDetour, {
+  NimbusRuleSetDownloadMode mode = nimbusRuleSetDownloadMode,
+}) {
   final definitions = <String, Map<String, dynamic>>{};
   for (final rule in rules) {
     if (rule.kind != 'rule_set' || rule.pattern.isEmpty || definitions.containsKey(rule.pattern)) continue;
@@ -60,7 +88,10 @@ List<Map<String, dynamic>> buildNimbusRuleSets(List<NimbusRulePackageItem> rules
       'format': rule.format ?? 'binary',
       'url': sourceUrl,
       'update_interval': rule.updateInterval ?? '1d',
-      'download_detour': downloadDetour,
+      if (useNimbusRuleSetHttpClient(mode))
+        'http_client': nimbusRuleSetHttpClientTag
+      else
+        'download_detour': downloadDetour,
     };
   }
   return definitions.values.toList(growable: false);

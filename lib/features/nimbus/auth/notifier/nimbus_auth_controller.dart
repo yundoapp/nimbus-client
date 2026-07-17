@@ -1,9 +1,12 @@
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
+import 'package:hiddify/utils/custom_loggers.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 final nimbusAuthControllerProvider = NotifierProvider<NimbusAuthController, NimbusAuthState>(NimbusAuthController.new);
+
+enum NimbusLoginResult { authenticated, passwordChangeRequired, failed }
 
 class NimbusAuthState {
   const NimbusAuthState({
@@ -51,7 +54,9 @@ class NimbusAuthState {
   final String? errorMessage;
 }
 
-class NimbusAuthController extends Notifier<NimbusAuthState> {
+class NimbusAuthController extends Notifier<NimbusAuthState> with AppLogger {
+  Future<NimbusAuthSession?>? _refreshInFlight;
+
   NimbusAuthRepository get _repository => ref.read(nimbusAuthRepositoryProvider);
   Translations get _t => ref.read(translationsProvider).requireValue;
 
@@ -65,7 +70,14 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
   }
 
   Future<void> restore() async {
-    final session = await _repository.readSession();
+    NimbusAuthSession? session;
+    try {
+      session = await _repository.readSession();
+    } catch (error, stackTrace) {
+      loggy.error('failed to read Nimbus authentication session', error, stackTrace);
+      state = const NimbusAuthState.unauthenticated();
+      return;
+    }
     if (session == null) {
       state = const NimbusAuthState.unauthenticated();
       return;
@@ -91,26 +103,11 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
         );
         return;
       }
-
-      try {
-        final refreshedSession = await _repository.refresh(session);
-        await _repository.saveSession(refreshedSession);
-        final me = await _repository.fetchMe(refreshedSession.accessToken);
-        state = NimbusAuthState.authenticated(
-          session: refreshedSession,
-          me: me,
-          devices: state.devices,
-          locations: state.locations,
-          selectedLocationCode: state.selectedLocationCode,
-        );
-      } catch (_) {
-        await _repository.clearSession();
-        state = const NimbusAuthState.unauthenticated();
-      }
+      await _refreshSession(session);
     }
   }
 
-  Future<bool> login({required String username, required String password}) async {
+  Future<NimbusLoginResult> login({required String username, required String password}) async {
     state = NimbusAuthState(
       isAuthenticated: state.isAuthenticated,
       session: state.session,
@@ -122,6 +119,38 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
     );
     try {
       final session = await _repository.login(username: username, password: password);
+      await _setAuthenticated(session);
+      return NimbusLoginResult.authenticated;
+    } catch (error) {
+      if (_repository.apiErrorCode(error) == 'AUTH_PASSWORD_CHANGE_REQUIRED') {
+        state = const NimbusAuthState.unauthenticated();
+        return NimbusLoginResult.passwordChangeRequired;
+      }
+      state = NimbusAuthState(isAuthenticated: false, errorMessage: _describeError(error));
+      return NimbusLoginResult.failed;
+    }
+  }
+
+  Future<bool> completePasswordReset({
+    required String username,
+    required String temporaryPassword,
+    required String newPassword,
+  }) async {
+    state = NimbusAuthState(
+      isAuthenticated: state.isAuthenticated,
+      session: state.session,
+      me: state.me,
+      devices: state.devices,
+      locations: state.locations,
+      selectedLocationCode: state.selectedLocationCode,
+      isLoading: true,
+    );
+    try {
+      final session = await _repository.completePasswordReset(
+        username: username,
+        temporaryPassword: temporaryPassword,
+        newPassword: newPassword,
+      );
       await _setAuthenticated(session);
       return true;
     } catch (error) {
@@ -164,7 +193,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       );
     } catch (error) {
       if (_repository.isUnauthorized(error)) {
-        await restore();
+        await refreshAfterUnauthorized(session);
         return;
       }
       state = NimbusAuthState.authenticated(
@@ -200,7 +229,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       );
     } catch (error) {
       if (_repository.isUnauthorized(error)) {
-        await restore();
+        await refreshAfterUnauthorized(session);
         return;
       }
       state = NimbusAuthState.authenticated(
@@ -239,7 +268,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       );
     } catch (error) {
       if (_repository.isUnauthorized(error)) {
-        await restore();
+        await refreshAfterUnauthorized(session);
         return;
       }
       state = NimbusAuthState.authenticated(
@@ -298,7 +327,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       return result.success;
     } catch (error) {
       if (_repository.isUnauthorized(error)) {
-        await restore();
+        await refreshAfterUnauthorized(session);
       } else {
         state = NimbusAuthState.authenticated(
           session: session,
@@ -340,7 +369,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
       return true;
     } catch (error) {
       if (_repository.isUnauthorized(error)) {
-        await restore();
+        await refreshAfterUnauthorized(session);
       } else {
         state = NimbusAuthState.authenticated(
           session: session,
@@ -374,14 +403,117 @@ class NimbusAuthController extends Notifier<NimbusAuthState> {
     state = const NimbusAuthState.unauthenticated();
   }
 
+  void clearError() {
+    state = NimbusAuthState(
+      isAuthenticated: state.isAuthenticated,
+      isLoading: state.isLoading,
+      isRestoring: state.isRestoring,
+      session: state.session,
+      me: state.me,
+      devices: state.devices,
+      locations: state.locations,
+      selectedLocationCode: state.selectedLocationCode,
+    );
+  }
+
+  Future<bool> refreshAfterUnauthorized(NimbusAuthSession rejectedSession) async {
+    final currentSession = state.session;
+    if (!state.isAuthenticated || currentSession == null) return false;
+
+    if (currentSession.accessToken != rejectedSession.accessToken) {
+      return true;
+    }
+
+    await _refreshSession(currentSession);
+    return state.isAuthenticated;
+  }
+
+  Future<NimbusAuthSession?> _refreshSession(NimbusAuthSession session) async {
+    final active = _refreshInFlight;
+    if (active != null) return active;
+
+    final future = _performSessionRefresh(session);
+    _refreshInFlight = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_refreshInFlight, future)) {
+        _refreshInFlight = null;
+      }
+    }
+  }
+
+  Future<NimbusAuthSession?> _performSessionRefresh(NimbusAuthSession session) async {
+    NimbusAuthSession refreshedSession;
+    try {
+      refreshedSession = await _repository.refresh(session);
+    } catch (error, stackTrace) {
+      if (_repository.isUnauthorized(error)) {
+        await _signOutAfterInvalidRefresh();
+        return null;
+      }
+      loggy.warning('failed to refresh Nimbus authentication session', error, stackTrace);
+      state = NimbusAuthState.authenticated(
+        session: session,
+        me: state.me,
+        devices: state.devices,
+        locations: state.locations,
+        selectedLocationCode: state.selectedLocationCode,
+        errorMessage: _describeError(error),
+      );
+      return null;
+    }
+
+    final persistenceError = await _persistSession(refreshedSession);
+    NimbusMe? me = state.me;
+    String? errorMessage = persistenceError;
+    try {
+      me = await _repository.fetchMe(refreshedSession.accessToken);
+    } catch (error) {
+      if (_repository.isUnauthorized(error)) {
+        await _signOutAfterInvalidRefresh();
+        return null;
+      }
+      errorMessage ??= _describeError(error);
+    }
+
+    state = NimbusAuthState.authenticated(
+      session: refreshedSession,
+      me: me,
+      devices: state.devices,
+      locations: state.locations,
+      selectedLocationCode: state.selectedLocationCode,
+      errorMessage: errorMessage,
+    );
+    return refreshedSession;
+  }
+
+  Future<String?> _persistSession(NimbusAuthSession session) async {
+    try {
+      await _repository.saveSession(session);
+      return null;
+    } catch (error, stackTrace) {
+      loggy.error('failed to persist Nimbus authentication session', error, stackTrace);
+      return _t.nimbus.auth.sessionNotSaved;
+    }
+  }
+
+  Future<void> _signOutAfterInvalidRefresh() async {
+    try {
+      await _repository.clearSession();
+    } catch (error, stackTrace) {
+      loggy.warning('failed to clear invalid Nimbus authentication session', error, stackTrace);
+    }
+    state = const NimbusAuthState.unauthenticated();
+  }
+
   Future<void> _setAuthenticated(NimbusAuthSession session) async {
-    await _repository.saveSession(session);
     NimbusMe? me;
-    String? errorMessage;
+    String? errorMessage = await _persistSession(session);
     try {
       me = await _repository.fetchMe(session.accessToken);
     } catch (error) {
-      errorMessage = _describeError(error);
+      errorMessage ??= _describeError(error);
     }
     state = NimbusAuthState.authenticated(
       session: session,

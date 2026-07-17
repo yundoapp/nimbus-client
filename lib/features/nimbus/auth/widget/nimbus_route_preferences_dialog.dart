@@ -4,11 +4,13 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_input_validation.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_route_preference_logic.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class NimbusRoutePreferencesDialog extends HookConsumerWidget {
@@ -25,6 +27,8 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
     final isSubmitting = useState<bool>(false);
     final errorMessage = useState<String?>(null);
     final t = ref.watch(translationsProvider).requireValue;
+    final connection = ref.watch(connectionNotifierProvider).valueOrNull;
+    final connectionIsSwitching = connection?.isSwitching ?? false;
 
     Future<void> loadPreferences() async {
       final session = ref.read(nimbusAuthControllerProvider).session;
@@ -35,7 +39,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
         preferences.value = await repository.fetchRoutePreferences(session);
       } catch (error) {
         if (repository.isUnauthorized(error)) {
-          await ref.read(nimbusAuthControllerProvider.notifier).restore();
+          await ref.read(nimbusAuthControllerProvider.notifier).refreshAfterUnauthorized(session);
         } else {
           errorMessage.value = repository.describeError(error, t);
         }
@@ -92,8 +96,9 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
         } else {
           await repository.updateRoutePreference(session: session, id: existing.id, type: selectedType.value);
         }
-        inputController.clear();
+        await ref.read(nimbusConnectionControllerProvider.notifier).reapplyIfConnected(userRulesOnly: true);
         await loadPreferences();
+        inputController.clear();
         if (context.mounted) {
           final message = existing == null
               ? t.nimbus.routePreferences.cloudSyncSaved
@@ -102,7 +107,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
         }
       } catch (error) {
         if (repository.isUnauthorized(error)) {
-          await ref.read(nimbusAuthControllerProvider.notifier).restore();
+          await ref.read(nimbusAuthControllerProvider.notifier).refreshAfterUnauthorized(session);
         } else {
           final message = repository.describeError(error, t);
           final code = repository.apiErrorCode(error);
@@ -129,10 +134,11 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
       errorMessage.value = null;
       try {
         await repository.deleteRoutePreference(session: session, id: preference.id);
+        await ref.read(nimbusConnectionControllerProvider.notifier).reapplyIfConnected(userRulesOnly: true);
         await loadPreferences();
       } catch (error) {
         if (repository.isUnauthorized(error)) {
-          await ref.read(nimbusAuthControllerProvider.notifier).restore();
+          await ref.read(nimbusAuthControllerProvider.notifier).refreshAfterUnauthorized(session);
         } else {
           errorMessage.value = repository.describeError(error, t);
         }
@@ -184,7 +190,9 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
                 ),
               ],
               selected: {selectedType.value},
-              onSelectionChanged: isSubmitting.value ? null : (values) => selectedType.value = values.first,
+              onSelectionChanged: isSubmitting.value || connectionIsSwitching
+                  ? null
+                  : (values) => selectedType.value = values.first,
             ),
             const Gap(8),
             Text(
@@ -200,7 +208,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
             const Gap(12),
             TextField(
               controller: inputController,
-              enabled: !isSubmitting.value && formReady,
+              enabled: !isSubmitting.value && !connectionIsSwitching && formReady,
               autofocus: true,
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.done,
@@ -211,7 +219,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
                 prefixIcon: const Icon(Icons.language_rounded),
               ),
               onChanged: (_) => errorMessage.value = null,
-              onSubmitted: (_) => isSubmitting.value || !formReady ? null : submit(),
+              onSubmitted: (_) => isSubmitting.value || connectionIsSwitching || !formReady ? null : submit(),
             ),
             if (errorMessage.value != null) ...[
               const Gap(10),
@@ -224,7 +232,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
             Align(
               alignment: Alignment.centerRight,
               child: FilledButton.icon(
-                onPressed: isSubmitting.value || !formReady ? null : submit,
+                onPressed: isSubmitting.value || connectionIsSwitching || !formReady ? null : submit,
                 icon: isSubmitting.value
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.add_rounded),
@@ -246,7 +254,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
                   separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, index) => _RoutePreferenceTile(
                     preference: items[index],
-                    isLoading: isLoading.value || isSubmitting.value,
+                    isLoading: isLoading.value || isSubmitting.value || connectionIsSwitching,
                     onDelete: () => deletePreference(items[index]),
                   ),
                 ),

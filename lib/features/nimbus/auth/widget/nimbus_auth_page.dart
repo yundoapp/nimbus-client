@@ -10,7 +10,7 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dar
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-enum NimbusAuthMode { login, register }
+enum NimbusAuthMode { login, register, completePasswordReset }
 
 class NimbusAuthPage extends HookConsumerWidget {
   const NimbusAuthPage({super.key, required this.initialMode});
@@ -24,13 +24,15 @@ class NimbusAuthPage extends HookConsumerWidget {
     final formKey = useMemoized(GlobalKey<FormState>.new);
     final usernameController = useTextEditingController();
     final passwordController = useTextEditingController();
+    final newPasswordController = useTextEditingController();
     final confirmPasswordController = useTextEditingController();
     final acceptedTerms = useState(false);
     final obscurePassword = useState(true);
     final authState = ref.watch(nimbusAuthControllerProvider);
     final isRegister = mode.value == NimbusAuthMode.register;
+    final isCompletingPasswordReset = mode.value == NimbusAuthMode.completePasswordReset;
     final t = ref.watch(translationsProvider).requireValue;
-    final appTitle = t.common.appTitle;
+    final appTitle = ref.watch(appDisplayNameProvider);
 
     Future<void> submit() async {
       if (authState.isLoading) return;
@@ -38,15 +40,42 @@ class NimbusAuthPage extends HookConsumerWidget {
       FocusScope.of(context).unfocus();
 
       final controller = ref.read(nimbusAuthControllerProvider.notifier);
-      final success = isRegister
-          ? await controller.register(
-              username: usernameController.text.trim(),
-              password: passwordController.text,
-              acceptedTerms: acceptedTerms.value,
-            )
-          : await controller.login(username: usernameController.text.trim(), password: passwordController.text);
+      var success = false;
+      if (isRegister) {
+        success = await controller.register(
+          username: usernameController.text.trim(),
+          password: passwordController.text,
+          acceptedTerms: acceptedTerms.value,
+        );
+      } else if (isCompletingPasswordReset) {
+        success = await controller.completePasswordReset(
+          username: usernameController.text.trim(),
+          temporaryPassword: passwordController.text,
+          newPassword: newPasswordController.text,
+        );
+      } else {
+        final result = await controller.login(
+          username: usernameController.text.trim(),
+          password: passwordController.text,
+        );
+        if (result == NimbusLoginResult.passwordChangeRequired) {
+          mode.value = NimbusAuthMode.completePasswordReset;
+          newPasswordController.clear();
+          confirmPasswordController.clear();
+          return;
+        }
+        success = result == NimbusLoginResult.authenticated;
+      }
 
-      if (success && context.mounted) context.go('/home');
+      if (success && context.mounted) {
+        final warning = ref.read(nimbusAuthControllerProvider).errorMessage;
+        final messenger = ScaffoldMessenger.of(context);
+        context.go('/home');
+        if (warning != null) {
+          messenger.showSnackBar(SnackBar(content: Text(warning)));
+          controller.clearError();
+        }
+      }
     }
 
     return Scaffold(
@@ -66,19 +95,26 @@ class NimbusAuthPage extends HookConsumerWidget {
                     Text(
                       isRegister
                           ? t.nimbus.auth.registerTitle(appTitle: appTitle)
+                          : isCompletingPasswordReset
+                          ? t.nimbus.auth.passwordResetTitle
                           : t.nimbus.auth.loginTitle(appTitle: appTitle),
                       textAlign: TextAlign.center,
                       style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
                     ),
                     const Gap(6),
                     Text(
-                      isRegister ? t.nimbus.auth.registerSubtitle : t.nimbus.auth.loginSubtitle,
+                      isRegister
+                          ? t.nimbus.auth.registerSubtitle
+                          : isCompletingPasswordReset
+                          ? t.nimbus.auth.passwordResetSubtitle
+                          : t.nimbus.auth.loginSubtitle,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                     const Gap(28),
                     TextFormField(
                       controller: usernameController,
+                      readOnly: isCompletingPasswordReset,
                       autofillHints: const [AutofillHints.username],
                       textInputAction: TextInputAction.next,
                       inputFormatters: [
@@ -100,12 +136,14 @@ class NimbusAuthPage extends HookConsumerWidget {
                         FilteringTextInputFormatter.deny(RegExp(r'[\u0000-\u001F\u007F]')),
                         LengthLimitingTextInputFormatter(72),
                       ],
-                      textInputAction: isRegister ? TextInputAction.next : TextInputAction.done,
+                      textInputAction: isRegister || isCompletingPasswordReset
+                          ? TextInputAction.next
+                          : TextInputAction.done,
                       onFieldSubmitted: (_) {
-                        if (!isRegister) submit();
+                        if (!isRegister && !isCompletingPasswordReset) submit();
                       },
                       decoration: InputDecoration(
-                        labelText: t.nimbus.auth.password,
+                        labelText: isCompletingPasswordReset ? t.nimbus.auth.temporaryPassword : t.nimbus.auth.password,
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: IconButton(
                           tooltip: obscurePassword.value ? t.nimbus.auth.showPassword : t.nimbus.auth.hidePassword,
@@ -115,6 +153,49 @@ class NimbusAuthPage extends HookConsumerWidget {
                       ),
                       validator: (value) => isRegister ? _validateNewPassword(t, value) : _validatePassword(t, value),
                     ),
+                    if (isCompletingPasswordReset) ...[
+                      const Gap(14),
+                      TextFormField(
+                        controller: newPasswordController,
+                        autofillHints: const [AutofillHints.newPassword],
+                        obscureText: obscurePassword.value,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.deny(RegExp(r'[\u0000-\u001F\u007F]')),
+                          LengthLimitingTextInputFormatter(72),
+                        ],
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: t.nimbus.auth.newPassword,
+                          prefixIcon: const Icon(Icons.password_rounded),
+                        ),
+                        validator: (value) {
+                          final validation = _validateNewPassword(t, value);
+                          if (validation != null) return validation;
+                          if (value == passwordController.text) return t.nimbus.auth.passwordMustDiffer;
+                          return null;
+                        },
+                      ),
+                      const Gap(14),
+                      TextFormField(
+                        controller: confirmPasswordController,
+                        autofillHints: const [AutofillHints.newPassword],
+                        obscureText: obscurePassword.value,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.deny(RegExp(r'[\u0000-\u001F\u007F]')),
+                          LengthLimitingTextInputFormatter(72),
+                        ],
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => submit(),
+                        decoration: InputDecoration(
+                          labelText: t.nimbus.auth.confirmNewPassword,
+                          prefixIcon: const Icon(Icons.lock_reset_rounded),
+                        ),
+                        validator: (value) {
+                          if (value != newPasswordController.text) return t.nimbus.auth.passwordsDoNotMatch;
+                          return null;
+                        },
+                      ),
+                    ],
                     if (isRegister) ...[
                       const Gap(14),
                       TextFormField(
@@ -179,17 +260,36 @@ class NimbusAuthPage extends HookConsumerWidget {
                       onPressed: authState.isLoading || (isRegister && !acceptedTerms.value) ? null : submit,
                       child: authState.isLoading
                           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : Text(isRegister ? t.nimbus.auth.registerAndLogin : t.nimbus.auth.login),
+                          : Text(
+                              isRegister
+                                  ? t.nimbus.auth.registerAndLogin
+                                  : isCompletingPasswordReset
+                                  ? t.nimbus.auth.completePasswordReset
+                                  : t.nimbus.auth.login,
+                            ),
                     ),
                     const Gap(10),
                     TextButton(
                       onPressed: authState.isLoading
                           ? null
                           : () {
-                              mode.value = isRegister ? NimbusAuthMode.login : NimbusAuthMode.register;
-                              formKey.currentState?.reset();
+                              if (isCompletingPasswordReset) {
+                                mode.value = NimbusAuthMode.login;
+                                newPasswordController.clear();
+                                confirmPasswordController.clear();
+                                ref.read(nimbusAuthControllerProvider.notifier).clearError();
+                              } else {
+                                mode.value = isRegister ? NimbusAuthMode.login : NimbusAuthMode.register;
+                                formKey.currentState?.reset();
+                              }
                             },
-                      child: Text(isRegister ? t.nimbus.auth.goLogin : t.nimbus.auth.goRegister),
+                      child: Text(
+                        isCompletingPasswordReset
+                            ? t.nimbus.auth.backToLogin
+                            : isRegister
+                            ? t.nimbus.auth.goLogin
+                            : t.nimbus.auth.goRegister,
+                      ),
                     ),
                   ],
                 ),

@@ -140,6 +140,10 @@ class LogsPage extends HookConsumerWidget with PresLogger {
               reverse: true,
               slivers: <Widget>[
                 switch (state.logs) {
+                  AsyncData(value: final logs) when logs.isEmpty => SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _LogsEmptyState(title: t.pages.logs.emptyTitle, description: t.pages.logs.emptyDescription),
+                  ),
                   AsyncData(value: final logs) => SliverList.builder(
                     itemCount: logs.length,
                     itemBuilder: (context, index) {
@@ -183,6 +187,40 @@ class LogsPage extends HookConsumerWidget with PresLogger {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _LogsEmptyState extends StatelessWidget {
+  const _LogsEmptyState({required this.title, required this.description});
+
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle_outline_rounded, size: 40, color: theme.colorScheme.primary),
+              const Gap(12),
+              Text(title, textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
+              const Gap(6),
+              Text(
+                description,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+            ],
+          ),
         ),
       ),
     );

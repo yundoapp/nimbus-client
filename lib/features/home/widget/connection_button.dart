@@ -20,7 +20,17 @@ class ConnectionButton extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
-    final connectionStatus = ref.watch(connectionNotifierProvider);
+    final rawConnectionStatus = ref.watch(connectionNotifierProvider);
+    final nimbusConnection = ref.watch(nimbusConnectionControllerProvider);
+    final connectionStatus = shouldPresentNimbusAsDisconnecting(isDisconnecting: nimbusConnection.isDisconnecting)
+        ? const AsyncData<ConnectionStatus>(Disconnecting())
+        : shouldPresentNimbusAsConnecting(
+            isPreparing: nimbusConnection.isPreparing,
+            connectedReported: nimbusConnection.connectedReported,
+            connection: rawConnectionStatus.valueOrNull,
+          )
+        ? const AsyncData<ConnectionStatus>(Connecting())
+        : rawConnectionStatus;
     final requiresReconnect = ref.watch(configOptionNotifierProvider).valueOrNull;
     // final animationController = useAnimationController(
     //   duration: const Duration(seconds: 1),
@@ -129,13 +139,14 @@ class ConnectionButton extends HookConsumerWidget {
         AsyncData(value: final status) => status.present(t),
         _ => "",
       },
-      buttonColor: _yundoLogoColor,
-      animated: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => false,
-        AsyncData(value: Connected()) => true,
-        AsyncData(value: _) => true,
-        _ => false,
+      semanticsLabel: switch (connectionStatus.valueOrNull) {
+        Connected() => t.connection.disconnect,
+        Connecting() => t.connection.connecting,
+        Disconnecting() => t.connection.disconnecting,
+        _ => t.connection.connect,
       },
+      buttonColor: _yundoLogoColor,
+      status: connectionStatus.valueOrNull,
       secureLabel: secureLabel,
     );
   }
@@ -146,21 +157,37 @@ class _ConnectionButton extends StatelessWidget {
     required this.onTap,
     required this.enabled,
     required this.label,
+    required this.semanticsLabel,
     required this.buttonColor,
-    required this.animated,
+    required this.status,
     required this.secureLabel,
   });
 
   final VoidCallback onTap;
   final bool enabled;
   final String label;
+  final String semanticsLabel;
   final Color buttonColor;
   final String secureLabel;
-
-  final bool animated;
+  final ConnectionStatus? status;
 
   @override
   Widget build(BuildContext context) {
+    final isConnected = status is Connected;
+    final isConnecting = status is Connecting;
+    final isDisconnecting = status is Disconnecting;
+    final isSwitching = isConnecting || isDisconnecting;
+    final transitionColor = isDisconnecting
+        ? Theme.of(context).colorScheme.onSurfaceVariant
+        : Theme.of(context).colorScheme.primary;
+
+    Widget connectionIcon = const Icon(Icons.rocket_launch_rounded, size: 60, color: Colors.white);
+    if (isConnected) {
+      connectionIcon = connectionIcon
+          .animate(onPlay: (controller) => controller.repeat(reverse: true))
+          .scaleXY(begin: 0.97, end: 1.04, duration: const Duration(milliseconds: 1600), curve: Curves.easeInOut);
+    }
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -168,37 +195,90 @@ class _ConnectionButton extends StatelessWidget {
         Semantics(
           button: true,
           enabled: enabled,
-          label: label,
-          child: Container(
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [BoxShadow(blurRadius: 16, color: buttonColor.withValues(alpha: .5))],
-            ),
+          label: semanticsLabel,
+          child: SizedBox(
             width: 148,
             height: 148,
-            child: Material(
-              key: const ValueKey("home_connection_button"),
-              shape: const CircleBorder(),
-              color: buttonColor,
-              child: InkWell(
-                focusColor: Colors.white.withValues(alpha: 0.16),
-                hoverColor: Colors.white.withValues(alpha: 0.08),
-                splashColor: Colors.white.withValues(alpha: 0.18),
-                onTap: onTap,
-                child: Padding(
-                  padding: const EdgeInsets.all(36),
-                  child: TweenAnimationBuilder(
-                    tween: ColorTween(end: Colors.white),
-                    duration: const Duration(milliseconds: 250),
-                    builder: (context, value, child) {
-                      return Icon(Icons.power_settings_new_rounded, size: 60, color: value);
-                    },
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                if (isConnected)
+                  Transform.scale(
+                    scale: 1.055,
+                    child: Container(
+                      width: 148,
+                      height: 148,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: buttonColor.withValues(alpha: 0.32), width: 1.5),
+                      ),
+                    ),
+                  ),
+                if (isConnected)
+                  Container(
+                        width: 148,
+                        height: 148,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: buttonColor.withValues(alpha: 0.62), width: 2),
+                        ),
+                      )
+                      .animate(onPlay: (controller) => controller.repeat())
+                      .scaleXY(
+                        begin: 0.96,
+                        end: 1.16,
+                        duration: const Duration(milliseconds: 2200),
+                        curve: Curves.easeOutCubic,
+                      )
+                      .fade(begin: 0.55, end: 0, duration: const Duration(milliseconds: 2200), curve: Curves.easeOut),
+                if (isSwitching)
+                  Transform.scale(
+                    scale: 1.08,
+                    child: SizedBox(
+                      key: const ValueKey('home_connection_progress'),
+                      width: 148,
+                      height: 148,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        strokeCap: StrokeCap.round,
+                        color: transitionColor.withValues(alpha: 0.9),
+                        backgroundColor: transitionColor.withValues(alpha: 0.14),
+                      ),
+                    ),
+                  ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        blurRadius: isConnected ? 22 : 16,
+                        spreadRadius: isConnected ? 2 : 0,
+                        color: buttonColor.withValues(alpha: isConnected ? 0.46 : 0.32),
+                      ),
+                    ],
+                  ),
+                  width: 148,
+                  height: 148,
+                  child: Material(
+                    key: const ValueKey("home_connection_button"),
+                    shape: const CircleBorder(),
+                    color: buttonColor,
+                    child: InkWell(
+                      focusColor: Colors.white.withValues(alpha: 0.16),
+                      hoverColor: Colors.white.withValues(alpha: 0.08),
+                      splashColor: Colors.white.withValues(alpha: 0.18),
+                      onTap: enabled ? onTap : null,
+                      child: Center(child: connectionIcon),
+                    ),
                   ),
                 ),
-              ),
-            ).animate(target: enabled ? 0 : 1).blurXY(end: 1),
-          ).animate(target: enabled ? 0 : 1).scaleXY(end: .88, curve: Curves.easeIn),
+              ],
+            ),
+          ),
         ),
         const Gap(16),
         ExcludeSemantics(

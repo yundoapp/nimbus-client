@@ -7,12 +7,15 @@ import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
+import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_proxy_mode_dialog.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 const _yundoLogoColor = Color(0xFF4F67AA);
@@ -24,12 +27,14 @@ class HomePage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final authState = ref.watch(nimbusAuthControllerProvider);
+    final connectionState = ref.watch(nimbusConnectionControllerProvider);
     final versionState = ref.watch(nimbusAppVersionControllerProvider);
     final appInfo = ref.watch(appInfoProvider).requireValue;
     final locale = ref.watch(localePreferencesProvider);
     final announcementRepository = ref.watch(nimbusAuthRepositoryProvider);
     final t = ref.watch(translationsProvider).requireValue;
-    final appTitle = t.common.appTitle;
+    final appTitle = ref.watch(appDisplayNameProvider);
+    final username = authState.me?.user.username ?? authState.session?.user.username ?? '';
     final hasActivePlan = authState.me?.subscription.hasActivePlan ?? false;
     final announcementLanguage = locale.flutterLocale.toLanguageTag();
     final announcementPlatform = _platformForAnnouncement(appInfo.operatingSystem);
@@ -120,6 +125,16 @@ class HomePage extends HookConsumerWidget {
             ),
           ],
         ),
+        actions: [
+          if (username.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: _CurrentUserLabel(
+                username: username,
+                semanticsLabel: t.nimbus.home.currentAccount(username: username),
+              ),
+            ),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -165,6 +180,13 @@ class HomePage extends HookConsumerWidget {
                     else
                       _ActivationConnectionButton(label: t.nimbus.home.connect, onTap: showNoPlanDialog),
                     const Gap(16),
+                    if (connectionState.errorMessage != null) ...[
+                      _ConnectionNoticeBanner(
+                        message: connectionState.errorMessage!,
+                        onDismiss: () => ref.read(nimbusConnectionControllerProvider.notifier).clearNotice(),
+                      ),
+                      const Gap(12),
+                    ],
                     _HomeQuickControls(rulesVersion: authState.me?.rules.publicRulesVersion),
                     const Spacer(),
                     _NimbusStatusPanel(theme: theme, me: authState.me, onActivate: showActivationDialog),
@@ -173,6 +195,94 @@ class HomePage extends HookConsumerWidget {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ConnectionNoticeBanner extends StatelessWidget {
+  const _ConnectionNoticeBanner({required this.message, required this.onDismiss});
+
+  final String message;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Material(
+      color: colors.tertiaryContainer.withValues(alpha: theme.brightness == Brightness.dark ? 0.42 : 0.72),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.62)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline_rounded, size: 19, color: colors.onTertiaryContainer),
+            const Gap(9),
+            Expanded(
+              child: Text(
+                message,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onTertiaryContainer,
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: onDismiss,
+              icon: const Icon(Icons.close_rounded, size: 17),
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CurrentUserLabel extends StatelessWidget {
+  const _CurrentUserLabel({required this.username, required this.semanticsLabel});
+
+  final String username;
+  final String semanticsLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      label: semanticsLabel,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: semanticsLabel,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 180),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.account_circle_outlined, size: 18, color: theme.colorScheme.onSurfaceVariant),
+              const Gap(6),
+              Flexible(
+                child: Text(
+                  username,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -269,71 +379,293 @@ class _NimbusStatusPanel extends ConsumerWidget {
     final usedBytes = subscription?.usedBytes ?? 0;
     final remainingBytes = subscription?.remainingBytes;
     final progress = quotaBytes == null || quotaBytes <= 0 ? 0.0 : (usedBytes / quotaBytes).clamp(0.0, 1.0);
-    final expiresText = _formatDate(subscription?.expiresAt);
+    final dateLocalizations = MaterialLocalizations.of(context);
+    final planName = subscription?.planName?.trim();
+    final planNameText = planName?.isNotEmpty == true ? planName! : t.nimbus.home.currentPlan;
+    final quotaText = _formatPlanBytes(quotaBytes);
+    final startedText = _formatDate(subscription?.startedAt, dateLocalizations);
+    final expiresText = _formatDate(subscription?.expiresAt, dateLocalizations);
+    final progressText = formatUsagePercent(progress);
     final usedText = _formatPlanBytes(usedBytes);
     final remainingText = _formatPlanBytes(remainingBytes);
     final hasActivePlan = subscription?.hasActivePlan ?? false;
+    final sectionTitleStyle = theme.textTheme.labelMedium?.copyWith(
+      color: theme.colorScheme.onSurface,
+      fontWeight: FontWeight.w700,
+    );
 
     if (!hasActivePlan) {
-      return Column(
-        children: [
-          Text(
-            subscription?.status == 'expired' ? t.nimbus.home.planExpired : t.nimbus.home.noAvailablePlan,
-            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const Gap(4),
-          Text(
-            t.nimbus.home.activateHint,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(color: muted),
-          ),
-          const Gap(10),
-          FilledButton.tonalIcon(
-            onPressed: onActivate,
-            icon: const Icon(Icons.key_rounded),
-            label: Text(t.nimbus.home.activatePlan),
-          ),
-        ],
+      return _HomeStatusFrame(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final message = Row(
+              children: [
+                _StatusIcon(icon: Icons.key_rounded, theme: theme),
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        subscription?.status == 'expired' ? t.nimbus.home.planExpired : t.nimbus.home.noAvailablePlan,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const Gap(4),
+                      Text(
+                        t.nimbus.home.activateHint,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(color: muted, height: 1.35),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+            final activateButton = FilledButton.tonalIcon(
+              onPressed: onActivate,
+              icon: const Icon(Icons.key_rounded),
+              label: Text(t.nimbus.home.activatePlan),
+            );
+
+            if (constraints.maxWidth < 430) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [message, const Gap(12), activateButton],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: message),
+                const Gap(14),
+                activateButton,
+              ],
+            );
+          },
+        ),
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                t.nimbus.home.monthlyUsage,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+    return _HomeStatusFrame(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 320;
+              final planMetric = _PlanMetric(label: t.nimbus.home.currentPlan, value: planNameText);
+              final quotaMetric = _PlanMetric(
+                label: t.nimbus.home.monthlyQuotaLabel,
+                value: quotaText,
+                alignEnd: isWide,
+              );
+
+              if (!isWide) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [planMetric, const Gap(10), quotaMetric],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: planMetric),
+                  const Gap(24),
+                  Expanded(child: quotaMetric),
+                ],
+              );
+            },
+          ),
+          const Gap(16),
+          _PlanValidity(
+            label: t.nimbus.home.validityLabel,
+            start: startedText,
+            end: expiresText,
+            semanticsLabel: t.nimbus.home.validity(start: startedText, end: expiresText),
+          ),
+          const Gap(12),
+          Divider(height: 1, color: theme.colorScheme.outlineVariant.withValues(alpha: 0.62)),
+          const Gap(14),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  t.nimbus.home.cycleUsage,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sectionTitleStyle,
+                ),
               ),
-            ),
-            Text(
-              t.nimbus.home.expiresOn(date: expiresText),
-              style: theme.textTheme.bodySmall?.copyWith(color: muted),
-            ),
-          ],
+              const Gap(12),
+              Text(progressText, style: theme.textTheme.labelMedium?.copyWith(color: muted)),
+            ],
+          ),
+          const Gap(7),
+          LinearProgressIndicator(
+            value: progress,
+            semanticsValue: progressText,
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(999),
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          ),
+          const Gap(12),
+          Row(
+            children: [
+              Expanded(
+                child: _StatusText(label: t.nimbus.home.used, value: usedText, color: muted),
+              ),
+              Expanded(
+                child: _StatusText(label: t.nimbus.home.unused, value: remainingText, color: muted, alignEnd: true),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeStatusFrame extends StatelessWidget {
+  const _HomeStatusFrame({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Material(
+      color: colors.surface.withValues(alpha: theme.brightness == Brightness.dark ? 0.78 : 0.92),
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.62)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(padding: const EdgeInsets.all(16), child: child),
+    );
+  }
+}
+
+class _PlanMetric extends StatelessWidget {
+  const _PlanMetric({required this.label, required this.value, this.alignEnd = false});
+
+  final String label;
+  final String value;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Column(
+      crossAxisAlignment: alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: alignEnd ? TextAlign.end : TextAlign.start,
+          style: theme.textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant, height: 1.15),
         ),
-        const Gap(8),
-        LinearProgressIndicator(
-          value: progress,
-          minHeight: 8,
-          borderRadius: BorderRadius.circular(999),
-          backgroundColor: theme.colorScheme.surfaceContainerHighest,
-        ),
-        const Gap(12),
-        Row(
-          children: [
-            Expanded(
-              child: _StatusText(label: t.nimbus.home.used, value: usedText, color: muted),
-            ),
-            Expanded(
-              child: _StatusText(label: t.nimbus.home.unused, value: remainingText, color: muted, alignEnd: true),
-            ),
-          ],
+        const Gap(4),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: alignEnd ? TextAlign.end : TextAlign.start,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: colors.onSurface,
+            fontWeight: FontWeight.w800,
+            height: 1.1,
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _PlanValidity extends StatelessWidget {
+  const _PlanValidity({required this.label, required this.start, required this.end, required this.semanticsLabel});
+
+  final String label;
+  final String start;
+  final String end;
+  final String semanticsLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final dateStyle = theme.textTheme.bodySmall?.copyWith(
+      color: colors.onSurface,
+      fontWeight: FontWeight.w600,
+      height: 1.15,
+    );
+
+    final labelWidget = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: theme.textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant),
+    );
+    final rangeWidget = Text(
+      '$start – $end',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.end,
+      style: dateStyle,
+    );
+
+    return Semantics(
+      label: semanticsLabel,
+      excludeSemantics: true,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 340) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [labelWidget, const Gap(4), rangeWidget],
+            );
+          }
+
+          return Row(
+            children: [
+              labelWidget,
+              const Gap(12),
+              Expanded(child: rangeWidget),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _StatusIcon extends StatelessWidget {
+  const _StatusIcon({required this.icon, required this.theme});
+
+  final IconData icon;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: theme.colorScheme.primaryContainer.withValues(
+            alpha: theme.brightness == Brightness.dark ? 0.36 : 0.72,
+          ),
+        ),
+        child: Icon(icon, size: 20, color: theme.colorScheme.primary),
+      ),
     );
   }
 }
@@ -368,15 +700,15 @@ class _HomeQuickControls extends HookConsumerWidget {
         if (constraints.maxWidth < 420) {
           return Column(
             children: [
-              SizedBox(height: 86, child: proxyCard()),
+              SizedBox(height: 76, child: proxyCard()),
               const Gap(10),
-              SizedBox(height: 86, child: locationCard()),
+              SizedBox(height: 76, child: locationCard()),
             ],
           );
         }
 
         return SizedBox(
-          height: 86,
+          height: 76,
           child: Row(
             children: [
               Expanded(child: proxyCard()),
@@ -401,29 +733,81 @@ class _LocationControlCard extends HookConsumerWidget {
     final t = ref.watch(translationsProvider).requireValue;
     final locale = ref.watch(localePreferencesProvider);
     final locations = authState.locations?.items ?? [selectedLocation];
+    final connection = ref.watch(connectionNotifierProvider).valueOrNull;
+    final isSwitching = connection?.isSwitching ?? false;
+    final isLoadingLocations = useState(false);
+    final theme = Theme.of(context);
 
-    return MenuAnchor(
-      menuChildren: locations
-          .map(
-            (location) => MenuItemButton(
-              leadingIcon: location.code == authState.selectedLocationCode
-                  ? const Icon(Icons.check_rounded)
-                  : const SizedBox(width: 24),
-              onPressed: () => ref.read(nimbusAuthControllerProvider.notifier).selectLocation(location),
-              child: Text(_locationDisplayName(t, location, locale.languageCode)),
+    return LayoutBuilder(
+      builder: (context, constraints) => MenuAnchor(
+        crossAxisUnconstrained: false,
+        useRootOverlay: true,
+        alignmentOffset: const Offset(0, 6),
+        style: MenuStyle(
+          alignment: AlignmentDirectional.bottomStart,
+          backgroundColor: WidgetStatePropertyAll(theme.colorScheme.surface),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shadowColor: WidgetStatePropertyAll(theme.colorScheme.shadow.withValues(alpha: 0.16)),
+          elevation: const WidgetStatePropertyAll(3),
+          padding: const WidgetStatePropertyAll(EdgeInsets.all(6)),
+          minimumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, 0)),
+          maximumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, double.infinity)),
+          side: WidgetStatePropertyAll(BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.65))),
+          shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+        ),
+        menuChildren: locations.map((location) {
+          final isSelected = location.code == authState.selectedLocationCode;
+          return MenuItemButton(
+            style: ButtonStyle(
+              minimumSize: const WidgetStatePropertyAll(Size.fromHeight(42)),
+              maximumSize: const WidgetStatePropertyAll(Size.fromHeight(42)),
+              padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12)),
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (isSelected) {
+                  final alpha = states.contains(WidgetState.hovered) ? 0.72 : 0.52;
+                  return theme.colorScheme.primaryContainer.withValues(alpha: alpha);
+                }
+                if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+                  return theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.72);
+                }
+                return Colors.transparent;
+              }),
+              shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
             ),
-          )
-          .toList(),
-      builder: (context, controller, child) => _HomeControlCard(
-        icon: Icons.public_rounded,
-        title: t.nimbus.home.locationTitle,
-        value: _locationDisplayName(t, selectedLocation, locale.languageCode),
-        detail: t.nimbus.home.locationDetail,
-        onTap: () async {
-          await ref.read(nimbusAuthControllerProvider.notifier).loadLocations();
-          if (!context.mounted) return;
-          controller.isOpen ? controller.close() : controller.open();
-        },
+            trailingIcon: isSelected
+                ? Icon(Icons.check_rounded, size: 18, color: theme.colorScheme.primary)
+                : const SizedBox(width: 18),
+            onPressed: isSwitching
+                ? null
+                : () => ref.read(nimbusConnectionControllerProvider.notifier).selectLocation(location),
+            child: Text(
+              _locationDisplayName(t, location, locale.languageCode),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500),
+            ),
+          );
+        }).toList(),
+        builder: (context, controller, child) => _HomeControlCard(
+          icon: Icons.public_rounded,
+          title: t.nimbus.home.locationTitle,
+          value: _locationDisplayName(t, selectedLocation, locale.languageCode),
+          detail: t.nimbus.home.locationDetail,
+          isExpanded: controller.isOpen,
+          isLoading: isLoadingLocations.value,
+          onTap: isSwitching || isLoadingLocations.value
+              ? null
+              : () async {
+                  isLoadingLocations.value = true;
+                  try {
+                    await ref.read(nimbusAuthControllerProvider.notifier).loadLocations();
+                    if (!context.mounted) return;
+                    controller.isOpen ? controller.close() : controller.open();
+                  } finally {
+                    if (context.mounted) isLoadingLocations.value = false;
+                  }
+                },
+        ),
       ),
     );
   }
@@ -436,57 +820,102 @@ class _HomeControlCard extends StatelessWidget {
     required this.value,
     required this.detail,
     required this.onTap,
+    this.isExpanded,
+    this.isLoading = false,
   });
 
   final IconData icon;
   final String title;
   final String value;
   final String detail;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool? isExpanded;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.66),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7)),
+    final enabled = onTap != null;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: BorderSide(
+        color: isExpanded == true
+            ? theme.colorScheme.primary.withValues(alpha: 0.46)
+            : theme.colorScheme.outlineVariant.withValues(alpha: 0.46),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Icon(icon, color: theme.colorScheme.primary),
-              const Gap(10),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                    const Gap(2),
-                    Text(
-                      value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+    );
+
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      expanded: isExpanded,
+      label: '$title, $value, $detail',
+      excludeSemantics: true,
+      child: Tooltip(
+        message: detail,
+        waitDuration: const Duration(milliseconds: 500),
+        child: Material(
+          color: isExpanded == true
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.22)
+              : theme.colorScheme.surface.withValues(alpha: 0.84),
+          shape: shape,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    icon,
+                    size: 22,
+                    color: enabled
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.52),
+                  ),
+                  const Gap(12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                        const Gap(3),
+                        Text(
+                          value,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ],
                     ),
-                    const Gap(2),
-                    Text(
-                      detail,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                  const Gap(8),
+                  if (isLoading)
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary),
+                    )
+                  else
+                    AnimatedRotation(
+                      turns: isExpanded == true ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
+                      child: Icon(
+                        isExpanded == null ? Icons.chevron_right_rounded : Icons.expand_more_rounded,
+                        size: 20,
+                        color: isExpanded == true ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ],
-                ),
+                ],
               ),
-              const Icon(Icons.expand_more_rounded, size: 18),
-            ],
+            ),
           ),
         ),
       ),
@@ -495,38 +924,7 @@ class _HomeControlCard extends StatelessWidget {
 }
 
 Future<void> _showProxyModeDialog(BuildContext context) async {
-  await showDialog<void>(
-    context: context,
-    builder: (context) => Consumer(
-      builder: (context, ref, _) {
-        final selected = ref.watch(Preferences.nimbusProxyMode);
-        final t = ref.watch(translationsProvider).requireValue;
-        return AlertDialog(
-          title: Text(t.nimbus.home.connectionMode),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: NimbusProxyMode.values
-                .map(
-                  (mode) => ListTile(
-                    leading: Icon(
-                      mode == selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-                      color: mode == selected ? Theme.of(context).colorScheme.primary : null,
-                    ),
-                    title: Text(mode.label(t)),
-                    subtitle: Text(mode.description(t)),
-                    onTap: () async {
-                      await ref.read(Preferences.nimbusProxyMode.notifier).update(mode);
-                      if (context.mounted) Navigator.of(context).pop();
-                    },
-                  ),
-                )
-                .toList(),
-          ),
-          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.common.close))],
-        );
-      },
-    ),
-  );
+  await showDialog<void>(context: context, builder: (_) => const NimbusProxyModeDialog());
 }
 
 class _ActivationConnectionButton extends StatelessWidget {
@@ -555,7 +953,7 @@ class _ActivationConnectionButton extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: onTap,
-                child: Icon(Icons.power_settings_new_rounded, size: 56, color: theme.colorScheme.onPrimary),
+                child: Icon(Icons.rocket_launch_rounded, size: 56, color: theme.colorScheme.onPrimary),
               ),
             ),
           ),
@@ -698,7 +1096,7 @@ NimbusLocation _selectedLocation(NimbusAuthState authState) {
 }
 
 String _locationDisplayName(Translations t, NimbusLocation location, String languageCode) {
-  if (location.code == 'auto') return t.common.auto;
+  if (location.code == 'auto') return t.nimbus.home.locationAuto;
   return location.displayNameForLanguage(languageCode);
 }
 
@@ -713,11 +1111,6 @@ extension on NimbusProxyMode {
     NimbusProxyMode.auto => t.nimbus.proxyMode.auto,
     NimbusProxyMode.global => t.nimbus.proxyMode.global,
   };
-
-  String description(Translations t) => switch (this) {
-    NimbusProxyMode.auto => t.nimbus.proxyMode.autoDescription,
-    NimbusProxyMode.global => t.nimbus.proxyMode.globalDescription,
-  };
 }
 
 String _formatPlanBytes(int? bytes) {
@@ -727,18 +1120,29 @@ String _formatPlanBytes(int? bytes) {
   const gb = 1024 * mb;
   if (bytes >= gb) {
     final value = bytes / gb;
-    return '${value.toStringAsFixed(value >= 100 ? 0 : 1)} GB';
+    return _formatPlanUnit(value, 'GB');
   }
   final value = (bytes / mb).clamp(0.1, double.infinity);
-  return '${value.toStringAsFixed(value >= 100 ? 0 : 1)} MB';
+  return _formatPlanUnit(value, 'MB');
 }
 
-String _formatDate(DateTime? value) {
+@visibleForTesting
+String formatUsagePercent(num progress) {
+  if (progress <= 0) return '0%';
+  if (progress < 0.01) return '<1%';
+  return '${(progress * 100).round()}%';
+}
+
+String _formatPlanUnit(double value, String unit) {
+  final fixed = value.toStringAsFixed(value >= 100 ? 0 : 1);
+  final compact = fixed.endsWith('.0') ? fixed.substring(0, fixed.length - 2) : fixed;
+  return '$compact $unit';
+}
+
+String _formatDate(DateTime? value, MaterialLocalizations localizations) {
   if (value == null) return '--';
-  return '${value.year}-${_twoDigits(value.month)}-${_twoDigits(value.day)}';
+  return localizations.formatCompactDate(value.toLocal());
 }
-
-String _twoDigits(int value) => value.toString().padLeft(2, '0');
 
 class _StatusText extends StatelessWidget {
   const _StatusText({required this.label, required this.value, required this.color, this.alignEnd = false});
@@ -754,11 +1158,19 @@ class _StatusText extends StatelessWidget {
     return Column(
       crossAxisAlignment: alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
-        Text(label, style: theme.textTheme.labelSmall?.copyWith(color: color)),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: alignEnd ? TextAlign.end : TextAlign.start,
+          style: theme.textTheme.labelSmall?.copyWith(color: color),
+        ),
         const Gap(2),
         Text(
           value,
+          maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          textAlign: alignEnd ? TextAlign.end : TextAlign.start,
           style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
       ],

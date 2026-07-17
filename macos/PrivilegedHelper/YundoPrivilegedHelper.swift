@@ -287,7 +287,14 @@ private final class HelperEndpoint: NSObject, YundoPrivilegedHelperProtocol {
 }
 
 private final class CallerVerifier {
-  private lazy var expectedTeamIdentifier: String? = {
+  private static let adHocSignatureFlag: UInt32 = 0x0002
+
+  private struct SigningIdentity {
+    let teamIdentifier: String?
+    let isAdHoc: Bool
+  }
+
+  private lazy var helperSigningIdentity: SigningIdentity? = {
     guard let helperURL = HelperProcess.executableURL else { return nil }
     var staticCode: SecStaticCode?
     guard SecStaticCodeCreateWithPath(helperURL as CFURL, [], &staticCode) == errSecSuccess, let staticCode else {
@@ -301,15 +308,18 @@ private final class CallerVerifier {
     else {
       return nil
     }
-    return signingInfo[kSecCodeInfoTeamIdentifier] as? String
+    let signatureFlags = (signingInfo[kSecCodeInfoFlags] as? NSNumber)?.uint32Value ?? 0
+    return SigningIdentity(
+      teamIdentifier: signingInfo[kSecCodeInfoTeamIdentifier] as? String,
+      isAdHoc: signatureFlags & Self.adHocSignatureFlag != 0
+    )
   }()
 
   func accepts(_ connection: NSXPCConnection) -> Bool {
     guard
       connection.processIdentifier > 0,
       connection.effectiveUserIdentifier != 0,
-      let expectedTeamIdentifier,
-      !expectedTeamIdentifier.isEmpty
+      let helperSigningIdentity
     else {
       return false
     }
@@ -327,11 +337,24 @@ private final class CallerVerifier {
         == errSecSuccess,
       let signingInfo = rawSigningInfo as? [CFString: Any],
       signingInfo[kSecCodeInfoIdentifier] as? String == BuildIdentity.appBundleIdentifier,
-      signingInfo[kSecCodeInfoTeamIdentifier] as? String == expectedTeamIdentifier,
       let executableURL = signingInfo[kSecCodeInfoMainExecutable] as? URL
     else {
       return false
     }
+
+    let callerTeamIdentifier = signingInfo[kSecCodeInfoTeamIdentifier] as? String
+    let callerSignatureFlags = (signingInfo[kSecCodeInfoFlags] as? NSNumber)?.uint32Value ?? 0
+    let callerIsAdHoc = callerSignatureFlags & Self.adHocSignatureFlag != 0
+    let teamsMatch = helperSigningIdentity.teamIdentifier.map {
+      !$0.isEmpty && $0 == callerTeamIdentifier
+    } ?? false
+    // Local Debug builds are recursively ad hoc signed. Their exact in-bundle path below
+    // remains mandatory; production builds continue to require matching Team IDs.
+    let adHocPair = helperSigningIdentity.isAdHoc
+      && callerIsAdHoc
+      && (helperSigningIdentity.teamIdentifier?.isEmpty ?? true)
+      && (callerTeamIdentifier?.isEmpty ?? true)
+    guard teamsMatch || adHocPair else { return false }
 
     guard let helperURL = HelperProcess.executableURL else { return false }
     let contentsURL = helperURL

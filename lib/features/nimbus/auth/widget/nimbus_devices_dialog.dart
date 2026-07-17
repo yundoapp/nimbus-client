@@ -31,9 +31,10 @@ class NimbusDevicesDialog extends HookConsumerWidget {
     }
 
     return AlertDialog(
+      scrollable: true,
       title: Text(t.nimbus.devices.title),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 520),
+      content: SizedBox(
+        width: 520,
         child: devices == null && authState.isLoading
             ? const SizedBox(height: 160, child: Center(child: CircularProgressIndicator()))
             : _DevicesContent(devices: devices, isLoading: authState.isLoading),
@@ -75,14 +76,10 @@ class _DevicesContent extends ConsumerWidget {
             child: Center(child: Text(t.nimbus.devices.empty)),
           )
         else
-          Flexible(
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: items.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, index) => _DeviceTile(device: items[index], isLoading: isLoading),
-            ),
-          ),
+          for (var index = 0; index < items.length; index++) ...[
+            if (index > 0) const Divider(height: 1),
+            _DeviceTile(device: items[index], isLoading: isLoading),
+          ],
       ],
     );
   }

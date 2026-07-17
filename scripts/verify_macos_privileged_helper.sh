@@ -30,6 +30,16 @@ sed "s/\"Yundo Dev\"/\"${executable_name}\"/" "$fixture_path" >"$validation_fixt
 
 [[ -x "$helper_path" ]] || fail "缺少特权辅助进程：${helper_path}"
 [[ -f "$daemon_plist" ]] || fail "缺少 LaunchDaemon 配置：${daemon_plist}"
+codesign --verify --deep --strict "$app_path" \
+  || fail "App 完整签名校验失败：${app_path}"
+app_team_identifier="$(codesign -dvv "$app_path" 2>&1 | sed -n 's/^TeamIdentifier=//p')"
+helper_signing_info="$(codesign -dvv "$helper_path" 2>&1)"
+helper_team_identifier="$(sed -n 's/^TeamIdentifier=//p' <<<"$helper_signing_info")"
+helper_identifier="$(sed -n 's/^Identifier=//p' <<<"$helper_signing_info")"
+[[ -n "$app_team_identifier" && "$app_team_identifier" == "$helper_team_identifier" ]] \
+  || fail "App 与特权辅助进程签名团队不一致"
+[[ "$helper_identifier" == "$service_name" ]] \
+  || fail "特权辅助进程签名标识与服务名不一致"
 [[ "$($plist_buddy -c 'Print :Label' "$daemon_plist")" == "$service_name" ]] \
   || fail "LaunchDaemon Label 与 App Bundle ID 不匹配"
 [[ "$($plist_buddy -c 'Print :BundleProgram' "$daemon_plist")" == 'Contents/Library/HelperTools/YundoPrivilegedHelper' ]] \

@@ -56,7 +56,7 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
         messenger.showSnackBar(SnackBar(content: Text(t.nimbus.issueReport.submitted)));
       } catch (error) {
         if (repository.isUnauthorized(error)) {
-          await ref.read(nimbusAuthControllerProvider.notifier).restore();
+          await ref.read(nimbusAuthControllerProvider.notifier).refreshAfterUnauthorized(session);
         } else {
           errorMessage.value = repository.describeError(error, t);
         }

@@ -106,22 +106,35 @@ final class PrivilegedHelperBridge {
 
   private func startThroughXPC(config: String, result: @escaping FlutterResult) {
     let connection = activeConnection()
+    var completed = false
+    let finish: (Any?) -> Void = { value in
+      guard !completed else { return }
+      completed = true
+      result(value)
+    }
+    let timeout = DispatchWorkItem {
+      finish(FlutterError(code: "helper_xpc_timeout", message: nil, details: nil))
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: timeout)
     let proxy = connection.remoteObjectProxyWithErrorHandler { error in
       DispatchQueue.main.async {
-        result(FlutterError(code: "helper_xpc_failed", message: error.localizedDescription, details: nil))
+        timeout.cancel()
+        finish(FlutterError(code: "helper_xpc_failed", message: error.localizedDescription, details: nil))
       }
     }
     guard let helper = proxy as? YundoPrivilegedHelperProtocol else {
-      result(FlutterError(code: "helper_xpc_unavailable", message: nil, details: nil))
+      timeout.cancel()
+      finish(FlutterError(code: "helper_xpc_unavailable", message: nil, details: nil))
       return
     }
     helper.startTunnel(config) { error in
       DispatchQueue.main.async {
+        timeout.cancel()
         if let error {
           NSLog("Privileged helper start failed: %@", error)
-          result(FlutterError(code: "helper_start_failed", message: error, details: nil))
+          finish(FlutterError(code: "helper_start_failed", message: error, details: nil))
         } else {
-          result(nil)
+          finish(nil)
         }
       }
     }
@@ -132,21 +145,34 @@ final class PrivilegedHelperBridge {
       result(nil)
       return
     }
+    var completed = false
+    let finish: (Any?) -> Void = { value in
+      guard !completed else { return }
+      completed = true
+      result(value)
+    }
+    let timeout = DispatchWorkItem {
+      finish(FlutterError(code: "helper_xpc_timeout", message: nil, details: nil))
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: timeout)
     let proxy = connection.remoteObjectProxyWithErrorHandler { error in
       DispatchQueue.main.async {
-        result(FlutterError(code: "helper_xpc_failed", message: error.localizedDescription, details: nil))
+        timeout.cancel()
+        finish(FlutterError(code: "helper_xpc_failed", message: error.localizedDescription, details: nil))
       }
     }
     guard let helper = proxy as? YundoPrivilegedHelperProtocol else {
-      result(FlutterError(code: "helper_xpc_unavailable", message: nil, details: nil))
+      timeout.cancel()
+      finish(FlutterError(code: "helper_xpc_unavailable", message: nil, details: nil))
       return
     }
     helper.stopTunnel { error in
       DispatchQueue.main.async {
+        timeout.cancel()
         if let error {
-          result(FlutterError(code: "helper_stop_failed", message: error, details: nil))
+          finish(FlutterError(code: "helper_stop_failed", message: error, details: nil))
         } else {
-          result(nil)
+          finish(nil)
         }
       }
     }
