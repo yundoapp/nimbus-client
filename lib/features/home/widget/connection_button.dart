@@ -24,6 +24,12 @@ class ConnectionButton extends HookConsumerWidget {
     final nimbusConnection = ref.watch(nimbusConnectionControllerProvider);
     final connectionStatus = shouldPresentNimbusAsDisconnecting(isDisconnecting: nimbusConnection.isDisconnecting)
         ? const AsyncData<ConnectionStatus>(Disconnecting())
+        : shouldPresentNimbusFailureAsDisconnected(
+            errorMessage: nimbusConnection.errorMessage,
+            connectedReported: nimbusConnection.connectedReported,
+            connection: rawConnectionStatus.valueOrNull,
+          )
+        ? const AsyncData<ConnectionStatus>(Disconnected())
         : shouldPresentNimbusAsConnecting(
             isPreparing: nimbusConnection.isPreparing,
             connectedReported: nimbusConnection.connectedReported,

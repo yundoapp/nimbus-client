@@ -76,4 +76,39 @@ void main() {
       isFalse,
     );
   });
+
+  test('失败提示优先于底层加速中状态展示为未加速', () {
+    expect(
+      shouldPresentNimbusFailureAsDisconnected(
+        errorMessage: '加速失败，请稍后重试。',
+        connectedReported: false,
+        connection: const ConnectionStatus.connecting(),
+      ),
+      isTrue,
+    );
+    expect(
+      shouldPresentNimbusFailureAsDisconnected(
+        errorMessage: null,
+        connectedReported: false,
+        connection: const ConnectionStatus.connecting(),
+      ),
+      isFalse,
+    );
+    expect(
+      shouldPresentNimbusFailureAsDisconnected(
+        errorMessage: '加速失败，请稍后重试。',
+        connectedReported: true,
+        connection: const ConnectionStatus.connecting(),
+      ),
+      isFalse,
+    );
+    expect(
+      shouldPresentNimbusFailureAsDisconnected(
+        errorMessage: '加速失败，请稍后重试。',
+        connectedReported: false,
+        connection: const ConnectionStatus.connected(),
+      ),
+      isFalse,
+    );
+  });
 }

@@ -60,6 +60,15 @@ bool shouldPresentNimbusAsConnecting({
 
 bool shouldPresentNimbusAsDisconnecting({required bool isDisconnecting}) => isDisconnecting;
 
+bool shouldPresentNimbusFailureAsDisconnected({
+  required String? errorMessage,
+  required bool connectedReported,
+  required ConnectionStatus? connection,
+}) {
+  if (errorMessage == null || connectedReported) return false;
+  return connection is! Connected && connection is! Disconnecting;
+}
+
 bool shouldFailNimbusPreparingDisconnected({
   required bool isPreparing,
   required bool connectedReported,
@@ -772,6 +781,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   }
 
   Future<void> _fail(String message) async {
+    await ref.read(connectionNotifierProvider.notifier).abortConnection();
     state = state.copyWith(isPreparing: false, errorMessage: message, plan: null, connectedReported: false);
   }
 
