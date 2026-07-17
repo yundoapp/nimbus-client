@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 
@@ -47,5 +48,32 @@ void main() {
   test('断开清理完成前持续展示正在停止加速', () {
     expect(shouldPresentNimbusAsDisconnecting(isDisconnecting: true), isTrue);
     expect(shouldPresentNimbusAsDisconnecting(isDisconnecting: false), isFalse);
+  });
+
+  test('准备阶段收到明确断开失败时立即结束加速中状态', () {
+    expect(
+      shouldFailNimbusPreparingDisconnected(
+        isPreparing: true,
+        connectedReported: false,
+        connection: const ConnectionStatus.disconnected(ConnectionFailure.missingVpnPermission()),
+      ),
+      isTrue,
+    );
+    expect(
+      shouldFailNimbusPreparingDisconnected(
+        isPreparing: true,
+        connectedReported: false,
+        connection: const ConnectionStatus.disconnected(),
+      ),
+      isFalse,
+    );
+    expect(
+      shouldFailNimbusPreparingDisconnected(
+        isPreparing: true,
+        connectedReported: true,
+        connection: const ConnectionStatus.disconnected(ConnectionFailure.missingVpnPermission()),
+      ),
+      isFalse,
+    );
   });
 }

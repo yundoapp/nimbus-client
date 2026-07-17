@@ -33,7 +33,6 @@ class HomePage extends HookConsumerWidget {
     final announcementRepository = ref.watch(nimbusAuthRepositoryProvider);
     final t = ref.watch(translationsProvider).requireValue;
     final username = authState.me?.user.username ?? authState.session?.user.username ?? '';
-    final showUsernameInAppBar = MediaQuery.sizeOf(context).width >= 480;
     final hasActivePlan = authState.me?.subscription.hasActivePlan ?? false;
     final announcementLanguage = locale.flutterLocale.toLanguageTag();
     final announcementPlatform = _platformForAnnouncement(appInfo.operatingSystem);
@@ -107,19 +106,6 @@ class HomePage extends HookConsumerWidget {
     }, [authState.isAuthenticated]);
 
     return Scaffold(
-      appBar: AppBar(
-        actions: [
-          if (username.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: _CurrentUserLabel(
-                username: username,
-                semanticsLabel: t.nimbus.home.currentAccount(username: username),
-                showUsername: showUsernameInAppBar,
-              ),
-            ),
-        ],
-      ),
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
@@ -146,6 +132,17 @@ class HomePage extends HookConsumerWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        if (username.isNotEmpty) ...[
+                          Align(
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: _CurrentUserLabel(
+                              username: username,
+                              semanticsLabel: t.nimbus.home.currentAccount(username: username),
+                              showUsername: true,
+                            ),
+                          ),
+                          const Gap(24),
+                        ],
                         if (announcement != null && dismissedAnnouncementId.value != announcement.id) ...[
                           _AnnouncementBanner(
                             announcement: announcement,

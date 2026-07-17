@@ -60,6 +60,15 @@ bool shouldPresentNimbusAsConnecting({
 
 bool shouldPresentNimbusAsDisconnecting({required bool isDisconnecting}) => isDisconnecting;
 
+bool shouldFailNimbusPreparingDisconnected({
+  required bool isPreparing,
+  required bool connectedReported,
+  required ConnectionStatus connection,
+}) {
+  if (!isPreparing || connectedReported) return false;
+  return connection is Disconnected && connection.connectionFailure != null;
+}
+
 class NimbusConnectionState {
   const NimbusConnectionState({
     this.isPreparing = false,
@@ -377,6 +386,18 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     final session = ref.read(nimbusAuthControllerProvider).session;
     if (plan == null || session == null) return;
 
+    if (next case AsyncData(:final value)
+        when shouldFailNimbusPreparingDisconnected(
+          isPreparing: state.isPreparing,
+          connectedReported: state.connectedReported,
+          connection: value,
+        )) {
+      final failure = (value as Disconnected).connectionFailure!;
+      await _handleDisconnected(session: session, plan: plan, failure: failure);
+      await _fail(_friendlyConnectionFailure(failure));
+      return;
+    }
+
     if (next case AsyncData(
       :final value,
     ) when shouldReportNimbusConnected(transportReady: _transportReady, connection: value)) {
@@ -391,7 +412,11 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     }
 
     if (next case AsyncError(:final error)) {
+      final wasPreparing = state.isPreparing && !state.connectedReported;
       await _handleDisconnected(session: session, plan: plan, failureCode: error.runtimeType.toString());
+      if (wasPreparing) {
+        await _fail(_t.nimbus.errors.connectFailed);
+      }
     }
   }
 
