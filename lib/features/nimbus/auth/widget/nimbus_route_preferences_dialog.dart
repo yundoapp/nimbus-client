@@ -14,7 +14,9 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controll
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class NimbusRoutePreferencesDialog extends HookConsumerWidget {
-  const NimbusRoutePreferencesDialog({super.key});
+  const NimbusRoutePreferencesDialog({super.key, this.asPage = false});
+
+  final bool asPage;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -165,106 +167,127 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
     final limit = preferences.value?.limit ?? 0;
     final formReady = preferences.value != null;
 
+    final content = Column(
+      mainAxisSize: asPage ? MainAxisSize.max : MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(t.nimbus.routePreferences.count(used: items.length, limit: limit == 0 ? '--' : limit)),
+        const Gap(12),
+        SegmentedButton<String>(
+          showSelectedIcon: false,
+          segments: [
+            ButtonSegment(
+              value: 'accelerate',
+              icon: const Icon(Icons.cloud_outlined),
+              label: Text(t.nimbus.routePreferences.requiresConnection),
+            ),
+            ButtonSegment(
+              value: 'direct',
+              icon: const Icon(Icons.language_rounded),
+              label: Text(t.nimbus.routePreferences.directConnection),
+            ),
+          ],
+          selected: {selectedType.value},
+          onSelectionChanged: isSubmitting.value || connectionIsSwitching
+              ? null
+              : (values) => selectedType.value = values.first,
+        ),
+        const Gap(8),
+        Text(
+          selectedType.value == 'accelerate'
+              ? t.nimbus.routePreferences.requiresConnectionDescription
+              : t.nimbus.routePreferences.directConnectionDescription,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+        const Gap(12),
+        _CloudSyncHint(message: t.nimbus.routePreferences.cloudSyncHint),
+        const Gap(12),
+        TextField(
+          controller: inputController,
+          enabled: !isSubmitting.value && !connectionIsSwitching && formReady,
+          autofocus: true,
+          keyboardType: TextInputType.url,
+          textInputAction: TextInputAction.done,
+          inputFormatters: [LengthLimitingTextInputFormatter(nimbusDomainMaxLength)],
+          decoration: InputDecoration(
+            labelText: t.nimbus.routePreferences.domainLabel,
+            hintText: 'openai.com',
+            prefixIcon: const Icon(Icons.language_rounded),
+          ),
+          onChanged: (_) => errorMessage.value = null,
+          onSubmitted: (_) => isSubmitting.value || connectionIsSwitching || !formReady ? null : submit(),
+        ),
+        if (errorMessage.value != null) ...[
+          const Gap(10),
+          Text(
+            errorMessage.value!,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error),
+          ),
+        ],
+        const Gap(12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.icon(
+            onPressed: isSubmitting.value || connectionIsSwitching || !formReady ? null : submit,
+            icon: isSubmitting.value
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.add_rounded),
+            label: Text(t.nimbus.routePreferences.add),
+          ),
+        ),
+        const Divider(height: 28),
+        if (isLoading.value && preferences.value == null)
+          const SizedBox(height: 160, child: Center(child: CircularProgressIndicator()))
+        else if (items.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: Center(child: Text(t.nimbus.routePreferences.empty)),
+          )
+        else
+          Flexible(
+            child: ListView.separated(
+              itemCount: items.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) => _RoutePreferenceTile(
+                preference: items[index],
+                isLoading: isLoading.value || isSubmitting.value || connectionIsSwitching,
+                onDelete: () => deletePreference(items[index]),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    if (asPage) {
+      return Scaffold(
+        appBar: AppBar(title: Text(t.nimbus.routePreferences.title)),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: content),
+            ),
+          ),
+        ),
+      );
+    }
+
     return AlertDialog(
       title: Text(t.nimbus.routePreferences.title),
       content: ConstrainedBox(
         constraints: const BoxConstraints(minWidth: 520, maxWidth: 520, maxHeight: 560),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(t.nimbus.routePreferences.count(used: items.length, limit: limit == 0 ? '--' : limit)),
-            const Gap(12),
-            SegmentedButton<String>(
-              showSelectedIcon: false,
-              segments: [
-                ButtonSegment(
-                  value: 'accelerate',
-                  icon: const Icon(Icons.cloud_outlined),
-                  label: Text(t.nimbus.routePreferences.requiresConnection),
-                ),
-                ButtonSegment(
-                  value: 'direct',
-                  icon: const Icon(Icons.language_rounded),
-                  label: Text(t.nimbus.routePreferences.directConnection),
-                ),
-              ],
-              selected: {selectedType.value},
-              onSelectionChanged: isSubmitting.value || connectionIsSwitching
-                  ? null
-                  : (values) => selectedType.value = values.first,
-            ),
-            const Gap(8),
-            Text(
-              selectedType.value == 'accelerate'
-                  ? t.nimbus.routePreferences.requiresConnectionDescription
-                  : t.nimbus.routePreferences.directConnectionDescription,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-            const Gap(12),
-            _CloudSyncHint(message: t.nimbus.routePreferences.cloudSyncHint),
-            const Gap(12),
-            TextField(
-              controller: inputController,
-              enabled: !isSubmitting.value && !connectionIsSwitching && formReady,
-              autofocus: true,
-              keyboardType: TextInputType.url,
-              textInputAction: TextInputAction.done,
-              inputFormatters: [LengthLimitingTextInputFormatter(nimbusDomainMaxLength)],
-              decoration: InputDecoration(
-                labelText: t.nimbus.routePreferences.domainLabel,
-                hintText: 'openai.com',
-                prefixIcon: const Icon(Icons.language_rounded),
-              ),
-              onChanged: (_) => errorMessage.value = null,
-              onSubmitted: (_) => isSubmitting.value || connectionIsSwitching || !formReady ? null : submit(),
-            ),
-            if (errorMessage.value != null) ...[
-              const Gap(10),
-              Text(
-                errorMessage.value!,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error),
-              ),
-            ],
-            const Gap(12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.icon(
-                onPressed: isSubmitting.value || connectionIsSwitching || !formReady ? null : submit,
-                icon: isSubmitting.value
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.add_rounded),
-                label: Text(t.nimbus.routePreferences.add),
-              ),
-            ),
-            const Divider(height: 28),
-            if (isLoading.value && preferences.value == null)
-              const SizedBox(height: 160, child: Center(child: CircularProgressIndicator()))
-            else if (items.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 32),
-                child: Center(child: Text(t.nimbus.routePreferences.empty)),
-              )
-            else
-              Flexible(
-                child: ListView.separated(
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (context, index) => _RoutePreferenceTile(
-                    preference: items[index],
-                    isLoading: isLoading.value || isSubmitting.value || connectionIsSwitching,
-                    onDelete: () => deletePreference(items[index]),
-                  ),
-                ),
-              ),
-          ],
-        ),
+        child: content,
       ),
       actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.common.close))],
     );
   }
+}
+
+class NimbusRoutePreferencesPage extends StatelessWidget {
+  const NimbusRoutePreferencesPage({super.key});
+
+  @override
+  Widget build(BuildContext context) => const NimbusRoutePreferencesDialog(asPage: true);
 }
 
 class _CloudSyncHint extends StatelessWidget {

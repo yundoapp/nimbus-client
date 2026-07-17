@@ -10,7 +10,9 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dar
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class NimbusChangePasswordDialog extends HookConsumerWidget {
-  const NimbusChangePasswordDialog({super.key});
+  const NimbusChangePasswordDialog({super.key, this.asPage = false});
+
+  final bool asPage;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -72,116 +74,146 @@ class NimbusChangePasswordDialog extends HookConsumerWidget {
       });
     }
 
-    return AlertDialog(
-      title: Text(t.nimbus.changePassword.title),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    final content = Form(
+      key: formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            t.nimbus.changePassword.description,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+          const Gap(16),
+          TextFormField(
+            controller: currentPasswordController,
+            enabled: !isSubmitting.value,
+            autofocus: true,
+            autofillHints: const [AutofillHints.password],
+            obscureText: obscureCurrentPassword.value,
+            inputFormatters: _passwordInputFormatters,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              labelText: t.nimbus.changePassword.currentPassword,
+              prefixIcon: const Icon(Icons.lock_outline_rounded),
+              suffixIcon: IconButton(
+                tooltip: obscureCurrentPassword.value ? t.nimbus.auth.showPassword : t.nimbus.auth.hidePassword,
+                onPressed: () => obscureCurrentPassword.value = !obscureCurrentPassword.value,
+                icon: Icon(obscureCurrentPassword.value ? Icons.visibility_rounded : Icons.visibility_off_rounded),
+              ),
+            ),
+            validator: (value) => _validateCurrentPassword(t, value),
+            onChanged: (_) => clearError(),
+          ),
+          const Gap(14),
+          TextFormField(
+            controller: newPasswordController,
+            enabled: !isSubmitting.value,
+            autofillHints: const [AutofillHints.newPassword],
+            obscureText: obscureNewPassword.value,
+            inputFormatters: _passwordInputFormatters,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              labelText: t.nimbus.changePassword.newPassword,
+              prefixIcon: const Icon(Icons.password_rounded),
+              suffixIcon: IconButton(
+                tooltip: obscureNewPassword.value ? t.nimbus.auth.showPassword : t.nimbus.auth.hidePassword,
+                onPressed: () => obscureNewPassword.value = !obscureNewPassword.value,
+                icon: Icon(obscureNewPassword.value ? Icons.visibility_rounded : Icons.visibility_off_rounded),
+              ),
+            ),
+            validator: (value) {
+              final validation = _validateNewPassword(t, value);
+              if (validation != null) return validation;
+              if (value == currentPasswordController.text) {
+                return t.nimbus.changePassword.passwordMustDiffer;
+              }
+              return null;
+            },
+            onChanged: (_) => clearError(),
+          ),
+          const Gap(14),
+          TextFormField(
+            controller: confirmPasswordController,
+            enabled: !isSubmitting.value,
+            autofillHints: const [AutofillHints.newPassword],
+            obscureText: obscureNewPassword.value,
+            inputFormatters: _passwordInputFormatters,
+            textInputAction: TextInputAction.done,
+            onFieldSubmitted: (_) => submit(),
+            decoration: InputDecoration(
+              labelText: t.nimbus.changePassword.confirmNewPassword,
+              prefixIcon: const Icon(Icons.lock_reset_rounded),
+            ),
+            validator: (value) {
+              if (value != newPasswordController.text) return t.nimbus.auth.passwordsDoNotMatch;
+              return null;
+            },
+            onChanged: (_) => clearError(),
+          ),
+          if (errorMessage.value != null) ...[
+            const Gap(10),
+            Text(
+              errorMessage.value!,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    final cancelButton = TextButton(
+      onPressed: isSubmitting.value ? null : () => Navigator.of(context).pop(),
+      child: Text(t.common.cancel),
+    );
+    final submitButton = FilledButton.icon(
+      onPressed: isSubmitting.value ? null : submit,
+      icon: isSubmitting.value
+          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+          : const Icon(Icons.check_rounded),
+      label: Text(t.nimbus.changePassword.submit),
+    );
+
+    if (asPage) {
+      return Scaffold(
+        appBar: AppBar(title: Text(t.nimbus.changePassword.title)),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: content),
+            ),
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Row(
             children: [
-              Text(
-                t.nimbus.changePassword.description,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-              const Gap(16),
-              TextFormField(
-                controller: currentPasswordController,
-                enabled: !isSubmitting.value,
-                autofocus: true,
-                autofillHints: const [AutofillHints.password],
-                obscureText: obscureCurrentPassword.value,
-                inputFormatters: _passwordInputFormatters,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: t.nimbus.changePassword.currentPassword,
-                  prefixIcon: const Icon(Icons.lock_outline_rounded),
-                  suffixIcon: IconButton(
-                    tooltip: obscureCurrentPassword.value ? t.nimbus.auth.showPassword : t.nimbus.auth.hidePassword,
-                    onPressed: () => obscureCurrentPassword.value = !obscureCurrentPassword.value,
-                    icon: Icon(obscureCurrentPassword.value ? Icons.visibility_rounded : Icons.visibility_off_rounded),
-                  ),
-                ),
-                validator: (value) => _validateCurrentPassword(t, value),
-                onChanged: (_) => clearError(),
-              ),
-              const Gap(14),
-              TextFormField(
-                controller: newPasswordController,
-                enabled: !isSubmitting.value,
-                autofillHints: const [AutofillHints.newPassword],
-                obscureText: obscureNewPassword.value,
-                inputFormatters: _passwordInputFormatters,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: t.nimbus.changePassword.newPassword,
-                  prefixIcon: const Icon(Icons.password_rounded),
-                  suffixIcon: IconButton(
-                    tooltip: obscureNewPassword.value ? t.nimbus.auth.showPassword : t.nimbus.auth.hidePassword,
-                    onPressed: () => obscureNewPassword.value = !obscureNewPassword.value,
-                    icon: Icon(obscureNewPassword.value ? Icons.visibility_rounded : Icons.visibility_off_rounded),
-                  ),
-                ),
-                validator: (value) {
-                  final validation = _validateNewPassword(t, value);
-                  if (validation != null) return validation;
-                  if (value == currentPasswordController.text) {
-                    return t.nimbus.changePassword.passwordMustDiffer;
-                  }
-                  return null;
-                },
-                onChanged: (_) => clearError(),
-              ),
-              const Gap(14),
-              TextFormField(
-                controller: confirmPasswordController,
-                enabled: !isSubmitting.value,
-                autofillHints: const [AutofillHints.newPassword],
-                obscureText: obscureNewPassword.value,
-                inputFormatters: _passwordInputFormatters,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => submit(),
-                decoration: InputDecoration(
-                  labelText: t.nimbus.changePassword.confirmNewPassword,
-                  prefixIcon: const Icon(Icons.lock_reset_rounded),
-                ),
-                validator: (value) {
-                  if (value != newPasswordController.text) return t.nimbus.auth.passwordsDoNotMatch;
-                  return null;
-                },
-                onChanged: (_) => clearError(),
-              ),
-              if (errorMessage.value != null) ...[
-                const Gap(10),
-                Text(
-                  errorMessage.value!,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error),
-                ),
-              ],
+              Expanded(child: cancelButton),
+              const Gap(12),
+              Expanded(child: submitButton),
             ],
           ),
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: isSubmitting.value ? null : () => Navigator.of(context).pop(),
-          child: Text(t.common.cancel),
-        ),
-        FilledButton.icon(
-          onPressed: isSubmitting.value ? null : submit,
-          icon: isSubmitting.value
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Icon(Icons.check_rounded),
-          label: Text(t.nimbus.changePassword.submit),
-        ),
-      ],
+      );
+    }
+
+    return AlertDialog(
+      title: Text(t.nimbus.changePassword.title),
+      content: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: content),
+      actions: [cancelButton, submitButton],
     );
   }
+}
+
+class NimbusChangePasswordPage extends StatelessWidget {
+  const NimbusChangePasswordPage({super.key});
+
+  @override
+  Widget build(BuildContext context) => const NimbusChangePasswordDialog(asPage: true);
 }
 
 final _passwordInputFormatters = <TextInputFormatter>[

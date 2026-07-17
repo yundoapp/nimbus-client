@@ -29,17 +29,29 @@ class SettingsPage extends HookConsumerWidget {
           ListTile(
             title: Text(t.nimbus.changePassword.title),
             leading: const Icon(Icons.password_rounded),
-            onTap: () => showDialog<void>(context: context, builder: (_) => const NimbusChangePasswordDialog()),
+            onTap: () => _openAdaptiveSettingsMenu(
+              context,
+              dialog: const NimbusChangePasswordDialog(),
+              page: const NimbusChangePasswordPage(),
+            ),
           ),
           ListTile(
             title: Text(t.nimbus.settings.deviceManagement),
             leading: const Icon(Icons.devices_rounded),
-            onTap: () => showDialog<void>(context: context, builder: (_) => const NimbusDevicesDialog()),
+            onTap: () => _openAdaptiveSettingsMenu(
+              context,
+              dialog: const NimbusDevicesDialog(),
+              page: const NimbusDevicesPage(),
+            ),
           ),
           ListTile(
             title: Text(t.nimbus.settings.issueReport),
             leading: const Icon(Icons.outlined_flag_rounded),
-            onTap: () => showDialog<void>(context: context, builder: (_) => const NimbusIssueReportDialog()),
+            onTap: () => _openAdaptiveSettingsMenu(
+              context,
+              dialog: const NimbusIssueReportDialog(),
+              page: const NimbusIssueReportPage(),
+            ),
           ),
           ListTile(
             title: Text(t.nimbus.settings.logout),
@@ -71,6 +83,17 @@ class SettingsPage extends HookConsumerWidget {
     );
   }
 }
+
+Future<void> _openAdaptiveSettingsMenu(BuildContext context, {required Widget dialog, required Widget page}) async {
+  if (shouldOpenNimbusMenuAsPage(isMobilePlatform: PlatformUtils.isMobile)) {
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+    return;
+  }
+  await showDialog<void>(context: context, builder: (_) => dialog);
+}
+
+@visibleForTesting
+bool shouldOpenNimbusMenuAsPage({required bool isMobilePlatform}) => isMobilePlatform;
 
 class SettingsSection extends HookConsumerWidget {
   const SettingsSection({

@@ -68,6 +68,52 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('加速模式页面展示完整内容且不使用弹窗外层', (tester) async {
+    SharedPreferences.setMockInitialValues({'nimbus_proxy_mode': 'auto', 'nimbus_custom_website_access_enabled': true});
+    final preferences = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          translationsProvider.overrideWith((ref) => AppLocale.zhCn.build()),
+          sharedPreferencesProvider.overrideWith((ref) => preferences),
+          connectionNotifierProvider.overrideWith(_FakeConnectionNotifier.new),
+        ],
+        child: MaterialApp(theme: ThemeData.light(), home: const _PageModeTestPage()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('加速模式'), findsOneWidget);
+    expect(find.text('自动模式'), findsOneWidget);
+    expect(find.text('已设置 2 个网站'), findsOneWidget);
+    expect(find.text('全局模式'), findsOneWidget);
+  });
+}
+
+class _PageModeTestPage extends ConsumerWidget {
+  const _PageModeTestPage();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final preferences = ref.watch(sharedPreferencesProvider);
+    final translations = ref.watch(translationsProvider);
+    if (!preferences.hasValue || !translations.hasValue) {
+      return const Scaffold(body: CircularProgressIndicator());
+    }
+    return Scaffold(
+      body: NimbusProxyModeDialog(
+        asPage: true,
+        loadConfiguredSiteCount: () async => 2,
+        openCustomWebsites: (_) async {},
+        applyChanges: () async {},
+      ),
+    );
+  }
 }
 
 class _FakeConnectionNotifier extends ConnectionNotifier {
