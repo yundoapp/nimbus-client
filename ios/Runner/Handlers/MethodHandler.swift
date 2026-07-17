@@ -162,11 +162,23 @@ public class MethodHandler: NSObject, FlutterPlugin {
 //                await mainResult(true)
 //            }
         case "stop":
-            VPNManager.shared.disconnect()
-            result(true)
+            Task {
+                do {
+                    try await VPNManager.shared.disconnect()
+                    await mainResult(true)
+                } catch {
+                    await mainResult(FlutterError(code: "STOP_CONNECTION", message: error.localizedDescription, details: nil))
+                }
+            }
         case "reset":
-            VPNManager.shared.reset()
-            result(true)
+            Task {
+                do {
+                    try await VPNManager.shared.reset()
+                    await mainResult(true)
+                } catch {
+                    await mainResult(FlutterError(code: "RESET_CONNECTION", message: error.localizedDescription, details: nil))
+                }
+            }
         case "url_test":
             guard
                 let args = call.arguments as? [String:Any?]

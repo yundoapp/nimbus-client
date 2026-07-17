@@ -35,6 +35,7 @@ class HomePage extends HookConsumerWidget {
     final t = ref.watch(translationsProvider).requireValue;
     final appTitle = ref.watch(appDisplayNameProvider);
     final username = authState.me?.user.username ?? authState.session?.user.username ?? '';
+    final showUsernameInAppBar = MediaQuery.sizeOf(context).width >= 480;
     final hasActivePlan = authState.me?.subscription.hasActivePlan ?? false;
     final announcementLanguage = locale.flutterLocale.toLanguageTag();
     final announcementPlatform = _platformForAnnouncement(appInfo.operatingSystem);
@@ -114,15 +115,9 @@ class HomePage extends HookConsumerWidget {
           children: [
             Image.asset('assets/images/app_icon.png', width: 24, height: 24),
             const Gap(8),
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: appTitle),
-                  const TextSpan(text: " "),
-                  const WidgetSpan(child: AppVersionLabel(), alignment: PlaceholderAlignment.middle),
-                ],
-              ),
-            ),
+            Flexible(child: Text(appTitle, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            const Gap(6),
+            const AppVersionLabel(),
           ],
         ),
         actions: [
@@ -132,6 +127,7 @@ class HomePage extends HookConsumerWidget {
               child: _CurrentUserLabel(
                 username: username,
                 semanticsLabel: t.nimbus.home.currentAccount(username: username),
+                showUsername: showUsernameInAppBar,
               ),
             ),
         ],
@@ -151,50 +147,56 @@ class HomePage extends HookConsumerWidget {
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Padding(
+          child: LayoutBuilder(
+            builder: (context, viewport) {
+              final sectionGap = viewport.maxHeight >= 800 ? 36.0 : 20.0;
+              return SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: Column(
-                  children: [
-                    if (announcement != null && dismissedAnnouncementId.value != announcement.id) ...[
-                      _AnnouncementBanner(
-                        announcement: announcement,
-                        closeTooltip: t.common.close,
-                        onClose: () => dismissedAnnouncementId.value = announcement.id,
-                      ),
-                      const Gap(12),
-                    ],
-                    const Spacer(),
-                    if (hasActivePlan)
-                      versionState.forceUpdate
-                          ? _UpdateRequiredConnectionButton(
-                              label: t.nimbus.home.updateRequired,
-                              onTap: () {
-                                final version = versionState.result;
-                                if (version != null) showVersionDialog(version);
-                              },
-                            )
-                          : const ConnectionButton()
-                    else
-                      _ActivationConnectionButton(label: t.nimbus.home.connect, onTap: showNoPlanDialog),
-                    const Gap(16),
-                    if (connectionState.errorMessage != null) ...[
-                      _ConnectionNoticeBanner(
-                        message: connectionState.errorMessage!,
-                        onDismiss: () => ref.read(nimbusConnectionControllerProvider.notifier).clearNotice(),
-                      ),
-                      const Gap(12),
-                    ],
-                    _HomeQuickControls(rulesVersion: authState.me?.rules.publicRulesVersion),
-                    const Spacer(),
-                    _NimbusStatusPanel(theme: theme, me: authState.me, onActivate: showActivationDialog),
-                    const Gap(16),
-                  ],
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (announcement != null && dismissedAnnouncementId.value != announcement.id) ...[
+                          _AnnouncementBanner(
+                            announcement: announcement,
+                            closeTooltip: t.common.close,
+                            onClose: () => dismissedAnnouncementId.value = announcement.id,
+                          ),
+                          const Gap(12),
+                        ],
+                        Gap(sectionGap),
+                        if (hasActivePlan)
+                          versionState.forceUpdate
+                              ? _UpdateRequiredConnectionButton(
+                                  label: t.nimbus.home.updateRequired,
+                                  onTap: () {
+                                    final version = versionState.result;
+                                    if (version != null) showVersionDialog(version);
+                                  },
+                                )
+                              : const ConnectionButton()
+                        else
+                          _ActivationConnectionButton(label: t.nimbus.home.connect, onTap: showNoPlanDialog),
+                        const Gap(16),
+                        if (connectionState.errorMessage != null) ...[
+                          _ConnectionNoticeBanner(
+                            message: connectionState.errorMessage!,
+                            onDismiss: () => ref.read(nimbusConnectionControllerProvider.notifier).clearNotice(),
+                          ),
+                          const Gap(12),
+                        ],
+                        _HomeQuickControls(rulesVersion: authState.me?.rules.publicRulesVersion),
+                        Gap(sectionGap),
+                        _NimbusStatusPanel(theme: theme, me: authState.me, onActivate: showActivationDialog),
+                        const Gap(16),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -254,10 +256,11 @@ class _ConnectionNoticeBanner extends StatelessWidget {
 }
 
 class _CurrentUserLabel extends StatelessWidget {
-  const _CurrentUserLabel({required this.username, required this.semanticsLabel});
+  const _CurrentUserLabel({required this.username, required this.semanticsLabel, required this.showUsername});
 
   final String username;
   final String semanticsLabel;
+  final bool showUsername;
 
   @override
   Widget build(BuildContext context) {
@@ -273,15 +276,17 @@ class _CurrentUserLabel extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.account_circle_outlined, size: 18, color: theme.colorScheme.onSurfaceVariant),
-              const Gap(6),
-              Flexible(
-                child: Text(
-                  username,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+              if (showUsername) ...[
+                const Gap(6),
+                Flexible(
+                  child: Text(
+                    username,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

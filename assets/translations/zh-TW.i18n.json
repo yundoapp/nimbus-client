@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "設定",
-      "resetTunnel": "重設 VPN 設定檔",
+      "resetTunnel": "重設加速權限",
       "options": {
         "import": {
           "clipboard": "從剪貼簿匯入選項",
@@ -849,7 +849,13 @@
     "issueReport": {
       "title": "回報問題",
       "description": "會同時上傳已脫敏的診斷資訊，方便盡快定位問題。",
+      "categoryLabel": "問題類型",
+      "categoryConnection": "加速問題",
+      "categoryAccount": "帳號問題",
+      "categorySubscription": "方案與流量",
+      "categoryOther": "其他問題",
       "descriptionLabel": "問題描述（選填）",
+      "contactLabel": "聯絡方式（選填）",
       "submit": "回報",
       "submitted": "問題已回報"
     },

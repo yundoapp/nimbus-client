@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "تنظیمات",
-      "resetTunnel": "بازنشانی پروفایل VPN",
+      "resetTunnel": "بازنشانی مجوز شتاب‌دهی",
       "options": {
         "import": {
           "clipboard": "وارد کردن تنظیمات از کلیپ‌بورد",
@@ -849,7 +849,13 @@
     "issueReport": {
       "title": "گزارش مشکل",
       "description": "یک نمونه تشخیصی بدون اطلاعات حساس ارسال می‌شود تا مشکل سریع‌تر پیدا شود.",
+      "categoryLabel": "نوع مشکل",
+      "categoryConnection": "شتاب‌دهی",
+      "categoryAccount": "حساب",
+      "categorySubscription": "طرح و ترافیک",
+      "categoryOther": "سایر",
       "descriptionLabel": "شرح مشکل (اختیاری)",
+      "contactLabel": "راه ارتباطی (اختیاری)",
       "submit": "گزارش",
       "submitted": "مشکل گزارش شد"
     },

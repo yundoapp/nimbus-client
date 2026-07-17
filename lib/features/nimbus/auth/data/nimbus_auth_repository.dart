@@ -9,6 +9,7 @@ import 'package:hiddify/core/model/app_info_entity.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_session_store.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_issue_report_sanitizer.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -20,7 +21,13 @@ final nimbusAuthRepositoryProvider = Provider<NimbusAuthRepository>((ref) {
   return NimbusAuthRepository(
     preferences: preferences,
     appInfo: ref.watch(appInfoProvider).requireValue,
-    sessionStore: !kIsWeb && Platform.isMacOS ? const MacOSKeychainNimbusSessionStore() : null,
+    sessionStore: !kIsWeb
+        ? switch (Platform.operatingSystem) {
+            'ios' => const IOSKeychainNimbusSessionStore(),
+            'macos' => const MacOSKeychainNimbusSessionStore(),
+            _ => null,
+          }
+        : null,
   );
 });
 
@@ -280,12 +287,19 @@ class NimbusAuthRepository {
 
   Future<NimbusIssueReport> submitIssueReport({
     required NimbusAuthSession session,
+    required String category,
     required String description,
+    required String contact,
     required Map<String, Object?> diagnostics,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       'issue-reports',
-      data: {'description': description, 'diagnostics': diagnostics},
+      data: {
+        'category': category,
+        'description': sanitizeNimbusIssueReportText(description),
+        'contact': sanitizeNimbusIssueReportText(contact),
+        'diagnostics': sanitizeNimbusIssueDiagnostics(diagnostics),
+      },
       options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
     );
     final data = Map<String, dynamic>.from(response.data ?? const {});
@@ -503,6 +517,7 @@ class NimbusAuthRepository {
 
   String get _deviceName {
     if (kIsWeb) return 'Web';
+    if (Platform.isIOS) return 'iPhone';
     final hostname = Platform.localHostname.trim();
     if (hostname.isNotEmpty) return hostname;
     return switch (_platform) {

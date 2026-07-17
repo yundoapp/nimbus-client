@@ -5,6 +5,9 @@
 //  Created by GFWFighter on 7/24/1402 AP.
 //
 
-BASE_BUNDLE_IDENTIFIER=apple.hiddify.com
+BASE_BUNDLE_IDENTIFIER=app.yundo.client
 SERVICE_IDENTIFIER=com.hiddify.app
-DEVELOPMENT_TEAM=3JFTY5BP58
+YUNDO_DISPLAY_NAME=Yundo
+YUNDO_IOS_DEVELOPMENT_TEAM=
+
+#include? "Local.xcconfig"

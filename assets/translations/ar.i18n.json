@@ -202,7 +202,7 @@
     },
     "settings": {
       "title": "الإعدادات",
-      "resetTunnel": "إعادة تعيين ملف VPN",
+      "resetTunnel": "إعادة تعيين إذن التسريع",
       "options": {
         "import": {
           "clipboard": "استيراد الخيارات من الحافظة",
@@ -855,7 +855,13 @@
     "issueReport": {
       "title": "الإبلاغ عن مشكلة",
       "description": "سيتم رفع لقطة تشخيص منقحة للمساعدة في تحديد المشكلة بشكل أسرع.",
+      "categoryLabel": "نوع المشكلة",
+      "categoryConnection": "التسريع",
+      "categoryAccount": "الحساب",
+      "categorySubscription": "الباقة وحركة البيانات",
+      "categoryOther": "أخرى",
       "descriptionLabel": "وصف المشكلة (اختياري)",
+      "contactLabel": "بيانات التواصل (اختياري)",
       "submit": "إبلاغ",
       "submitted": "تم الإبلاغ عن المشكلة"
     },

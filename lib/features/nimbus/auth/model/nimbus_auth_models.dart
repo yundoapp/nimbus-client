@@ -345,7 +345,9 @@ class NimbusIssueReport {
   const NimbusIssueReport({
     required this.id,
     required this.status,
+    required this.category,
     required this.message,
+    required this.contact,
     required this.createdAt,
     this.resolvedAt,
   });
@@ -354,7 +356,9 @@ class NimbusIssueReport {
     return NimbusIssueReport(
       id: json['id'] as String? ?? '',
       status: json['status'] as String? ?? 'open',
+      category: json['category'] as String?,
       message: json['message'] as String? ?? '',
+      contact: json['contact'] as String?,
       createdAt: _dateTime(json['createdAt']),
       resolvedAt: _dateTime(json['resolvedAt']),
     );
@@ -362,7 +366,9 @@ class NimbusIssueReport {
 
   final String id;
   final String status;
+  final String? category;
   final String message;
+  final String? contact;
   final DateTime? createdAt;
   final DateTime? resolvedAt;
 }

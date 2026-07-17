@@ -40,3 +40,19 @@ class MacOSKeychainNimbusSessionStore implements NimbusSessionStore {
   @override
   Future<void> write(String value) => _channel.invokeMethod<void>('write', {'value': value});
 }
+
+class IOSKeychainNimbusSessionStore implements NimbusSessionStore {
+  const IOSKeychainNimbusSessionStore({MethodChannel channel = const MethodChannel('yundo_ios_secure_session')})
+    : _channel = channel;
+
+  final MethodChannel _channel;
+
+  @override
+  Future<void> delete() => _channel.invokeMethod<void>('delete');
+
+  @override
+  Future<String?> read() => _channel.invokeMethod<String>('read');
+
+  @override
+  Future<void> write(String value) => _channel.invokeMethod<void>('write', {'value': value});
+}

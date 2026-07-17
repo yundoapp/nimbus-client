@@ -10,6 +10,47 @@ import 'package:hiddify/features/nimbus/auth/widget/nimbus_auth_page.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 void main() {
+  testWidgets('iPhone 尺寸下登录和注册页面可滚动且无布局异常', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = GoRouter(
+      initialLocation: '/login',
+      routes: [
+        GoRoute(
+          path: '/login',
+          builder: (_, _) => const NimbusAuthPage(initialMode: NimbusAuthMode.login),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          translationsProvider.overrideWith((ref) => AppLocale.zhCn.build()),
+          environmentProvider.overrideWith((ref) => Environment.prod),
+          nimbusAuthControllerProvider.overrideWith(_PasswordResetRequiredController.new),
+        ],
+        child: _TestApp(router: router, themeMode: ThemeMode.dark),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('登录 Yundo · 云渡'), findsOneWidget);
+    expect(find.byType(SingleChildScrollView), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('没有账号，去注册'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('注册 Yundo · 云渡'), findsOneWidget);
+    expect(find.byType(CheckboxListTile), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('注册已完成但会话未保存时进入首页并显示准确提示', (tester) async {
     _SuccessfulRegistrationWithStorageWarningController.registrationCalls = 0;
     final router = GoRouter(
@@ -107,15 +148,16 @@ void main() {
 }
 
 class _TestApp extends ConsumerWidget {
-  const _TestApp({required this.router});
+  const _TestApp({required this.router, this.themeMode});
 
   final GoRouter router;
+  final ThemeMode? themeMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final translations = ref.watch(translationsProvider);
     return translations.hasValue
-        ? MaterialApp.router(routerConfig: router)
+        ? MaterialApp.router(routerConfig: router, themeMode: themeMode, darkTheme: ThemeData.dark())
         : const MaterialApp(home: CircularProgressIndicator());
   }
 }

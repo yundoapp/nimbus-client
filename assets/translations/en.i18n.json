@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "Settings",
-      "resetTunnel": "Reset VPN profile",
+      "resetTunnel": "Reset acceleration access",
       "options": {
         "import": {
           "clipboard": "Import options from clipboard",
@@ -849,7 +849,13 @@
     "issueReport": {
       "title": "Report an issue",
       "description": "A redacted diagnostics snapshot will be uploaded to help locate the issue faster.",
+      "categoryLabel": "Issue type",
+      "categoryConnection": "Acceleration",
+      "categoryAccount": "Account",
+      "categorySubscription": "Plan and traffic",
+      "categoryOther": "Other",
       "descriptionLabel": "Issue description (optional)",
+      "contactLabel": "Contact details (optional)",
       "submit": "Report",
       "submitted": "Issue reported"
     },

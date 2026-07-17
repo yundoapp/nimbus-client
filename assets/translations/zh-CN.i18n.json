@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "设置",
-      "resetTunnel": "重置 VPN 配置文件",
+      "resetTunnel": "重置加速权限",
       "options": {
         "import": {
           "clipboard": "从剪贴板导入选项",
@@ -849,7 +849,13 @@
     "issueReport": {
       "title": "上报问题",
       "description": "会同时上传脱敏诊断信息，方便尽快定位问题。",
+      "categoryLabel": "问题类型",
+      "categoryConnection": "加速问题",
+      "categoryAccount": "账号问题",
+      "categorySubscription": "套餐与流量",
+      "categoryOther": "其他问题",
       "descriptionLabel": "问题描述（选填）",
+      "contactLabel": "联系方式（选填）",
       "submit": "上报",
       "submitted": "问题已上报"
     },

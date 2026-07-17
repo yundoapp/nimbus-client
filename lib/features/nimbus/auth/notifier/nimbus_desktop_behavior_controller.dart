@@ -22,8 +22,6 @@ class NimbusDesktopBehaviorController extends Notifier<void> with AppLogger {
 
   @override
   void build() {
-    if (!PlatformUtils.isDesktop) return;
-
     ref.onDispose(() {
       _autoConnectTimer?.cancel();
       _debounceTimer?.cancel();
@@ -56,7 +54,7 @@ class NimbusDesktopBehaviorController extends Notifier<void> with AppLogger {
   }
 
   Future<void> tryAutoConnect({required String reason}) async {
-    if (!PlatformUtils.isDesktop || !ref.read(Preferences.nimbusAutoConnect)) return;
+    if (!ref.read(Preferences.nimbusAutoConnect)) return;
 
     final authState = ref.read(nimbusAuthControllerProvider);
     if (!authState.isAuthenticated || authState.isRestoring) return;
