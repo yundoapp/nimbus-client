@@ -5,6 +5,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "${script_dir}/.." && pwd)"
 app_path="${repo_root}/build/macos/Build/Products/Release/Yundo.app"
 strict=""
+pre_notarization=""
 expected_bundle_id="${YUNDO_EXPECTED_RELEASE_BUNDLE_ID:-app.yundo.client}"
 expected_identity="${YUNDO_DEVELOPER_ID_APPLICATION:-}"
 notary_profile="${YUNDO_NOTARY_PROFILE:-}"
@@ -16,12 +17,16 @@ for argument in "$@"; do
     --strict)
       strict="--strict"
       ;;
+    --pre-notarization)
+      pre_notarization="--pre-notarization"
+      ;;
     --help|-h)
       cat <<EOF
-用法：$(basename "$0") [--strict] [App 路径]
+用法：$(basename "$0") [--strict] [--pre-notarization] [App 路径]
 
 默认 App 路径：${app_path}
 说明：本检查只读，不执行签名、公证提交、helper 注册或系统网络变更。
+      --pre-notarization 只跳过 Gatekeeper 与 stapling 检查，用于公证提交前验证签名包。
 EOF
       exit 0
       ;;
@@ -111,8 +116,10 @@ else
       codesign --verify --strict "$helper_path" >/dev/null 2>&1 || blockers+=("helper 签名校验失败")
     fi
 
-    spctl --assess --type execute --verbose=2 "$app_path" >/dev/null 2>&1 || blockers+=("Gatekeeper 验收未通过")
-    xcrun stapler validate "$app_path" >/dev/null 2>&1 || blockers+=("App 没有可验证的公证 stapling ticket")
+    if [[ "$pre_notarization" != "--pre-notarization" ]]; then
+      spctl --assess --type execute --verbose=2 "$app_path" >/dev/null 2>&1 || blockers+=("Gatekeeper 验收未通过")
+      xcrun stapler validate "$app_path" >/dev/null 2>&1 || blockers+=("App 没有可验证的公证 stapling ticket")
+    fi
   fi
 fi
 
@@ -129,5 +136,5 @@ macOS 正式分发就绪检查：ready
 App：${app_path}
 TeamIdentifier：${app_team}
 公证凭据配置名：${notary_profile}
-说明：签名、Gatekeeper 和 stapling 均通过；仍需按 #47/#5 完成管理员批准和 TUN 真机采证。
+说明：$([[ "$pre_notarization" == "--pre-notarization" ]] && echo "公证前签名检查通过" || echo "签名、Gatekeeper 和 stapling 均通过")；仍需按 #47/#5 完成管理员批准和 TUN 真机采证。
 EOF
