@@ -31,7 +31,7 @@ void main() {
       ProviderScope(
         overrides: [
           translationsProvider.overrideWith((ref) => AppLocale.zhCn.build()),
-          environmentProvider.overrideWith((ref) => Environment.prod),
+          environmentProvider.overrideWith((ref) => Environment.dev),
           nimbusAuthControllerProvider.overrideWith(_PasswordResetRequiredController.new),
         ],
         child: _TestApp(router: router, themeMode: ThemeMode.dark),
@@ -39,14 +39,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('登录 Yundo · 云渡'), findsOneWidget);
+    expect(find.text('Yundo · 云渡'), findsOneWidget);
+    expect(find.text('登录 Yundo · 云渡开发版'), findsNothing);
     expect(find.byType(SingleChildScrollView), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.tap(find.text('没有账号，去注册'));
     await tester.pumpAndSettle();
 
-    expect(find.text('注册 Yundo · 云渡'), findsOneWidget);
+    expect(find.text('Yundo · 云渡'), findsOneWidget);
+    expect(find.text('注册 Yundo · 云渡开发版'), findsNothing);
     expect(find.byType(CheckboxListTile), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

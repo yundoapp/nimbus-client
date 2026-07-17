@@ -32,7 +32,7 @@ class NimbusAuthPage extends HookConsumerWidget {
     final isRegister = mode.value == NimbusAuthMode.register;
     final isCompletingPasswordReset = mode.value == NimbusAuthMode.completePasswordReset;
     final t = ref.watch(translationsProvider).requireValue;
-    final appTitle = ref.watch(appDisplayNameProvider);
+    final appTitle = t.common.appTitle;
 
     Future<void> submit() async {
       if (authState.isLoading) return;
@@ -94,10 +94,10 @@ class NimbusAuthPage extends HookConsumerWidget {
                     const Gap(16),
                     Text(
                       isRegister
-                          ? t.nimbus.auth.registerTitle(appTitle: appTitle)
+                          ? appTitle
                           : isCompletingPasswordReset
                           ? t.nimbus.auth.passwordResetTitle
-                          : t.nimbus.auth.loginTitle(appTitle: appTitle),
+                          : appTitle,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
                     ),
