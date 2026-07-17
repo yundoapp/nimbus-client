@@ -31,16 +31,6 @@ class SettingsPage extends HookConsumerWidget {
           ),
           const Divider(height: 16),
           ListTile(
-            title: Text(t.nimbus.changePassword.title),
-            leading: const Icon(Icons.password_rounded),
-            trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
-            onTap: () => _openAdaptiveSettingsMenu(
-              context,
-              dialog: const NimbusChangePasswordDialog(),
-              page: const NimbusChangePasswordPage(),
-            ),
-          ),
-          ListTile(
             title: Text(t.nimbus.settings.deviceManagement),
             leading: const Icon(Icons.devices_rounded),
             trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
@@ -51,22 +41,14 @@ class SettingsPage extends HookConsumerWidget {
             ),
           ),
           ListTile(
-            title: Text(t.nimbus.settings.issueReport),
-            leading: const Icon(Icons.outlined_flag_rounded),
+            title: Text(t.nimbus.changePassword.title),
+            leading: const Icon(Icons.password_rounded),
             trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
             onTap: () => _openAdaptiveSettingsMenu(
               context,
-              dialog: const NimbusIssueReportDialog(),
-              page: const NimbusIssueReportPage(),
+              dialog: const NimbusChangePasswordDialog(),
+              page: const NimbusChangePasswordPage(),
             ),
-          ),
-          ListTile(
-            title: Text(t.nimbus.settings.logout),
-            leading: const Icon(Icons.logout_rounded),
-            onTap: () async {
-              await ref.read(nimbusAuthControllerProvider.notifier).logout();
-              if (context.mounted) context.go('/auth/login');
-            },
           ),
           if (PlatformUtils.isIOS)
             Material(
@@ -78,6 +60,16 @@ class SettingsPage extends HookConsumerWidget {
                 },
               ),
             ),
+          ListTile(
+            title: Text(t.nimbus.settings.issueReport),
+            leading: const Icon(Icons.outlined_flag_rounded),
+            trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
+            onTap: () => _openAdaptiveSettingsMenu(
+              context,
+              dialog: const NimbusIssueReportDialog(),
+              page: const NimbusIssueReportPage(),
+            ),
+          ),
           if (Breakpoint(context).isMobile()) ...[
             SettingsSection(
               title: t.pages.about.title,
@@ -86,6 +78,14 @@ class SettingsPage extends HookConsumerWidget {
               page: const AboutPage(),
             ),
           ],
+          ListTile(
+            title: Text(t.nimbus.settings.logout),
+            leading: const Icon(Icons.logout_rounded),
+            onTap: () async {
+              await ref.read(nimbusAuthControllerProvider.notifier).logout();
+              if (context.mounted) context.go('/auth/login');
+            },
+          ),
         ],
       ),
     );
