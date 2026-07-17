@@ -7,6 +7,7 @@ import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/core/theme/app_theme_mode.dart';
 import 'package:hiddify/core/theme/theme_preferences.dart';
+import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class LocalePrefTile extends ConsumerWidget {
@@ -21,20 +22,93 @@ class LocalePrefTile extends ConsumerWidget {
       title: Text(t.pages.settings.general.locale),
       subtitle: Text(locale.localeName),
       leading: const Icon(Icons.translate_rounded),
+      trailing: shouldOpenGeneralChoiceAsPage(isMobilePlatform: PlatformUtils.isMobile)
+          ? const Icon(Icons.chevron_right_rounded)
+          : null,
       onTap: () async {
-        final selectedLocale = await ref
-            .read(dialogNotifierProvider.notifier)
-            .showSettingPicker<AppLocale>(
-              title: t.pages.settings.general.locale,
-              selected: locale,
-              onReset: () => ref.read(localePreferencesProvider.notifier).changeLocale(AppLocale.en),
-              options: AppLocale.values,
-              getTitle: (e) => e.localeName,
-            );
+        final AppLocale? selectedLocale;
+        if (shouldOpenGeneralChoiceAsPage(isMobilePlatform: PlatformUtils.isMobile)) {
+          final navigator = Navigator.of(context);
+          selectedLocale = await navigator.push<AppLocale>(
+            MaterialPageRoute(
+              builder: (_) => _SettingsSelectionPage<AppLocale>(
+                title: t.pages.settings.general.locale,
+                selected: locale,
+                options: AppLocale.values,
+                getTitle: (e) => e.localeName,
+                onReset: () => ref.read(localePreferencesProvider.notifier).changeLocale(AppLocale.en),
+              ),
+            ),
+          );
+        } else {
+          selectedLocale = await ref
+              .read(dialogNotifierProvider.notifier)
+              .showSettingPicker<AppLocale>(
+                title: t.pages.settings.general.locale,
+                selected: locale,
+                onReset: () => ref.read(localePreferencesProvider.notifier).changeLocale(AppLocale.en),
+                options: AppLocale.values,
+                getTitle: (e) => e.localeName,
+              );
+        }
         if (selectedLocale != null) {
           await ref.read(localePreferencesProvider.notifier).changeLocale(selectedLocale);
         }
       },
+    );
+  }
+}
+
+class _SettingsSelectionPage<T> extends ConsumerWidget {
+  const _SettingsSelectionPage({
+    required this.title,
+    required this.selected,
+    required this.options,
+    required this.getTitle,
+    this.onReset,
+  });
+
+  final String title;
+  final T selected;
+  final List<T> options;
+  final String Function(T e) getTitle;
+  final VoidCallback? onReset;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = ref.watch(translationsProvider).requireValue;
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        actions: [
+          if (onReset != null)
+            TextButton(
+              onPressed: () {
+                onReset!();
+                Navigator.of(context).pop();
+              },
+              child: Text(t.common.reset),
+            ),
+        ],
+      ),
+      body: SafeArea(
+        child: ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: options.length,
+          separatorBuilder: (_, _) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final option = options[index];
+            final isSelected = option == selected;
+            return ListTile(
+              title: Text(getTitle(option)),
+              trailing: isSelected ? Icon(Icons.check_rounded, color: theme.colorScheme.primary) : null,
+              onTap: () => Navigator.of(context).pop(option),
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -87,16 +161,35 @@ class ThemeModePrefTile extends ConsumerWidget {
         AppThemeMode.dark => Icons.dark_mode_rounded,
         AppThemeMode.black => Icons.contrast_rounded,
       }),
+      trailing: shouldOpenGeneralChoiceAsPage(isMobilePlatform: PlatformUtils.isMobile)
+          ? const Icon(Icons.chevron_right_rounded)
+          : null,
       onTap: () async {
-        final selectedThemeMode = await ref
-            .read(dialogNotifierProvider.notifier)
-            .showSettingPicker<AppThemeMode>(
-              title: t.pages.settings.general.themeMode,
-              selected: themeMode,
-              onReset: () => ref.read(themePreferencesProvider.notifier).changeThemeMode(AppThemeMode.system),
-              options: AppThemeMode.values,
-              getTitle: (e) => e.present(t),
-            );
+        final AppThemeMode? selectedThemeMode;
+        if (shouldOpenGeneralChoiceAsPage(isMobilePlatform: PlatformUtils.isMobile)) {
+          final navigator = Navigator.of(context);
+          selectedThemeMode = await navigator.push<AppThemeMode>(
+            MaterialPageRoute(
+              builder: (_) => _SettingsSelectionPage<AppThemeMode>(
+                title: t.pages.settings.general.themeMode,
+                selected: themeMode,
+                options: AppThemeMode.values,
+                getTitle: (e) => e.present(t),
+                onReset: () => ref.read(themePreferencesProvider.notifier).changeThemeMode(AppThemeMode.system),
+              ),
+            ),
+          );
+        } else {
+          selectedThemeMode = await ref
+              .read(dialogNotifierProvider.notifier)
+              .showSettingPicker<AppThemeMode>(
+                title: t.pages.settings.general.themeMode,
+                selected: themeMode,
+                onReset: () => ref.read(themePreferencesProvider.notifier).changeThemeMode(AppThemeMode.system),
+                options: AppThemeMode.values,
+                getTitle: (e) => e.present(t),
+              );
+        }
         if (selectedThemeMode != null) {
           await ref.read(themePreferencesProvider.notifier).changeThemeMode(selectedThemeMode);
         }
@@ -104,6 +197,9 @@ class ThemeModePrefTile extends ConsumerWidget {
     );
   }
 }
+
+@visibleForTesting
+bool shouldOpenGeneralChoiceAsPage({required bool isMobilePlatform}) => isMobilePlatform;
 
 class ClosingPrefTile extends ConsumerWidget {
   const ClosingPrefTile({super.key});
