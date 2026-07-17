@@ -47,7 +47,7 @@ Debug 为“云渡开发版/雲渡開發版”，其他语言回退为 `Yundo De
 - Flutter `3.38.5` 兼容工具链；
 - CocoaPods；
 - `ios/Frameworks/HiddifyCore.xcframework`；
-- 用于本地真机调试的 Apple Development 证书和 Apple Team；
+- 用于本地真机调试的 Apple Development 证书和具备 Network Extension 能力的 Apple Developer Team；
 - 已解锁、信任本机并启用开发者模式的 iPhone。
 
 ## 本地签名配置
@@ -65,6 +65,8 @@ YUNDO_IOS_DEVELOPMENT_TEAM=YOUR_TEAM_ID
 ```
 
 App 与 Packet Tunnel target 都使用自动签名。Apple Developer 后台必须为开发版 App、开发版 Packet Tunnel 和 App Group 开通与工程 entitlement 一致的能力。当前只保留实际使用的 `packet-tunnel-provider`、App Group 与 VPN 控制能力，不申请 App Proxy、DNS Proxy、Content Filter 或推送权限。
+
+2026-07-17 已验证：免费 Personal Team 不能为 App 和 Packet Tunnel 创建包含 Network Extension/Personal VPN 能力的 iOS App Development provisioning profile。因此，iOS 真机完整体验需要 Apple Developer Program 付费团队，且该团队必须能为开发版 App ID、Packet Tunnel App ID 和 App Group 配置上述能力。macOS 的 Developer ID 只影响 macOS 对外分发签名，不解决 iOS 真机描述文件问题。
 
 ## 生成依赖与模拟器构建
 
@@ -100,6 +102,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 - 本次修改文件静态检查：0 个问题；全仓检查仍有 217 条既有上游告警，未由 M5 新增。
 - iPhone 17 Pro 模拟器：Debug 构建、安装和启动通过；简体中文开发版名称、浅色/深色首页、登录态恢复和窄屏滚动已检查。
 - iOS arm64：`flutter build ios --debug --no-codesign` 通过，App 与 Packet Tunnel 均为 arm64，开发版 Bundle ID 分别为 `app.yundo.client.dev` 与 `app.yundo.client.dev.PacketTunnel`。
+- iOS 真机签名前置检查：`flutter build ios --debug` 已触发 Xcode 自动签名，但当前 Personal Team 无法创建包含 Network Extension/Personal VPN 能力的描述文件，签名安装不能继续。
 - macOS 共享代码回归：`Yundo Dev` 已完成构建、特权辅助进程校验、覆盖安装和启动。
 - 平台隔离端到端验收：18 项 HTTP 闭环通过，问题类型和可选联系方式能够写入、返回并在后台处理。
 
@@ -107,12 +110,17 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 ## 当前外部阻塞
 
-没有连接并信任真实 iPhone 时，无法完成以下验收：
+当前还有两个外部前置没有满足：
+
+1. Mac 侧未识别到真实 iPhone。`flutter devices`、`xcrun xctrace list devices`、`xcrun devicectl list devices` 和 USB 设备列表均未发现实体 iPhone。
+2. 当前 Apple Team 为免费 Personal Team，不能创建包含 Network Extension/Personal VPN 能力的 iOS App Development provisioning profile。
+
+在这两个前置满足前，无法完成以下验收：
 
 - App 与 Packet Tunnel 的真机签名、安装和启动；
 - 首次系统连接授权与拒绝后的恢复；
 - Wi-Fi/蜂窝网络切换及前后台连接状态；
 - 真实节点加速、停止加速和杀进程后的登录态恢复；
-- Apple Team 对 Network Extension/App Group 能力的实际授权结果。
+- 付费 Apple Developer Team 对 Network Extension/App Group 能力的实际授权结果。
 
 这些项目必须以真机结果为准，模拟器构建成功不能替代。
