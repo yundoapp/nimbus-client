@@ -67,6 +67,7 @@ flutter_bin="${FLUTTER_BIN:-$(command -v flutter || true)}"
 export DEVELOPER_DIR="$developer_dir"
 cd "$repo_root"
 "$flutter_bin" build macos --release \
+  --target=lib/main_prod.dart \
   "--dart-define=NIMBUS_API_BASE_URL=${api_base_url}"
 
 [[ -d "$app_path" ]] || fail "找不到 macOS Release 产物：${app_path}"
