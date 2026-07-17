@@ -21,7 +21,7 @@ final branchesScope = <String, FocusScopeNode>{
 };
 
 final loadingConfig = RoutingConfig(
-  routes: <RouteBase>[GoRoute(path: '/home', builder: (context, state) => const Material())],
+  routes: <RouteBase>[GoRoute(path: '/home', builder: (context, state) => const _RoutingLoadingPage())],
 );
 
 String getNameOfBranch(bool isMobileBreakpoint, bool showProfilesAction, int index) =>
@@ -38,13 +38,18 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
   RoutingConfig build() {
     final isMobileBreakpoint = ref.watch(isMobileBreakpointProvider);
     if (isMobileBreakpoint == null) return loadingConfig;
-    final isAuthenticated = ref.watch(nimbusAuthControllerProvider.select((state) => state.isAuthenticated));
+    final authState = ref.watch(
+      nimbusAuthControllerProvider.select(
+        (state) => (isAuthenticated: state.isAuthenticated, isRestoring: state.isRestoring),
+      ),
+    );
+    if (authState.isRestoring) return loadingConfig;
 
     return RoutingConfig(
       redirect: (_, state) {
         final isAuthRoute = state.matchedLocation.startsWith('/auth/');
-        if (!isAuthenticated && !isAuthRoute) return '/auth/login';
-        if (isAuthenticated && isAuthRoute) return '/home';
+        if (!authState.isAuthenticated && !isAuthRoute) return '/auth/login';
+        if (authState.isAuthenticated && isAuthRoute) return '/home';
         return null;
       },
       routes: <RouteBase>[
@@ -125,5 +130,14 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
         ),
       ],
     );
+  }
+}
+
+class _RoutingLoadingPage extends StatelessWidget {
+  const _RoutingLoadingPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
