@@ -9,11 +9,19 @@ import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_route_preferences_dialog.dart';
+import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class NimbusProxyModeDialog extends ConsumerStatefulWidget {
-  const NimbusProxyModeDialog({super.key, this.loadConfiguredSiteCount, this.openCustomWebsites, this.applyChanges});
+  const NimbusProxyModeDialog({
+    super.key,
+    this.asPage = false,
+    this.loadConfiguredSiteCount,
+    this.openCustomWebsites,
+    this.applyChanges,
+  });
 
+  final bool asPage;
   final Future<int?> Function()? loadConfiguredSiteCount;
   final Future<void> Function(BuildContext context)? openCustomWebsites;
   final Future<void> Function()? applyChanges;
@@ -57,6 +65,8 @@ class _NimbusProxyModeDialogState extends ConsumerState<NimbusProxyModeDialog> {
     final customOpener = widget.openCustomWebsites;
     if (customOpener != null) {
       await customOpener(context);
+    } else if (PlatformUtils.isMobile) {
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const NimbusRoutePreferencesPage()));
     } else {
       await showDialog<void>(context: context, builder: (_) => const NimbusRoutePreferencesDialog());
     }
@@ -101,92 +111,115 @@ class _NimbusProxyModeDialogState extends ConsumerState<NimbusProxyModeDialog> {
     final contentWidth = math.min(520.0, availableWidth);
     final configuredCount = _isLoadingCount ? '—' : (_configuredSiteCount?.toString() ?? '—');
 
+    final content = RadioGroup<NimbusProxyMode>(
+      groupValue: selectedMode,
+      onChanged: (mode) {
+        if (controlsEnabled && mode != null) _selectMode(mode);
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RadioListTile<NimbusProxyMode>(
+            contentPadding: EdgeInsets.zero,
+            value: NimbusProxyMode.auto,
+            enabled: controlsEnabled,
+            title: Text(t.nimbus.proxyMode.auto),
+            subtitle: Text(t.nimbus.proxyMode.autoDescription),
+          ),
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 52),
+            child: AnimatedOpacity(
+              opacity: isAutomaticMode ? 1 : 0.48,
+              duration: const Duration(milliseconds: 180),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: BorderDirectional(start: BorderSide(color: theme.colorScheme.outlineVariant)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 16),
+                  child: Column(
+                    children: [
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: customWebsiteAccessEnabled,
+                        onChanged: isAutomaticMode && controlsEnabled ? _setCustomWebsiteAccess : null,
+                        title: Text(t.nimbus.proxyMode.customWebsiteAccess),
+                        subtitle: Text(
+                          isAutomaticMode
+                              ? t.nimbus.proxyMode.customWebsiteAccessDescription
+                              : t.nimbus.proxyMode.customWebsiteAccessAutoOnly,
+                        ),
+                      ),
+                      Divider(height: 1, color: theme.colorScheme.outlineVariant),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        enabled: isAutomaticMode && controlsEnabled,
+                        onTap: isAutomaticMode && controlsEnabled ? _openCustomWebsites : null,
+                        title: Text(t.nimbus.proxyMode.customWebsiteConfiguredCount(count: configuredCount)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(t.nimbus.proxyMode.manageCustomWebsites),
+                            const Gap(4),
+                            const Icon(Icons.chevron_right_rounded),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const Gap(8),
+          Divider(height: 1, color: theme.colorScheme.outlineVariant),
+          const Gap(8),
+          RadioListTile<NimbusProxyMode>(
+            contentPadding: EdgeInsets.zero,
+            value: NimbusProxyMode.global,
+            enabled: controlsEnabled,
+            title: Text(t.nimbus.proxyMode.global),
+            subtitle: Text(t.nimbus.proxyMode.globalDescription),
+          ),
+          if (_isApplying || (connection?.isSwitching ?? false)) ...[
+            const Gap(12),
+            const LinearProgressIndicator(minHeight: 2),
+          ],
+        ],
+      ),
+    );
+
+    if (widget.asPage) {
+      return Scaffold(
+        appBar: AppBar(title: Text(t.nimbus.home.connectionMode)),
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Center(
+                child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: content),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return AlertDialog(
       title: Text(t.nimbus.home.connectionMode),
       content: SizedBox(
         width: contentWidth,
-        child: SingleChildScrollView(
-          child: RadioGroup<NimbusProxyMode>(
-            groupValue: selectedMode,
-            onChanged: (mode) {
-              if (controlsEnabled && mode != null) _selectMode(mode);
-            },
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                RadioListTile<NimbusProxyMode>(
-                  contentPadding: EdgeInsets.zero,
-                  value: NimbusProxyMode.auto,
-                  enabled: controlsEnabled,
-                  title: Text(t.nimbus.proxyMode.auto),
-                  subtitle: Text(t.nimbus.proxyMode.autoDescription),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 52),
-                  child: AnimatedOpacity(
-                    opacity: isAutomaticMode ? 1 : 0.48,
-                    duration: const Duration(milliseconds: 180),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        border: BorderDirectional(start: BorderSide(color: theme.colorScheme.outlineVariant)),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.only(start: 16),
-                        child: Column(
-                          children: [
-                            SwitchListTile(
-                              contentPadding: EdgeInsets.zero,
-                              value: customWebsiteAccessEnabled,
-                              onChanged: isAutomaticMode && controlsEnabled ? _setCustomWebsiteAccess : null,
-                              title: Text(t.nimbus.proxyMode.customWebsiteAccess),
-                              subtitle: Text(
-                                isAutomaticMode
-                                    ? t.nimbus.proxyMode.customWebsiteAccessDescription
-                                    : t.nimbus.proxyMode.customWebsiteAccessAutoOnly,
-                              ),
-                            ),
-                            Divider(height: 1, color: theme.colorScheme.outlineVariant),
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              enabled: isAutomaticMode && controlsEnabled,
-                              onTap: isAutomaticMode && controlsEnabled ? _openCustomWebsites : null,
-                              title: Text(t.nimbus.proxyMode.customWebsiteConfiguredCount(count: configuredCount)),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(t.nimbus.proxyMode.manageCustomWebsites),
-                                  const Gap(4),
-                                  const Icon(Icons.chevron_right_rounded),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const Gap(8),
-                Divider(height: 1, color: theme.colorScheme.outlineVariant),
-                const Gap(8),
-                RadioListTile<NimbusProxyMode>(
-                  contentPadding: EdgeInsets.zero,
-                  value: NimbusProxyMode.global,
-                  enabled: controlsEnabled,
-                  title: Text(t.nimbus.proxyMode.global),
-                  subtitle: Text(t.nimbus.proxyMode.globalDescription),
-                ),
-                if (_isApplying || (connection?.isSwitching ?? false)) ...[
-                  const Gap(12),
-                  const LinearProgressIndicator(minHeight: 2),
-                ],
-              ],
-            ),
-          ),
-        ),
+        child: SingleChildScrollView(child: content),
       ),
       actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.common.close))],
     );
   }
+}
+
+class NimbusProxyModePage extends StatelessWidget {
+  const NimbusProxyModePage({super.key});
+
+  @override
+  Widget build(BuildContext context) => const NimbusProxyModeDialog(asPage: true);
 }

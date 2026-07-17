@@ -15,6 +15,7 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dar
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_proxy_mode_dialog.dart';
+import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 const _yundoLogoColor = Color(0xFF4F67AA);
@@ -728,6 +729,30 @@ class _LocationControlCard extends HookConsumerWidget {
     final isLoadingLocations = useState(false);
     final theme = Theme.of(context);
 
+    if (PlatformUtils.isMobile) {
+      return _HomeControlCard(
+        icon: Icons.public_rounded,
+        title: t.nimbus.home.locationTitle,
+        value: _locationDisplayName(t, selectedLocation, locale.languageCode),
+        detail: t.nimbus.home.locationDetail,
+        isLoading: isLoadingLocations.value,
+        onTap: isSwitching || isLoadingLocations.value
+            ? null
+            : () async {
+                isLoadingLocations.value = true;
+                try {
+                  await ref.read(nimbusAuthControllerProvider.notifier).loadLocations();
+                  if (!context.mounted) return;
+                  await Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute<void>(builder: (_) => const _NimbusLocationSelectionPage()));
+                } finally {
+                  if (context.mounted) isLoadingLocations.value = false;
+                }
+              },
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) => MenuAnchor(
         crossAxisUnconstrained: false,
@@ -797,6 +822,48 @@ class _LocationControlCard extends HookConsumerWidget {
                     if (context.mounted) isLoadingLocations.value = false;
                   }
                 },
+        ),
+      ),
+    );
+  }
+}
+
+class _NimbusLocationSelectionPage extends HookConsumerWidget {
+  const _NimbusLocationSelectionPage();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(nimbusAuthControllerProvider);
+    final t = ref.watch(translationsProvider).requireValue;
+    final locale = ref.watch(localePreferencesProvider);
+    final connection = ref.watch(connectionNotifierProvider).valueOrNull;
+    final isSwitching = connection?.isSwitching ?? false;
+    final locations = authState.locations?.items ?? const [NimbusLocation(code: 'auto', displayName: '')];
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(title: Text(t.nimbus.home.locationTitle)),
+      body: SafeArea(
+        child: ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: locations.length,
+          separatorBuilder: (_, _) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final location = locations[index];
+            final isSelected = location.code == authState.selectedLocationCode;
+            return ListTile(
+              enabled: !isSwitching,
+              leading: const Icon(Icons.public_rounded),
+              title: Text(_locationDisplayName(t, location, locale.languageCode)),
+              trailing: isSelected ? Icon(Icons.check_rounded, color: theme.colorScheme.primary) : null,
+              onTap: isSwitching
+                  ? null
+                  : () async {
+                      await ref.read(nimbusConnectionControllerProvider.notifier).selectLocation(location);
+                      if (context.mounted) Navigator.of(context).pop();
+                    },
+            );
+          },
         ),
       ),
     );
@@ -914,6 +981,10 @@ class _HomeControlCard extends StatelessWidget {
 }
 
 Future<void> _showProxyModeDialog(BuildContext context) async {
+  if (PlatformUtils.isMobile) {
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const NimbusProxyModePage()));
+    return;
+  }
   await showDialog<void>(context: context, builder: (_) => const NimbusProxyModeDialog());
 }
 

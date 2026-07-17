@@ -8,7 +8,9 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dar
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class NimbusDevicesDialog extends HookConsumerWidget {
-  const NimbusDevicesDialog({super.key});
+  const NimbusDevicesDialog({super.key, this.asPage = false});
+
+  final bool asPage;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,18 +32,40 @@ class NimbusDevicesDialog extends HookConsumerWidget {
       });
     }
 
+    final content = devices == null && authState.isLoading
+        ? const SizedBox(height: 160, child: Center(child: CircularProgressIndicator()))
+        : _DevicesContent(devices: devices, isLoading: authState.isLoading);
+
+    if (asPage) {
+      return Scaffold(
+        appBar: AppBar(title: Text(t.nimbus.devices.title)),
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Center(
+                child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: content),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return AlertDialog(
       scrollable: true,
       title: Text(t.nimbus.devices.title),
-      content: SizedBox(
-        width: 520,
-        child: devices == null && authState.isLoading
-            ? const SizedBox(height: 160, child: Center(child: CircularProgressIndicator()))
-            : _DevicesContent(devices: devices, isLoading: authState.isLoading),
-      ),
+      content: SizedBox(width: 520, child: content),
       actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.common.close))],
     );
   }
+}
+
+class NimbusDevicesPage extends StatelessWidget {
+  const NimbusDevicesPage({super.key});
+
+  @override
+  Widget build(BuildContext context) => const NimbusDevicesDialog(asPage: true);
 }
 
 class _DevicesContent extends ConsumerWidget {
