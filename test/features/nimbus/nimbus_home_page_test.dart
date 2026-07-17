@@ -40,6 +40,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    expect(find.byType(AppBar), findsNothing);
+    expect(find.text('tester'), findsOneWidget);
+    expect(find.ancestor(of: find.text('tester'), matching: find.byType(SingleChildScrollView)), findsOneWidget);
     expect(find.text(_connectionError), findsOneWidget);
     expect(find.byType(AlertDialog), findsNothing);
     expect(tester.takeException(), isNull);
