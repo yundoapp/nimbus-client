@@ -1,4 +1,3 @@
-import 'package:dartx/dartx.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -33,7 +32,6 @@ class HomePage extends HookConsumerWidget {
     final locale = ref.watch(localePreferencesProvider);
     final announcementRepository = ref.watch(nimbusAuthRepositoryProvider);
     final t = ref.watch(translationsProvider).requireValue;
-    final appTitle = ref.watch(appDisplayNameProvider);
     final username = authState.me?.user.username ?? authState.session?.user.username ?? '';
     final showUsernameInAppBar = MediaQuery.sizeOf(context).width >= 480;
     final hasActivePlan = authState.me?.subscription.hasActivePlan ?? false;
@@ -110,16 +108,6 @@ class HomePage extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        centerTitle: false,
-        title: Row(
-          children: [
-            Image.asset('assets/images/app_icon.png', width: 24, height: 24),
-            const Gap(8),
-            Flexible(child: Text(appTitle, maxLines: 1, overflow: TextOverflow.ellipsis)),
-            const Gap(6),
-            const AppVersionLabel(),
-          ],
-        ),
         actions: [
           if (username.isNotEmpty)
             Padding(
@@ -1179,33 +1167,6 @@ class _StatusText extends StatelessWidget {
           style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
       ],
-    );
-  }
-}
-
-class AppVersionLabel extends HookConsumerWidget {
-  const AppVersionLabel({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final t = ref.watch(translationsProvider).requireValue;
-    final theme = Theme.of(context);
-
-    final version = ref.watch(appInfoProvider).requireValue.presentVersion;
-    if (version.isBlank) return const SizedBox();
-
-    return Semantics(
-      label: t.common.version,
-      button: false,
-      child: Container(
-        decoration: BoxDecoration(color: theme.colorScheme.secondaryContainer, borderRadius: BorderRadius.circular(4)),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-        child: Text(
-          version,
-          textDirection: TextDirection.ltr,
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSecondaryContainer),
-        ),
-      ),
     );
   }
 }
