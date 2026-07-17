@@ -200,7 +200,7 @@
     },
     "settings": {
       "title": "Настройки",
-      "resetTunnel": "Сбросить профиль VPN",
+      "resetTunnel": "Сбросить разрешение на ускорение",
       "options": {
         "import": {
           "clipboard": "Импортировать настройки из буфера обмена",
@@ -853,7 +853,13 @@
     "issueReport": {
       "title": "Сообщить о проблеме",
       "description": "Будет отправлен обезличенный снимок диагностики, чтобы быстрее найти проблему.",
+      "categoryLabel": "Тип проблемы",
+      "categoryConnection": "Ускорение",
+      "categoryAccount": "Аккаунт",
+      "categorySubscription": "Тариф и трафик",
+      "categoryOther": "Другое",
       "descriptionLabel": "Описание проблемы (необязательно)",
+      "contactLabel": "Контактные данные (необязательно)",
       "submit": "Отправить",
       "submitted": "Проблема отправлена"
     },

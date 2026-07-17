@@ -515,6 +515,15 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     state = state.copyWith(errorMessage: null);
   }
 
+  Future<void> handleAppPaused() async {
+    if (state.connectedReported) await _sendHeartbeat();
+  }
+
+  Future<void> handleAppResumed() async {
+    await _handleConnectionStatus(ref.read(connectionNotifierProvider));
+    if (state.connectedReported) await _sendHeartbeat();
+  }
+
   Future<NimbusRulesPackage> _prepareRulesPackage(NimbusAuthSession session) async {
     final cached = _repository.readRulesPackage(session.user.id);
     final manifest = await _repository.fetchRulesManifest(session: session, localManifest: cached?.manifest);

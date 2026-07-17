@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Flutter 的原生资源钩子会直接调用 xcrun。仅在当前项目的 Xcode 构建阶段
+# 补充完整 Xcode 路径，避免修改开发机的全局 xcode-select。
+export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+exec /usr/bin/xcrun "$@"

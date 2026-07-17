@@ -1,0 +1,3 @@
+// Copy this file to Local.xcconfig and set the Apple Team used for local
+// device builds. Local.xcconfig is intentionally ignored by Git.
+YUNDO_IOS_DEVELOPMENT_TEAM=YOUR_TEAM_ID

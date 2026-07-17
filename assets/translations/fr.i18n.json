@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "Paramètres",
-      "resetTunnel": "Réinitialiser le profil VPN",
+      "resetTunnel": "Réinitialiser l’autorisation d’accélération",
       "options": {
         "import": {
           "clipboard": "Importer les options depuis le presse-papiers",
@@ -841,7 +841,13 @@
     "issueReport": {
       "title": "Signaler un problème",
       "description": "Un instantané de diagnostic anonymisé sera envoyé pour aider à localiser le problème plus vite.",
+      "categoryLabel": "Type de problème",
+      "categoryConnection": "Accélération",
+      "categoryAccount": "Compte",
+      "categorySubscription": "Forfait et trafic",
+      "categoryOther": "Autre",
       "descriptionLabel": "Description du problème (facultatif)",
+      "contactLabel": "Coordonnées (facultatif)",
       "submit": "Signaler",
       "submitted": "Problème signalé"
     },

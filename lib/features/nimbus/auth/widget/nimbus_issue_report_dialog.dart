@@ -22,7 +22,9 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
     final appInfo = ref.watch(appInfoProvider).asData?.value;
     final connectionStatus = ref.watch(connectionNotifierProvider).asData?.value;
     final stats = ref.watch(statsNotifierProvider).asData?.value;
+    final category = useState('connection');
     final descriptionController = useTextEditingController();
+    final contactController = useTextEditingController();
     final isSubmitting = useState(false);
     final errorMessage = useState<String?>(null);
     final t = ref.watch(translationsProvider).requireValue;
@@ -36,7 +38,9 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
       try {
         await repository.submitIssueReport(
           session: session,
+          category: category.value,
           description: descriptionController.text.trim(),
+          contact: contactController.text.trim(),
           diagnostics: {
             'appVersion': appInfo == null ? null : '${appInfo.version}+${appInfo.buildNumber}',
             'appName': appInfo?.name,
@@ -76,6 +80,7 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
 
     return AlertDialog(
       title: Text(t.nimbus.issueReport.title),
+      scrollable: true,
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: Column(
@@ -87,6 +92,21 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+            const Gap(12),
+            DropdownButtonFormField<String>(
+              initialValue: category.value,
+              decoration: InputDecoration(
+                labelText: t.nimbus.issueReport.categoryLabel,
+                prefixIcon: const Icon(Icons.category_outlined),
+              ),
+              items: [
+                DropdownMenuItem(value: 'connection', child: Text(t.nimbus.issueReport.categoryConnection)),
+                DropdownMenuItem(value: 'account', child: Text(t.nimbus.issueReport.categoryAccount)),
+                DropdownMenuItem(value: 'subscription', child: Text(t.nimbus.issueReport.categorySubscription)),
+                DropdownMenuItem(value: 'other', child: Text(t.nimbus.issueReport.categoryOther)),
+              ],
+              onChanged: isSubmitting.value ? null : (value) => category.value = value ?? 'connection',
             ),
             const Gap(12),
             TextField(
@@ -103,6 +123,21 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
                 labelText: t.nimbus.issueReport.descriptionLabel,
                 alignLabelWithHint: true,
                 prefixIcon: const Icon(Icons.edit_note_rounded),
+              ),
+              onChanged: (_) => errorMessage.value = null,
+            ),
+            const Gap(12),
+            TextField(
+              controller: contactController,
+              enabled: !isSubmitting.value,
+              maxLength: 200,
+              textInputAction: TextInputAction.done,
+              inputFormatters: [
+                FilteringTextInputFormatter.deny(RegExp(r'[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]')),
+              ],
+              decoration: InputDecoration(
+                labelText: t.nimbus.issueReport.contactLabel,
+                prefixIcon: const Icon(Icons.alternate_email_rounded),
               ),
               onChanged: (_) => errorMessage.value = null,
             ),

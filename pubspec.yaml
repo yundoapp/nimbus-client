@@ -77,6 +77,9 @@ dependencies:
   flutter_displaymode: ^0.6.0
   dio_smart_retry: ^7.0.1
   cupertino_http: ^2.0.1
+  # objective_c 9.2+ uses native assets, which Flutter 3.38.5 embeds under
+  # Frameworks/ but resolves from the iOS app root at runtime.
+  objective_c: 9.1.0
   dart_mappable: ^4.2.1
   fluentui_system_icons: ^1.1.229
   json_path: ^0.7.1

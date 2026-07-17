@@ -25,11 +25,6 @@ class SettingsPage extends HookConsumerWidget {
             icon: Icons.layers_rounded,
             namedLocation: context.namedLocation('general'),
           ),
-          SettingsSection(
-            title: t.pages.logs.title,
-            icon: Icons.description_rounded,
-            namedLocation: context.namedLocation('logs'),
-          ),
           const Divider(height: 16),
           ListTile(
             title: Text(t.nimbus.changePassword.title),

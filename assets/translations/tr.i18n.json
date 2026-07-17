@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "Ayarlar",
-      "resetTunnel": "VPN profilini sıfırla",
+      "resetTunnel": "Hızlandırma iznini sıfırla",
       "options": {
         "import": {
           "clipboard": "Seçenekleri panodan içe aktar",
@@ -849,7 +849,13 @@
     "issueReport": {
       "title": "Sorun bildir",
       "description": "Sorunu daha hızlı bulmaya yardımcı olmak için anonimleştirilmiş tanılama anlık görüntüsü yüklenecek.",
+      "categoryLabel": "Sorun türü",
+      "categoryConnection": "Hızlandırma",
+      "categoryAccount": "Hesap",
+      "categorySubscription": "Paket ve trafik",
+      "categoryOther": "Diğer",
       "descriptionLabel": "Sorun açıklaması (isteğe bağlı)",
+      "contactLabel": "İletişim bilgisi (isteğe bağlı)",
       "submit": "Bildir",
       "submitted": "Sorun bildirildi"
     },

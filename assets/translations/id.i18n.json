@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "Pengaturan",
-      "resetTunnel": "Setel ulang profil VPN",
+      "resetTunnel": "Atur ulang izin percepatan",
       "options": {
         "import": {
           "clipboard": "Impor opsi dari papan klip",
@@ -849,7 +849,13 @@
     "issueReport": {
       "title": "Laporkan masalah",
       "description": "Snapshot diagnostik yang sudah disamarkan akan diunggah untuk membantu menemukan masalah lebih cepat.",
+      "categoryLabel": "Jenis masalah",
+      "categoryConnection": "Percepatan",
+      "categoryAccount": "Akun",
+      "categorySubscription": "Paket dan trafik",
+      "categoryOther": "Lainnya",
       "descriptionLabel": "Deskripsi masalah (opsional)",
+      "contactLabel": "Kontak (opsional)",
       "submit": "Laporkan",
       "submitted": "Masalah dilaporkan"
     },

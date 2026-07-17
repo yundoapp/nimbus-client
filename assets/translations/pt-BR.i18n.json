@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "Configurações",
-      "resetTunnel": "Redefinir perfil de VPN",
+      "resetTunnel": "Redefinir permissão de aceleração",
       "options": {
         "import": {
           "clipboard": "Importar opções da área de transferência",
@@ -849,7 +849,13 @@
     "issueReport": {
       "title": "Relatar um problema",
       "description": "Um diagnóstico sem dados sensíveis será enviado para ajudar a localizar o problema mais rápido.",
+      "categoryLabel": "Tipo de problema",
+      "categoryConnection": "Aceleração",
+      "categoryAccount": "Conta",
+      "categorySubscription": "Plano e tráfego",
+      "categoryOther": "Outro",
       "descriptionLabel": "Descrição do problema (opcional)",
+      "contactLabel": "Contato (opcional)",
       "submit": "Relatar",
       "submitted": "Problema relatado"
     },

@@ -6,7 +6,6 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controll
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_desktop_behavior_controller.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
-import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class ConnectionWrapper extends StatefulHookConsumerWidget {
@@ -22,9 +21,7 @@ class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with Widg
   @override
   Widget build(BuildContext context) {
     ref.listen(connectionNotifierProvider, (_, _) {});
-    if (PlatformUtils.isDesktop) {
-      ref.listen(nimbusDesktopBehaviorControllerProvider, (_, _) {});
-    }
+    ref.listen(nimbusDesktopBehaviorControllerProvider, (_, _) {});
 
     ref.listen(configOptionNotifierProvider, (previous, next) async {
       if (next case AsyncData(value: true)) {
@@ -51,14 +48,12 @@ class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with Widg
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if (PlatformUtils.isDesktop) {
-      Future.delayed(const Duration(seconds: 2)).then((_) async {
-        if (!mounted) return;
-        await ref
-            .read(nimbusDesktopBehaviorControllerProvider.notifier)
-            .tryAutoConnect(reason: 'connection wrapper ready');
-      });
-    }
+    Future.delayed(const Duration(seconds: 2)).then((_) async {
+      if (!mounted) return;
+      await ref
+          .read(nimbusDesktopBehaviorControllerProvider.notifier)
+          .tryAutoConnect(reason: 'connection wrapper ready');
+    });
   }
 
   @override
@@ -69,7 +64,7 @@ class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with Widg
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!PlatformUtils.isDesktop || state != AppLifecycleState.resumed) return;
+    if (state != AppLifecycleState.resumed) return;
     ref.read(nimbusDesktopBehaviorControllerProvider.notifier).scheduleAutoConnect(reason: 'app resumed');
   }
 }

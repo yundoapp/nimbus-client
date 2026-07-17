@@ -58,8 +58,7 @@
       launchAutomaticallySubstyle = "2">
       <RemoteRunnable
          runnableDebuggingMode = "0"
-         BundleIdentifier = "apple.hiddify.com"
-         RemotePath = "/var/containers/Bundle/Application/8EBA9FC7-47CA-4C36-B670-54E8EB45F196/Runner.app">
+         BundleIdentifier = "app.yundo.client">
       </RemoteRunnable>
       <MacroExpansion>
          <BuildableReference

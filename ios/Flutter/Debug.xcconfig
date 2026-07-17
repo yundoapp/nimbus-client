@@ -2,3 +2,6 @@
 #include "Generated.xcconfig"
 
 #include "Base.xcconfig"
+
+BASE_BUNDLE_IDENTIFIER=app.yundo.client.dev
+YUNDO_DISPLAY_NAME=Yundo Dev
