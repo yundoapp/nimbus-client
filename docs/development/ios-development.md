@@ -98,9 +98,10 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 ## 2026-07-17 自动验证记录
 
-- Flutter 全量测试：95 项全部通过。
+- Flutter 全量测试：97 项全部通过。
 - 本次修改文件静态检查：0 个问题；全仓检查仍有 217 条既有上游告警，未由 M5 新增。
 - iPhone 17 Pro 模拟器：Debug 构建、安装和启动通过；简体中文开发版名称、浅色/深色首页、登录态恢复和窄屏滚动已检查。
+- iPhone 17 Pro 模拟器补充检查：iOS AppIcon 与启动页均使用云渡图标；认证恢复期间不渲染首页 shell，清空模拟器 Keychain 后首屏进入登录页；首页标题栏不再重复展示 App 图标、应用名和版本号。
 - iOS arm64：`flutter build ios --debug --no-codesign` 通过，App 与 Packet Tunnel 均为 arm64，开发版 Bundle ID 分别为 `app.yundo.client.dev` 与 `app.yundo.client.dev.PacketTunnel`。
 - iOS 真机签名前置检查：`flutter build ios --debug` 已触发 Xcode 自动签名，但当前 Personal Team 无法创建包含 Network Extension/Personal VPN 能力的描述文件，签名安装不能继续。
 - macOS 共享代码回归：`Yundo Dev` 已完成构建、特权辅助进程校验、覆盖安装和启动。
