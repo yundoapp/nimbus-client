@@ -8,6 +8,12 @@ void main() {
     expect(shouldOpenNimbusMenuAsPage(isMobilePlatform: false), isFalse);
   });
 
+  test('移动端设置分区入口使用标准页面跳转，桌面端保留路由入口', () {
+    expect(shouldOpenSettingsSectionAsPage(isMobilePlatform: true, hasPage: true), isTrue);
+    expect(shouldOpenSettingsSectionAsPage(isMobilePlatform: true, hasPage: false), isFalse);
+    expect(shouldOpenSettingsSectionAsPage(isMobilePlatform: false, hasPage: true), isFalse);
+  });
+
   test('移动端通用选择项使用页面，桌面端保留弹窗', () {
     expect(shouldOpenGeneralChoiceAsPage(isMobilePlatform: true), isTrue);
     expect(shouldOpenGeneralChoiceAsPage(isMobilePlatform: false), isFalse);
