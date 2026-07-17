@@ -101,16 +101,14 @@ class NimbusAuthPage extends HookConsumerWidget {
                       textAlign: TextAlign.center,
                       style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
                     ),
-                    const Gap(6),
-                    Text(
-                      isRegister
-                          ? t.nimbus.auth.registerSubtitle
-                          : isCompletingPasswordReset
-                          ? t.nimbus.auth.passwordResetSubtitle
-                          : t.nimbus.auth.loginSubtitle,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    ),
+                    if (isCompletingPasswordReset) ...[
+                      const Gap(6),
+                      Text(
+                        t.nimbus.auth.passwordResetSubtitle,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ],
                     const Gap(28),
                     TextFormField(
                       controller: usernameController,

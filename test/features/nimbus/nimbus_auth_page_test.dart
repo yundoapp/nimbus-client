@@ -41,6 +41,7 @@ void main() {
 
     expect(find.text('Yundo · 云渡'), findsOneWidget);
     expect(find.text('登录 Yundo · 云渡开发版'), findsNothing);
+    expect(find.text('登录后即可查看套餐、流量和设备。'), findsNothing);
     expect(find.byType(SingleChildScrollView), findsOneWidget);
     expect(tester.takeException(), isNull);
 
@@ -49,6 +50,7 @@ void main() {
 
     expect(find.text('Yundo · 云渡'), findsOneWidget);
     expect(find.text('注册 Yundo · 云渡开发版'), findsNothing);
+    expect(find.text('创建账号后再使用激活码开通套餐。'), findsNothing);
     expect(find.byType(CheckboxListTile), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
