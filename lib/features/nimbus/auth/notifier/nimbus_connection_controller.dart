@@ -9,7 +9,6 @@ import 'package:flutter/foundation.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
-import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/features/connection/data/connection_data_providers.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
@@ -255,17 +254,17 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
 
     final session = authState.session;
     if (!authState.isAuthenticated || session == null) {
-      await _fail(_t.nimbus.errors.loginRequired, showErrors: showErrors);
+      await _fail(_t.nimbus.errors.loginRequired);
       return;
     }
     if (!(authState.me?.subscription.hasActivePlan ?? false)) {
-      await _fail(_t.nimbus.errors.noPlan, showErrors: showErrors);
+      await _fail(_t.nimbus.errors.noPlan);
       return;
     }
 
     final version = await ref.read(nimbusAppVersionControllerProvider.notifier).check();
     if (version?.forceUpdate ?? false) {
-      await _fail(_t.nimbus.errors.updateRequired, showErrors: showErrors);
+      await _fail(_t.nimbus.errors.updateRequired);
       return;
     }
 
@@ -298,7 +297,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       state = state.copyWith(isPreparing: true, plan: plan, traffic: plan.traffic, connectedReported: false);
     } catch (error) {
       loggy.warning('failed to prepare managed connection: ${_diagnosticError(error)}');
-      await _fail(_describeError(error), showErrors: showErrors);
+      await _fail(_describeError(error));
       if (_repository.isUnauthorized(error)) {
         await ref.read(nimbusAuthControllerProvider.notifier).refreshAfterUnauthorized(session);
       }
@@ -318,12 +317,12 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       _transportReady = false;
       await _safeReportResult(session: session, plan: plan, status: 'failed', failureCode: _failureCode(failure));
       state = const NimbusConnectionState();
-      await _fail(_friendlyConnectionFailure(failure), showErrors: showErrors);
+      await _fail(_friendlyConnectionFailure(failure));
     } catch (error) {
       _transportReady = false;
       await _safeReportResult(session: session, plan: plan, status: 'failed', failureCode: 'CLIENT_START_FAILED');
       state = const NimbusConnectionState();
-      await _fail(_t.nimbus.errors.connectFailed, showErrors: showErrors);
+      await _fail(_t.nimbus.errors.connectFailed);
       loggy.warning('failed to start managed connection', error);
     } finally {
       await _deleteManagedProfileFile();
@@ -347,7 +346,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         '(systemProxy=${conflict.systemProxyEnabled}, tunneledRoutes=${conflict.tunneledRouteCount})',
       );
       if (showErrors) {
-        await _fail(_t.nimbus.errors.otherConnectionActive, showErrors: true);
+        await _fail(_t.nimbus.errors.otherConnectionActive);
       } else if (state.isPreparing) {
         state = state.copyWith(isPreparing: false, plan: null, errorMessage: null, connectedReported: false);
       }
@@ -747,13 +746,8 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     }
   }
 
-  Future<void> _fail(String message, {required bool showErrors}) async {
+  Future<void> _fail(String message) async {
     state = state.copyWith(isPreparing: false, errorMessage: message, plan: null, connectedReported: false);
-    if (showErrors) {
-      await ref
-          .read(dialogNotifierProvider.notifier)
-          .showCustomAlert(title: _t.nimbus.errors.cannotConnectTitle, message: message);
-    }
   }
 
   String _friendlyConnectionFailure(ConnectionFailure failure) {
