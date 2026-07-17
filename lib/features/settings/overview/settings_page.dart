@@ -16,6 +16,7 @@ class SettingsPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
+    final settingsMenuOpensPage = shouldOpenNimbusMenuAsPage(isMobilePlatform: PlatformUtils.isMobile);
     return Scaffold(
       appBar: AppBar(title: Text(t.pages.settings.title)),
       body: ListView(
@@ -29,6 +30,7 @@ class SettingsPage extends HookConsumerWidget {
           ListTile(
             title: Text(t.nimbus.changePassword.title),
             leading: const Icon(Icons.password_rounded),
+            trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
             onTap: () => _openAdaptiveSettingsMenu(
               context,
               dialog: const NimbusChangePasswordDialog(),
@@ -38,6 +40,7 @@ class SettingsPage extends HookConsumerWidget {
           ListTile(
             title: Text(t.nimbus.settings.deviceManagement),
             leading: const Icon(Icons.devices_rounded),
+            trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
             onTap: () => _openAdaptiveSettingsMenu(
               context,
               dialog: const NimbusDevicesDialog(),
@@ -47,6 +50,7 @@ class SettingsPage extends HookConsumerWidget {
           ListTile(
             title: Text(t.nimbus.settings.issueReport),
             leading: const Icon(Icons.outlined_flag_rounded),
+            trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
             onTap: () => _openAdaptiveSettingsMenu(
               context,
               dialog: const NimbusIssueReportDialog(),
