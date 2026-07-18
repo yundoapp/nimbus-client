@@ -1,9 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:grpc/grpc.dart';
 import 'package:hiddify/hiddifycore/core_interface/windows_tunnel_service.dart';
 
-void main() {
-  test('builds a Windows tunnel request from the minimized bridge config', () {
-    const config = '''
+const _tunnelConfig = '''
 {
   "inbounds": [
     {
@@ -26,7 +25,9 @@ void main() {
 }
 ''';
 
-    final request = WindowsTunnelSettings.fromConfig(config).toRequest();
+void main() {
+  test('builds a Windows tunnel request from the minimized bridge config', () {
+    final request = WindowsTunnelSettings.fromConfig(_tunnelConfig).toRequest();
 
     expect(request.ipv6, isTrue);
     expect(request.serverPort, 1080);
@@ -39,5 +40,55 @@ void main() {
 
   test('rejects a config without a single tunnel inbound', () {
     expect(() => WindowsTunnelSettings.fromConfig('{"inbounds": [], "outbounds": []}'), throwsFormatException);
+  });
+
+  test('installs the permission service only when the local service is unavailable', () async {
+    var startAttempts = 0;
+    final controls = <String>[];
+    var waited = false;
+    final service = WindowsTunnelService(
+      isWindows: () => true,
+      requestStarter: (_) async {
+        startAttempts += 1;
+        if (startAttempts == 1) throw const GrpcError.unavailable();
+      },
+      controlRunner: (action) async => controls.add(action),
+      serviceWaiter: () async => waited = true,
+    );
+
+    await service.start(_tunnelConfig);
+
+    expect(startAttempts, 2);
+    expect(controls, ['install']);
+    expect(waited, isTrue);
+  });
+
+  test('does not request elevation for a running service error', () async {
+    var controlRuns = 0;
+    final service = WindowsTunnelService(
+      isWindows: () => true,
+      requestStarter: (_) async => throw const GrpcError.permissionDenied(),
+      controlRunner: (_) async => controlRuns += 1,
+    );
+
+    await expectLater(service.start(_tunnelConfig), throwsA(isA<GrpcError>()));
+    expect(controlRuns, 0);
+  });
+
+  test('reset stops and uninstalls the Windows permission service', () async {
+    var stopRuns = 0;
+    final controls = <String>[];
+    final service = WindowsTunnelService(
+      isWindows: () => true,
+      stopRequest: () async {
+        stopRuns += 1;
+        return true;
+      },
+      controlRunner: (action) async => controls.add(action),
+    );
+
+    expect(await service.reset(), isTrue);
+    expect(stopRuns, 1);
+    expect(controls, ['uninstall']);
   });
 }

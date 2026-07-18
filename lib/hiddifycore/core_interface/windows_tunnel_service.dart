@@ -85,30 +85,53 @@ class WindowsTunnelServicePermissionException implements Exception {
 }
 
 class WindowsTunnelService {
-  const WindowsTunnelService();
+  WindowsTunnelService({
+    bool Function()? isWindows,
+    Future<void> Function(TunnelStartRequest request)? requestStarter,
+    Future<void> Function(String action)? controlRunner,
+    Future<void> Function()? serviceWaiter,
+    Future<bool> Function()? stopRequest,
+  }) : _isWindows = isWindows ?? _platformIsWindows,
+       _requestStarter = requestStarter,
+       _controlRunner = controlRunner,
+       _serviceWaiter = serviceWaiter,
+       _stopRequestOverride = stopRequest;
 
   static const _port = 18020;
   static const _requestTimeout = Duration(seconds: 15);
   static const _serviceStartTimeout = Duration(seconds: 30);
 
+  final bool Function() _isWindows;
+  final Future<void> Function(TunnelStartRequest request)? _requestStarter;
+  final Future<void> Function(String action)? _controlRunner;
+  final Future<void> Function()? _serviceWaiter;
+  final Future<bool> Function()? _stopRequestOverride;
+
+  static bool _platformIsWindows() => Platform.isWindows;
+
   Future<void> start(String tunnelConfig) async {
-    if (!Platform.isWindows) return;
+    if (!_isWindows()) return;
     final request = WindowsTunnelSettings.fromConfig(tunnelConfig).toRequest();
+    final startRequest = _requestStarter ?? _startRequest;
 
     try {
-      await _startRequest(request);
+      await startRequest(request);
       return;
     } on GrpcError catch (error) {
       if (error.code != StatusCode.unavailable) rethrow;
     }
 
-    await _runElevatedControl('install');
-    await _waitForService();
-    await _startRequest(request);
+    await (_controlRunner ?? _runElevatedControl)('install');
+    await (_serviceWaiter ?? _waitForService)();
+    await startRequest(request);
   }
 
   Future<bool> stop() async {
-    if (!Platform.isWindows) return false;
+    if (!_isWindows()) return false;
+    return (_stopRequestOverride ?? _stopRequest)();
+  }
+
+  Future<bool> _stopRequest() async {
     final channel = _channel();
     try {
       await TunnelServiceClient(channel).stop(Empty()).timeout(_requestTimeout);
@@ -121,9 +144,9 @@ class WindowsTunnelService {
   }
 
   Future<bool> reset() async {
-    if (!Platform.isWindows) return false;
+    if (!_isWindows()) return false;
     await stop();
-    await _runElevatedControl('uninstall');
+    await (_controlRunner ?? _runElevatedControl)('uninstall');
     return true;
   }
 

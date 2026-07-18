@@ -30,7 +30,7 @@ typedef StopFuncDart = Pointer<Utf8> Function();
 class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
   static final HiddifyCoreNativeLibrary _box = _gen();
   static const _privilegedHelper = MacOSPrivilegedHelper();
-  static const _windowsTunnelService = WindowsTunnelService();
+  static final _windowsTunnelService = WindowsTunnelService();
 
   Directories? _directories;
   String? _preparedSourcePath;
