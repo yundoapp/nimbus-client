@@ -33,7 +33,7 @@ powershell -ExecutionPolicy Bypass -File scripts/verify_windows_bundle.ps1 -Conf
 正式版无签名构建验证：
 
 ```powershell
-flutter build windows --release --target=lib/main_prod.dart
+flutter build windows --release --target=lib/main_prod.dart --dart-define=NIMBUS_API_BASE_URL=https://api.yundo.app/api/v1
 powershell -ExecutionPolicy Bypass -File scripts/verify_windows_bundle.ps1 -Configuration Release -ExpectedProductName "Yundo"
 ```
 
@@ -42,7 +42,7 @@ powershell -ExecutionPolicy Bypass -File scripts/verify_windows_bundle.ps1 -Conf
 用于项目负责人 Windows 验收的无签名 EXE 安装包通过 Pull Request 临时生成：
 
 1. 给目标 PR 添加 `ci:windows-acceptance` label。
-2. CI 使用 `lib/main_prod.dart` 构建并校验 Release `Yundo` bundle。
+2. CI 使用 `lib/main_prod.dart` 和生产 API `https://api.yundo.app/api/v1` 构建并校验 Release `Yundo` bundle。
 3. CI 生成 `Yundo-Windows-Setup-x64-<version>-build<build>.exe` 及 SHA-256 校验文件；安装器允许在 Windows 11 ARM64 的 x64 模拟环境安装，应用 bundle 仍为 x64 架构。
 4. `windows-acceptance` artifact 仅保留 3 天，不创建或更新 GitHub Release。
 

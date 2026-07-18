@@ -28,6 +28,7 @@ void main() {
     final msix = File('windows/packaging/msix/make_config.yaml').readAsStringSync();
     final inno = File('windows/packaging/exe/inno_setup.sas').readAsStringSync();
     final packaging = File('scripts/package_windows.ps1').readAsStringSync();
+    final makefile = File('Makefile').readAsStringSync();
 
     expect(exe, contains('display_name: Yundo'));
     expect(exe, contains('publisher_url: https://github.com/yundoapp/nimbus-client'));
@@ -36,6 +37,8 @@ void main() {
     expect(msix, contains('protocol_activation: yundo'));
     expect(inno, contains('ArchitecturesAllowed=x64compatible'));
     expect(inno, contains('ArchitecturesInstallIn64BitMode=x64compatible'));
+    expect(makefile, contains('NIMBUS_API_BASE_URL?=https://api.yundo.app/api/v1'));
+    expect(makefile, contains(r'--build-dart-define=NIMBUS_API_BASE_URL=$(NIMBUS_API_BASE_URL)'));
     expect(packaging, contains('Yundo-Windows-Portable-x64.zip'));
   });
 
@@ -46,6 +49,8 @@ void main() {
     expect(ci, contains('ci:windows-acceptance'));
     expect(build, contains('windows-acceptance-artifact'));
     expect(build, contains('Package Windows acceptance installer'));
+    expect(build, contains('--dart-define=NIMBUS_API_BASE_URL=https://api.yundo.app/api/v1'));
+    expect(build, contains('--build-dart-define=NIMBUS_API_BASE_URL=https://api.yundo.app/api/v1'));
     expect(build, contains('actions/upload-artifact@v6'));
     expect(build, contains('retention-days: 3'));
   });
