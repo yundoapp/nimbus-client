@@ -18,7 +18,11 @@ namespace
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 
-  constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
+#ifdef _DEBUG
+  constexpr const wchar_t kWindowClassName[] = L"YUNDO_DEV_FLUTTER_RUNNER_WIN32_WINDOW";
+#else
+  constexpr const wchar_t kWindowClassName[] = L"YUNDO_FLUTTER_RUNNER_WIN32_WINDOW";
+#endif
 
   /// Registry key for app theme preference.
   ///
@@ -179,8 +183,10 @@ bool Win32Window::Show()
 
 bool Win32Window::SendAppLinkToInstance(const std::wstring &title)
 {
-  // Find our exact window
-  HWND hwnd = ::FindWindow(kWindowClassName, title.c_str());
+  // The localized title can change after Flutter starts, so identify the
+  // matching Debug or Release window by its isolated class instead.
+  static_cast<void>(title);
+  HWND hwnd = ::FindWindow(kWindowClassName, nullptr);
 
   if (hwnd)
   {

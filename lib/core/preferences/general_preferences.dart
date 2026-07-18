@@ -83,6 +83,11 @@ abstract class Preferences {
 
   static final silentStart = PreferencesNotifier.create<bool, bool>("silent_start", false);
 
+  static final nimbusWindowsAutoStartInitialized = PreferencesNotifier.create<bool, bool>(
+    "nimbus_windows_auto_start_initialized",
+    false,
+  );
+
   static final nimbusAutoConnect = PreferencesNotifier.create<bool, bool>("nimbus_auto_connect", true);
 
   static final nimbusProxyMode = PreferencesNotifier.create<NimbusProxyMode, String>(
@@ -122,7 +127,7 @@ abstract class Preferences {
 
   static final actionAtClose = PreferencesNotifier.create<ActionsAtClosing, String>(
     "action_at_close",
-    ActionsAtClosing.ask,
+    ActionsAtClosing.defaultForPlatform(isWindows: PlatformUtils.isWindows),
     mapFrom: ActionsAtClosing.values.byName,
     mapTo: (value) => value.name,
   );

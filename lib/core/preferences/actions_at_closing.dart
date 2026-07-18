@@ -5,6 +5,8 @@ enum ActionsAtClosing {
   hide,
   exit;
 
+  static ActionsAtClosing defaultForPlatform({required bool isWindows}) => isWindows ? hide : ask;
+
   String present(TranslationsEn t) => switch (this) {
     ask => t.dialogs.windowClosing.askEachTime,
     hide => t.common.hide,

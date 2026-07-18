@@ -11,6 +11,7 @@ import 'package:hiddify/gen/hiddify_core_generated_bindings.dart';
 import 'package:hiddify/hiddifycore/core_interface/core_interface.dart';
 import 'package:hiddify/hiddifycore/core_interface/macos_privileged_helper.dart';
 import 'package:hiddify/hiddifycore/core_interface/macos_tunnel_config.dart';
+import 'package:hiddify/hiddifycore/core_interface/windows_tunnel_service.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore_service.pbgrpc.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hello/hello.pb.dart';
@@ -29,6 +30,7 @@ typedef StopFuncDart = Pointer<Utf8> Function();
 class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
   static final HiddifyCoreNativeLibrary _box = _gen();
   static const _privilegedHelper = MacOSPrivilegedHelper();
+  static final _windowsTunnelService = WindowsTunnelService();
 
   Directories? _directories;
   String? _preparedSourcePath;
@@ -135,13 +137,15 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
 
   @override
   Future<CoreStatus> setupBackground(String path, String name) async {
-    if (!Platform.isMacOS) return const CoreStatus.started();
-    return _prepareMacOSTunnel(path);
+    if (!Platform.isMacOS && !Platform.isWindows) return const CoreStatus.started();
+    return _prepareDesktopTunnel(path);
   }
 
   @override
   String backgroundConfigPath(String originalPath) {
-    if (Platform.isMacOS && _preparedSourcePath == originalPath && _preparedConfigPath != null) {
+    if ((Platform.isMacOS || Platform.isWindows) &&
+        _preparedSourcePath == originalPath &&
+        _preparedConfigPath != null) {
       return _preparedConfigPath!;
     }
     return originalPath;
@@ -163,11 +167,11 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
 
   @override
   Future<CoreStatus> prepareRestart(String path, String name) async {
-    if (!Platform.isMacOS) return const CoreStatus.started();
-    return _prepareMacOSTunnel(path);
+    if (!Platform.isMacOS && !Platform.isWindows) return const CoreStatus.started();
+    return _prepareDesktopTunnel(path);
   }
 
-  Future<CoreStatus> _prepareMacOSTunnel(String path) async {
+  Future<CoreStatus> _prepareDesktopTunnel(String path) async {
     final directories = _directories;
     if (directories == null) {
       return const CoreStatus.stopped(alert: CoreAlert.startService, message: 'core directories are not ready');
@@ -193,14 +197,21 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
 
   @override
   Future<CoreStatus> activateTunnel() async {
-    if (!Platform.isMacOS) return const CoreStatus.started();
+    if (!Platform.isMacOS && !Platform.isWindows) return const CoreStatus.started();
     final config = _tunnelConfig;
     if (config == null) {
       return const CoreStatus.stopped(alert: CoreAlert.startService, message: 'tunnel config is not ready');
     }
     try {
-      await _privilegedHelper.startTunnel(config);
+      if (Platform.isWindows) {
+        await _windowsTunnelService.start(config);
+      } else {
+        await _privilegedHelper.startTunnel(config);
+      }
       return const CoreStatus.started();
+    } on WindowsTunnelServicePermissionException catch (error) {
+      loggy.warning('Windows acceleration service is not available: $error');
+      return CoreStatus.stopped(alert: CoreAlert.requestSystemPrivilege, message: error.message);
     } on PlatformException catch (error) {
       loggy.warning('macOS privileged helper is not available: ${error.code}');
       return CoreStatus.stopped(alert: CoreAlert.requestSystemPrivilege, message: error.code);
@@ -216,8 +227,11 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
 
   @override
   Future<bool> stop() async {
-    if (!Platform.isMacOS) return false;
+    if (!Platform.isMacOS && !Platform.isWindows) return false;
     try {
+      if (Platform.isWindows) {
+        return await _windowsTunnelService.stop();
+      }
       await _privilegedHelper.stopTunnel();
       return true;
     } catch (error) {
@@ -227,5 +241,11 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
       await discardPreparedConfig();
       _tunnelConfig = null;
     }
+  }
+
+  @override
+  Future<bool> resetTunnel() async {
+    if (!Platform.isWindows) return false;
+    return _windowsTunnelService.reset();
   }
 }

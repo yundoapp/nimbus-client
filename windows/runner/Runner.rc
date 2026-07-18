@@ -72,6 +72,16 @@ IDI_APP_ICON            ICON                    "resources\\app_icon.ico"
 #define VERSION_AS_STRING "1.0.0"
 #endif
 
+#ifdef _DEBUG
+#define YUNDO_FILE_DESCRIPTION "Yundo Dev"
+#define YUNDO_INTERNAL_NAME "yundo_dev"
+#define YUNDO_PRODUCT_NAME "Yundo Dev"
+#else
+#define YUNDO_FILE_DESCRIPTION "Yundo"
+#define YUNDO_INTERNAL_NAME "yundo"
+#define YUNDO_PRODUCT_NAME "Yundo"
+#endif
+
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION VERSION_AS_NUMBER
  PRODUCTVERSION VERSION_AS_NUMBER
@@ -89,13 +99,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "Hiddify" "\0"
-            VALUE "FileDescription", "Hiddify" "\0"
+            VALUE "CompanyName", "Yundo" "\0"
+            VALUE "FileDescription", YUNDO_FILE_DESCRIPTION "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "hiddify" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2023 Hiddify.com. All rights reserved." "\0"
-            VALUE "OriginalFilename", "Hiddify.exe" "\0"
-            VALUE "ProductName", "hiddify" "\0"
+            VALUE "InternalName", YUNDO_INTERNAL_NAME "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Yundo contributors." "\0"
+            VALUE "OriginalFilename", "Yundo.exe" "\0"
+            VALUE "ProductName", YUNDO_PRODUCT_NAME "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

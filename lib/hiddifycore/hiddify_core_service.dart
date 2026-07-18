@@ -297,8 +297,7 @@ class HiddifyCoreService with InfraLogger {
 
   TaskEither<String, Unit> resetTunnel() {
     return TaskEither(() async {
-      // only available on iOS (and macOS later)
-      if (!PlatformUtils.isIOS) {
+      if (!PlatformUtils.isIOS && !PlatformUtils.isWindows) {
         throw UnimplementedError("reset tunnel function unavailable on platform");
       }
 
