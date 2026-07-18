@@ -34,14 +34,16 @@ void main() {
     final iconImageCount = icon[4] | (icon[5] << 8);
 
     expect(exe, contains('display_name: Yundo'));
-    expect(exe, contains('  - zh'));
+    expect(exe, isNot(contains('  - zh')));
     expect(exe, contains('publisher_url: https://github.com/yundoapp/nimbus-client'));
     expect(msix, contains('identity_name: Yundo.Yundo'));
     expect(msix, contains('msix_version: 1.0.0.10002'));
     expect(msix, contains('protocol_activation: yundo'));
-    expect(inno, contains('AppName={cm:YundoAppName}'));
-    expect(inno, contains('chinesesimplified.YundoAppName=云渡'));
-    expect(inno, contains(r'Name: "{autodesktop}\\{cm:YundoAppName}"'));
+    expect(inno, contains('AppName={code:YundoAppName}'));
+    expect(inno, contains('LanguageId := GetUILanguage'));
+    expect(inno, contains("Result := '云渡'"));
+    expect(inno, contains("Result := '雲渡'"));
+    expect(inno, contains(r'Name: "{autodesktop}\\{code:YundoAppName}"'));
     expect(inno, contains(r'Name: "{autodesktop}\\Yundo.lnk"'));
     expect(inno, contains(r'Name: "{autodesktop}\\云渡.lnk"'));
     expect(inno, contains('ArchitecturesAllowed=x64compatible'));
