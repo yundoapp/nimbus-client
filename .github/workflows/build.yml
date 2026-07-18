@@ -85,6 +85,7 @@ jobs:
 
 
   build:
+    if: ${{ inputs.upload-artifact }}
     needs: test
     permissions: write-all
     continue-on-error: true
