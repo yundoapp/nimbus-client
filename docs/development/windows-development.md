@@ -43,7 +43,7 @@ powershell -ExecutionPolicy Bypass -File scripts/verify_windows_bundle.ps1 -Conf
 
 1. 给目标 PR 添加 `ci:windows-acceptance` label。
 2. CI 使用 `lib/main_prod.dart` 构建并校验 Release `Yundo` bundle。
-3. CI 生成 `Yundo-Windows-Setup-x64-<version>-build<build>.exe` 及 SHA-256 校验文件。
+3. CI 生成 `Yundo-Windows-Setup-x64-<version>-build<build>.exe` 及 SHA-256 校验文件；安装器允许在 Windows 11 ARM64 的 x64 模拟环境安装，应用 bundle 仍为 x64 架构。
 4. `windows-acceptance` artifact 仅保留 3 天，不创建或更新 GitHub Release。
 
 该入口只用于当前项目内部验收；安装程序尚未经过 Developer ID 等效的 Windows 代码签名，Windows 可能显示未知发布者提示。公开发布、Microsoft Store、正式签名和面向真实用户分发仍需另行确认。
