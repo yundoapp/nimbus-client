@@ -27,6 +27,9 @@ void main() {
     final exe = File('windows/packaging/exe/make_config.yaml').readAsStringSync();
     final msix = File('windows/packaging/msix/make_config.yaml').readAsStringSync();
     final inno = File('windows/packaging/exe/inno_setup.sas').readAsStringSync();
+    final installerLanguageSetup = File('scripts/prepare_windows_installer_languages.ps1').readAsStringSync();
+    final farsiInstallerMessages = File('windows/packaging/exe/languages/Farsi.isl').readAsStringSync();
+    final indonesianInstallerMessages = File('windows/packaging/exe/languages/Indonesian.isl').readAsStringSync();
     final packaging = File('scripts/package_windows.ps1').readAsStringSync();
     final makefile = File('Makefile').readAsStringSync();
 
@@ -34,10 +37,14 @@ void main() {
     final iconImageCount = icon[4] | (icon[5] << 8);
 
     expect(exe, contains('display_name: Yundo'));
-    expect(exe, isNot(contains('  - zh')));
+    const installerLocales = ['en', 'ar', 'es', 'fa', 'fr', 'id', 'pt-BR', 'ru', 'tr', 'zh-CN', 'zh-TW'];
+    for (final locale in installerLocales) {
+      expect(exe, contains('  - $locale'));
+    }
+    expect(RegExp('^  - ', multiLine: true).allMatches(exe), hasLength(installerLocales.length));
     expect(exe, contains('publisher_url: https://github.com/yundoapp/nimbus-client'));
     expect(msix, contains('identity_name: Yundo.Yundo'));
-    expect(msix, contains('msix_version: 1.0.0.10004'));
+    expect(msix, contains('msix_version: 1.0.0.10005'));
     expect(msix, contains('protocol_activation: yundo'));
     expect(inno, contains('AppName={code:YundoAppName}'));
     expect(inno, contains('LanguageId := GetUILanguage'));
@@ -57,6 +64,21 @@ void main() {
     expect(inno, contains('ArchitecturesAllowed=x64os'));
     expect(inno, contains('ArchitecturesInstallIn64BitMode=x64os'));
     expect(inno, isNot(contains('x64compatible')));
+    expect(inno, contains('ShowLanguageDialog=auto'));
+    expect(inno, contains('Name: "arabic"'));
+    expect(inno, contains('Name: "farsi"'));
+    expect(inno, contains('Name: "indonesian"'));
+    expect(inno, contains('Name: "brazilianportuguese"'));
+    expect(inno, contains('Name: "chinesesimplified"'));
+    expect(inno, contains('Name: "chinesetraditional"'));
+    expect(installerLanguageSetup, contains('Prepared 11 Windows installer languages'));
+    expect(installerLanguageSetup, contains('@("Farsi.isl", "Indonesian.isl")'));
+    expect(installerLanguageSetup, contains('c495623a97376d524f298b1b160e8fd612375c62'));
+    expect(installerLanguageSetup, contains('Invoke-WebRequest -UseBasicParsing'));
+    expect(installerLanguageSetup, contains('Downloaded Inno Setup language file failed SHA256 verification'));
+    expect(farsiInstallerMessages, contains('LanguageID=\$0429'));
+    expect(farsiInstallerMessages, contains('RightToLeft=yes'));
+    expect(indonesianInstallerMessages, contains('LanguageID=\$0421'));
     expect(icon.take(4), orderedEquals([0, 0, 1, 0]));
     expect(iconImageCount, greaterThan(1));
     expect(makefile, contains('NIMBUS_API_BASE_URL?=https://api.yundo.app/api/v1'));
@@ -71,6 +93,7 @@ void main() {
     expect(ci, contains('ci:windows-acceptance'));
     expect(build, contains('windows-acceptance-artifact'));
     expect(build, contains('Package Windows acceptance installer'));
+    expect(build, contains('./scripts/prepare_windows_installer_languages.ps1'));
     expect(build, contains('--dart-define=NIMBUS_API_BASE_URL=https://api.yundo.app/api/v1'));
     expect(build, contains('--build-dart-define=NIMBUS_API_BASE_URL=https://api.yundo.app/api/v1'));
     expect(build, contains('actions/upload-artifact@v6'));

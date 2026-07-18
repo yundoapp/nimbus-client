@@ -6,11 +6,15 @@ create_desktop_icon: true
 install_dir_name: "{autopf64}\\Yundo"
 setup_icon_file: windows\runner\resources\app_icon.ico
 locales:
-  - ar
   - en
+  - ar
   - es
+  - fa
   - fr
-  - pt
+  - id
+  - pt-BR
   - ru
   - tr
+  - zh-CN
+  - zh-TW
 script_template: inno_setup.sas
