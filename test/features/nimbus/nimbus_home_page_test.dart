@@ -44,6 +44,14 @@ void main() {
     expect(find.text('tester'), findsOneWidget);
     expect(find.ancestor(of: find.text('tester'), matching: find.byType(SingleChildScrollView)), findsOneWidget);
     expect(find.text(_connectionError), findsOneWidget);
+    final banner = tester.widget<Material>(find.byKey(const Key('home-connection-notice')));
+    final colors = Theme.of(tester.element(find.byKey(const Key('home-connection-notice')))).colorScheme;
+    final message = tester.widget<Text>(find.text(_connectionError));
+    final closeButton = tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.close_rounded));
+    expect(banner.color, colors.errorContainer.withValues(alpha: 0.64));
+    expect(message.style?.color, colors.error);
+    expect(message.style?.fontWeight, FontWeight.w500);
+    expect(closeButton.constraints, const BoxConstraints.tightFor(width: 44, height: 44));
     expect(find.byType(AlertDialog), findsNothing);
     expect(tester.takeException(), isNull);
   });
