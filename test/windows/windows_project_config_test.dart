@@ -37,13 +37,21 @@ void main() {
     expect(exe, isNot(contains('  - zh')));
     expect(exe, contains('publisher_url: https://github.com/yundoapp/nimbus-client'));
     expect(msix, contains('identity_name: Yundo.Yundo'));
-    expect(msix, contains('msix_version: 1.0.0.10002'));
+    expect(msix, contains('msix_version: 1.0.0.10003'));
     expect(msix, contains('protocol_activation: yundo'));
     expect(inno, contains('AppName={code:YundoAppName}'));
     expect(inno, contains('LanguageId := GetUILanguage'));
     expect(inno, contains("Result := '云渡'"));
     expect(inno, contains("Result := '雲渡'"));
     expect(inno, contains(r'Name: "{autodesktop}\\{code:YundoAppName}"'));
+    expect(inno, isNot(contains('Tasks: desktopicon')));
+    expect(inno, isNot(contains('Name: "desktopicon"')));
+    expect(
+      inno,
+      contains(
+        r'Name: "{autodesktop}\\{code:YundoAppName}"; Filename: "{app}\\{{EXECUTABLE_NAME}}"; IconFilename: "{app}\\{{EXECUTABLE_NAME}}"',
+      ),
+    );
     expect(inno, contains(r'Name: "{autodesktop}\\Yundo.lnk"'));
     expect(inno, contains(r'Name: "{autodesktop}\\云渡.lnk"'));
     expect(inno, contains('ArchitecturesAllowed=x64compatible'));

@@ -1,7 +1,7 @@
 display_name: Yundo
 publisher_display_name: Yundo
 identity_name: Yundo.Yundo
-msix_version: 1.0.0.10002
+msix_version: 1.0.0.10003
 logo_path: windows\runner\resources\app_icon.ico
 capabilities: internetClient, internetClientServer, privateNetworkClientServer
 languages: ar, en-us, es-es, fa-ir, fr-fr, id-id, pt-br, ru-ru, tr-tr, zh-cn, zh-tw
