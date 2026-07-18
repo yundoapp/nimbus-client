@@ -89,6 +89,7 @@ jobs:
         if: ${{ inputs.windows-acceptance-artifact }}
         shell: pwsh
         run: |
+          ./scripts/prepare_windows_installer_languages.ps1
           fastforge package --platform windows --targets exe --skip-clean --build-target=lib/main_prod.dart --build-dart-define=NIMBUS_API_BASE_URL=https://api.yundo.app/api/v1
           $installer = Get-ChildItem -Path dist -Recurse -Filter "*.exe" |
             Where-Object { $_.Name -match "setup" } |

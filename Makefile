@@ -312,6 +312,7 @@ windows-zip-release:
 	$(GREEN)Successful$(DONE)
 
 windows-exe-release:
+	pwsh -NoProfile -File scripts/prepare_windows_installer_languages.ps1
 	fastforge package \
 	  --platform windows \
 	  --targets exe \
