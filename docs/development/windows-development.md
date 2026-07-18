@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-M4 Windows MVP 已完成不依赖实体 Windows 的身份隔离、共享业务逻辑、加速权限承载、托盘/窗口、启动项、自动加速、测试和 CI 构建。当前进入 Windows 安装验收：先用 Parallels Windows 11 ARM64 虚拟机验证 x64 安装包的安装、身份与启动，再在实体 Windows x64 机器完成虚拟网卡、路由和长期驻留总验收。
+M4 Windows MVP 已完成不依赖实体 Windows 的身份隔离、共享业务逻辑、加速权限承载、托盘/窗口、启动项、自动加速、测试和 CI 构建。Parallels Windows 11 ARM64 已用于早期安装和品牌复验；从 `1.0.0+10004` 起，安装器只允许原生 x64 Windows，最终在实体 Windows x64 机器完成虚拟网卡、路由和长期驻留总验收。
 
 本阶段不授权 GitHub Release、Microsoft Store、正式代码签名或面向用户发布安装包。
 
@@ -43,7 +43,7 @@ powershell -ExecutionPolicy Bypass -File scripts/verify_windows_bundle.ps1 -Conf
 
 1. 给目标 PR 添加 `ci:windows-acceptance` label。
 2. CI 使用 `lib/main_prod.dart` 和生产 API `https://api.yundo.app/api/v1` 构建并校验 Release `Yundo` bundle。
-3. CI 生成 `Yundo-Windows-Setup-x64-<version>-build<build>.exe` 及 SHA-256 校验文件；安装器允许在 Windows 11 ARM64 的 x64 模拟环境安装，应用 bundle 仍为 x64 架构。
+3. CI 生成 `Yundo-Windows-Setup-x64-<version>-build<build>.exe` 及 SHA-256 校验文件；安装器仅允许原生 x64 Windows，在 ARM64 或 x86 Windows 上会在复制文件前提示不兼容并退出。
 4. `windows-acceptance` artifact 仅保留 3 天，不创建或更新 GitHub Release。
 
 该入口只用于当前项目内部验收；安装程序尚未经过 Developer ID 等效的 Windows 代码签名，Windows 可能显示未知发布者提示。公开发布、Microsoft Store、正式签名和面向真实用户分发仍需另行确认。
@@ -109,3 +109,12 @@ CI 构建不能替代以下真机验收：UAC、虚拟网卡和路由、Windows 
 - 实际桌面、窗口标题、登录页和任务栏均已目视确认显示 `云渡` 与新版蓝色 Y 图标，进程版本为 `1.0.0+10003` 且保持响应。
 
 本次复验仍未触发 UAC、虚拟网卡、路由或真实加速；实体 Windows x64 的网络链路和长期驻留总验收边界不变。
+
+## 2026-07-18 原生 x64 安装限制
+
+从正式版 `Yundo 1.0.0+10004` 起，Windows EXE 安装器使用 Inno Setup `x64os` 作为允许架构和 64 位安装模式条件，只允许原生 x64 Windows：
+
+- ARM64 Windows 即使能够模拟运行 x64 用户态程序，也不能继续安装云渡，避免安装完成后才发现虚拟网卡和加速权限链路不可用。
+- x86 Windows 同样不能安装；当前 Windows bundle、权限服务和验收范围均为 x64。
+- 架构判定在复制文件和修改安装目录前完成，不会覆盖 ARM64 机器上已存在的 `1.0.0+10003` 验收安装。
+- ARM64 原生版本只有在 Flutter runner、core、权限服务、虚拟网卡和 CI 构建链路均完成 ARM64 适配后再单独开放。
