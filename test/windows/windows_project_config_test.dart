@@ -37,7 +37,7 @@ void main() {
     expect(exe, isNot(contains('  - zh')));
     expect(exe, contains('publisher_url: https://github.com/yundoapp/nimbus-client'));
     expect(msix, contains('identity_name: Yundo.Yundo'));
-    expect(msix, contains('msix_version: 1.0.0.10003'));
+    expect(msix, contains('msix_version: 1.0.0.10004'));
     expect(msix, contains('protocol_activation: yundo'));
     expect(inno, contains('AppName={code:YundoAppName}'));
     expect(inno, contains('LanguageId := GetUILanguage'));
@@ -54,8 +54,9 @@ void main() {
     );
     expect(inno, contains(r'Name: "{autodesktop}\\Yundo.lnk"'));
     expect(inno, contains(r'Name: "{autodesktop}\\云渡.lnk"'));
-    expect(inno, contains('ArchitecturesAllowed=x64compatible'));
-    expect(inno, contains('ArchitecturesInstallIn64BitMode=x64compatible'));
+    expect(inno, contains('ArchitecturesAllowed=x64os'));
+    expect(inno, contains('ArchitecturesInstallIn64BitMode=x64os'));
+    expect(inno, isNot(contains('x64compatible')));
     expect(icon.take(4), orderedEquals([0, 0, 1, 0]));
     expect(iconImageCount, greaterThan(1));
     expect(makefile, contains('NIMBUS_API_BASE_URL?=https://api.yundo.app/api/v1'));
