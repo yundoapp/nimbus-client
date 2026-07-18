@@ -1,6 +1,6 @@
 # macOS 开发版构建基线
 
-最后更新：`2026-07-17`
+最后更新：`2026-07-18`
 
 ## 工具链
 
@@ -61,7 +61,7 @@ macOS TUN helper 的进程边界、签名要求和授权流程见 [macOS TUN 最
 
 Android Debug 使用 `app.yundo.client.dev`，并通过独立的 Debug 应用名和 Application ID 与正式版隔离。本阶段只校验身份配置，不开始 Android 功能开发。
 
-## 日常开发构建、安装与启动
+## 日常双版本构建、安装与开发版启动
 
 只要修改会影响运行中 App 的源码、多语言、资源、依赖或 macOS 原生配置，在完成必要生成与测试后执行：
 
@@ -75,13 +75,15 @@ scripts/build_install_run_macos_dev.sh
 FLUTTER_BIN=/path/to/flutter scripts/build_install_run_macos_dev.sh
 ```
 
-脚本会使用本地 API 基线 `http://127.0.0.1:4000/api/v1`，也可通过 `NIMBUS_API_BASE_URL` 显式覆盖。它会依次完成：
+脚本会让开发版使用本地 API 基线 `http://127.0.0.1:4000/api/v1`，可通过 `NIMBUS_API_BASE_URL` 显式覆盖；正式版本机验收固定使用生产入口和生产 API `https://api.yundo.app/api/v1`，如需验证其他生产候选地址只能通过独立的 `NIMBUS_PROD_API_BASE_URL` 覆盖。它会依次完成：
 
 1. 构建 macOS Debug 版 `Yundo Dev`。
-2. 在 helper 与登录启动组件写入包内后，优先使用钥匙串中的 Apple Development 身份从内向外重签，同时保留主 App 和登录项原有 entitlement，再执行严格的完整签名和特权辅助进程校验。可通过 `MACOS_CODESIGN_IDENTITY` 指定签名身份；本机没有开发签名身份时才回退到 ad hoc 签名，并可能在 helper 更新后要求重新授权。
-3. 退出正在运行的已安装开发版，完整替换 `/Applications/Yundo Dev.app`，避免已删除资源因目录合并而残留。
-4. 比对构建产物与已安装可执行文件的 SHA-256，并再次校验已安装 App 的完整签名和 helper。
-5. 启动 `/Applications/Yundo Dev.app` 并确认进程存活。
+2. 使用 `lib/main_prod.dart` 构建 macOS Release 版 `Yundo`，但不进入 Developer ID、公证或 DMG 流程。
+3. 在两套 App 的 helper 与登录启动组件写入包内后，优先使用钥匙串中的 Apple Development 身份从内向外重签，同时保留主 App 和登录项原有 entitlement，再执行严格的完整签名和特权辅助进程校验。可通过 `MACOS_CODESIGN_IDENTITY` 指定签名身份；本机没有开发签名身份时才回退到 ad hoc 签名，并可能在 helper 更新后要求重新授权。
+4. 若 `/Applications/Yundo.app` 正在运行，先安全退出；将原安装备份到系统临时目录后完整替换正式版，比对 SHA-256 并复验签名和 helper。任一步失败时恢复原安装，成功后删除临时备份。正式版安装完成后保持未运行。
+5. 退出正在运行的已安装开发版，完整替换 `/Applications/Yundo Dev.app`，避免已删除资源因目录合并而残留。
+6. 比对开发版构建产物与已安装可执行文件的 SHA-256，并再次校验已安装 App 的完整签名和 helper。
+7. 仅启动 `/Applications/Yundo Dev.app` 并确认进程存活。
 
 如果 macOS 的 Apple Event 退出请求未及时返回，脚本会在 5 秒后结束该请求，再使用进程级退出兜底，避免自动验收流程无限等待。
 
@@ -89,7 +91,7 @@ Debug 版登录会话保存在开发版独立 Bundle ID 的 `UserDefaults` 中�
 
 正式构建写入 Keychain 时优先更新现有会话项，仅在项目不存在时新增，避免通过“先删除再新增”制造短暂丢失或额外授权失败。服务端已完成注册但本地安全存储异常时，客户端必须保持当前内存登录态并提示下次启动需要重新登录，不得把已经创建的账号误报为注册失败；诊断日志只记录平台错误码，不记录令牌或会话内容。
 
-任一步失败时脚本立即退出，不应宣布客户端任务已完成。这是本机 Debug 验收，不会生成内测 ZIP、发布安装包或触发 GitHub Actions release。
+任一步失败时脚本立即退出，不应宣布客户端任务已完成。这是本机双版本验收，不会生成内测 ZIP、DMG、发布安装包或触发 GitHub Actions release；正式版在这里采用的本机签名不替代对外分发所需的 Developer ID 签名、公证和 Gatekeeper 验收。
 
 ## 路由决策诊断
 
