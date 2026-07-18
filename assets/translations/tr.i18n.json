@@ -878,7 +878,7 @@
       "switchSaved": "Erişim yöntemi değiştirildi.",
       "limitReached": "Sınıra ulaşıldı",
       "add": "Ekle",
-      "empty": "Henüz erişim kuralı eklenmedi",
+      "empty": "Henüz hiçbir web sitesi eklenmedi",
       "deleteTooltip": "Sil",
       "deleteTitle": "Erişim kuralını sil",
       "deleteConfirm": "\"${value}\" silinsin mi?"

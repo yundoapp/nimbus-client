@@ -16,6 +16,36 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  testWidgets('空列表使用网站文案', (tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues({});
+    final sharedPreferences = await SharedPreferences.getInstance();
+    final repository = _FakeNimbusAuthRepository(sharedPreferences, initialItems: const []);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          translationsProvider.overrideWith((ref) => AppLocale.zhCn.build()),
+          nimbusAuthRepositoryProvider.overrideWithValue(repository),
+          nimbusAuthControllerProvider.overrideWith(_FakeNimbusAuthController.new),
+          connectionNotifierProvider.overrideWith(_FakeConnectionNotifier.new),
+          nimbusConnectionControllerProvider.overrideWith(() => _FakeNimbusConnectionController(Future<void>.value())),
+        ],
+        child: const MaterialApp(home: _TestPage()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('打开自定义网站'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('暂未添加任何网站'), findsOneWidget);
+    expect(find.text('暂未添加访问规则'), findsNothing);
+  });
+
   testWidgets('新增网站完成应用前保持原列表和输入内容', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final sharedPreferences = await SharedPreferences.getInstance();
@@ -116,8 +146,19 @@ class _FakeNimbusConnectionController extends NimbusConnectionController {
 }
 
 class _FakeNimbusAuthRepository extends NimbusAuthRepository {
-  _FakeNimbusAuthRepository(SharedPreferences preferences)
-    : super(
+  _FakeNimbusAuthRepository(SharedPreferences preferences, {List<NimbusRoutePreference>? initialItems})
+    : _items =
+          initialItems ??
+          [
+            NimbusRoutePreference(
+              id: 'existing-id',
+              type: 'direct',
+              targetType: 'domain',
+              value: 'existing.test',
+              createdAt: DateTime(2026, 7, 16, 19),
+            ),
+          ],
+      super(
         preferences: preferences,
         appInfo: const AppInfoEntity(
           name: 'Yundo',
@@ -130,15 +171,7 @@ class _FakeNimbusAuthRepository extends NimbusAuthRepository {
         ),
       );
 
-  final List<NimbusRoutePreference> _items = [
-    NimbusRoutePreference(
-      id: 'existing-id',
-      type: 'direct',
-      targetType: 'domain',
-      value: 'existing.test',
-      createdAt: DateTime(2026, 7, 16, 19),
-    ),
-  ];
+  final List<NimbusRoutePreference> _items;
 
   @override
   Future<NimbusRoutePreferencesList> fetchRoutePreferences(NimbusAuthSession session) async {

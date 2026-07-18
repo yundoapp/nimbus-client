@@ -86,7 +86,9 @@ class NimbusAuthRepository {
 
   Future<void> saveSession(NimbusAuthSession session) async {
     await _sessionStore.write(session.encode());
-    await _preferences.remove(_sessionKey);
+    if (_migrateLegacySession) {
+      await _preferences.remove(_sessionKey);
+    }
   }
 
   Future<void> clearSession() async {

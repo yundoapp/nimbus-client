@@ -878,7 +878,7 @@
       "switchSaved": "访问方式已更改。",
       "limitReached": "已达上限",
       "add": "添加",
-      "empty": "暂未添加访问规则",
+      "empty": "暂未添加任何网站",
       "deleteTooltip": "删除",
       "deleteTitle": "删除访问规则",
       "deleteConfirm": "确定删除“${value}”吗？"

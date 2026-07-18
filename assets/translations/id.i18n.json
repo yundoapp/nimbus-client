@@ -878,7 +878,7 @@
       "switchSaved": "Cara akses telah diubah.",
       "limitReached": "Batas tercapai",
       "add": "Tambah",
-      "empty": "Belum ada aturan akses",
+      "empty": "Belum ada situs yang ditambahkan",
       "deleteTooltip": "Hapus",
       "deleteTitle": "Hapus aturan akses",
       "deleteConfirm": "Hapus \"${value}\"?"

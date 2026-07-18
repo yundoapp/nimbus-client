@@ -878,7 +878,7 @@
       "switchSaved": "Forma de acesso alterada.",
       "limitReached": "Limite atingido",
       "add": "Adicionar",
-      "empty": "Nenhuma regra de acesso adicionada",
+      "empty": "Nenhum site adicionado ainda",
       "deleteTooltip": "Excluir",
       "deleteTitle": "Excluir regra de acesso",
       "deleteConfirm": "Excluir \"${value}\"?"

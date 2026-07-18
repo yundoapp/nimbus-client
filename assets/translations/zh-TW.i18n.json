@@ -878,7 +878,7 @@
       "switchSaved": "存取方式已變更。",
       "limitReached": "已達上限",
       "add": "新增",
-      "empty": "暫未新增存取規則",
+      "empty": "暫未新增任何網站",
       "deleteTooltip": "刪除",
       "deleteTitle": "刪除存取規則",
       "deleteConfirm": "確定刪除「${value}」嗎？"
