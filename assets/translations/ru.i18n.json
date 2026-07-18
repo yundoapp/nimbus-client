@@ -688,7 +688,7 @@
     }
   },
   "connection": {
-    "tapToConnect": "Ускорить",
+    "tapToConnect": "Нажмите, чтобы включить ускорение",
     "connect": "Включить ускорение",
     "connecting": "Включение ускорения...",
     "connected": "Ускорение включено",
@@ -769,7 +769,7 @@
       "locationTitle": "Регион сервера",
       "locationAuto": "Автоматический выбор",
       "locationDetail": "Выбрать страну или регион",
-      "connect": "Ускорить",
+      "connect": "Нажмите, чтобы включить ускорение",
       "updateRequired": "Требуется обновление"
     },
     "activation": {

@@ -684,7 +684,7 @@
     }
   },
   "connection": {
-    "tapToConnect": "加速",
+    "tapToConnect": "點擊開始加速",
     "connect": "開始加速",
     "connecting": "加速中...",
     "connected": "加速已開啟",
@@ -765,7 +765,7 @@
       "locationTitle": "節點地區",
       "locationAuto": "自動選擇",
       "locationDetail": "按國家或地區選擇",
-      "connect": "加速",
+      "connect": "點擊開始加速",
       "updateRequired": "需要更新"
     },
     "activation": {

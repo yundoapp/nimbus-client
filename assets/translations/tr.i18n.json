@@ -684,7 +684,7 @@
     }
   },
   "connection": {
-    "tapToConnect": "Hızlandır",
+    "tapToConnect": "Hızlandırmayı başlatmak için tıklayın",
     "connect": "Hızlandırmayı başlat",
     "connecting": "Hızlandırma başlatılıyor...",
     "connected": "Hızlandırma açık",
@@ -765,7 +765,7 @@
       "locationTitle": "Sunucu bölgesi",
       "locationAuto": "Otomatik seçim",
       "locationDetail": "Ülke veya bölgeye göre seç",
-      "connect": "Hızlandır",
+      "connect": "Hızlandırmayı başlatmak için tıklayın",
       "updateRequired": "Güncelleme gerekli"
     },
     "activation": {

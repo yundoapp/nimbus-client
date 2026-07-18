@@ -684,7 +684,7 @@
     }
   },
   "connection": {
-    "tapToConnect": "شتاب‌دهی",
+    "tapToConnect": "برای شروع شتاب‌دهی کلیک کنید",
     "connect": "شروع شتاب‌دهی",
     "connecting": "در حال شروع شتاب‌دهی...",
     "connected": "شتاب‌دهی فعال است",
@@ -765,7 +765,7 @@
       "locationTitle": "منطقه سرور",
       "locationAuto": "انتخاب خودکار",
       "locationDetail": "انتخاب بر اساس کشور یا منطقه",
-      "connect": "شتاب‌دهی",
+      "connect": "برای شروع شتاب‌دهی کلیک کنید",
       "updateRequired": "به‌روزرسانی لازم است"
     },
     "activation": {
