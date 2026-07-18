@@ -201,38 +201,37 @@ class _ConnectionNoticeBanner extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     return Material(
-      color: colors.tertiaryContainer.withValues(alpha: theme.brightness == Brightness.dark ? 0.42 : 0.72),
+      key: const Key('home-connection-notice'),
+      color: colors.errorContainer.withValues(alpha: theme.brightness == Brightness.dark ? 0.48 : 0.64),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.62)),
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: colors.error.withValues(alpha: theme.brightness == Brightness.dark ? 0.32 : 0.18)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 6, 8),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.info_outline_rounded, size: 19, color: colors.onTertiaryContainer),
-            const Gap(9),
+            Icon(Icons.error_outline_rounded, size: 21, color: colors.error),
+            const Gap(12),
             Expanded(
               child: Text(
                 message,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.onTertiaryContainer,
-                  height: 1.35,
-                  fontWeight: FontWeight.w600,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.error,
+                  height: 1.4,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
             IconButton(
               onPressed: onDismiss,
-              icon: const Icon(Icons.close_rounded, size: 17),
+              icon: Icon(Icons.close_rounded, size: 19, color: colors.error),
               tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-              visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
             ),
           ],
         ),
