@@ -80,3 +80,17 @@ CI 构建不能替代以下真机验收：UAC、虚拟网卡和路由、Windows 
 - 系统托盘、关闭窗口后台运行、开机启动、静默启动、自动加速和退出断开。
 - 速度、流量、套餐、心跳、服务端强制断开和问题上报。
 - Windows 100%、125%、150% 缩放，浅色/深色和主要语言。
+
+## 2026-07-18 Parallels 初验
+
+已在 Windows 11 Pro ARM64 Parallels 虚拟机完成正式版 `Yundo 1.0.0+10001` 的安装前初验：
+
+- PR #23 的 CI run `29641135139` 通过 124 项测试、Debug/Release 双 bundle 校验、EXE 打包和短期 artifact 上传。
+- 安装器改用 Inno Setup `x64compatible`，在 Windows 11 ARM64 通过 x64 模拟完成 64 位安装模式安装；实体 Windows x64 仍是主要交付目标。
+- 正式构建和 Windows 打包入口显式编译生产 API `https://api.yundo.app/api/v1`，避免回退到开发默认地址 `http://localhost:4000/api/v1`。
+- 最终安装包 SHA-256 为 `59e19ba5f1215a3c0be4379d3ea9580aa0ca8eee76e3287adf8a854a7491924e`；虚拟机复制后校验一致。
+- 安装日志确认安装成功且不要求重启；程序文件身份为 `Yundo 1.0.0+10001`，未签名状态符合内部验收边界，卸载入口和桌面快捷方式已生成。
+- 安装后的 `app.so` 已检出生产 API 地址；虚拟机访问生产 health 返回 HTTP 200，数据库依赖正常。
+- `Yundo.exe` 在当前用户 Console 会话启动、进程响应正常，窗口标题与登录页显示 `Yundo · 云渡`。
+
+本次未执行登录后的 UAC、虚拟网卡、路由和真实加速；这些操作会改变 Windows 网络状态，且仍需在实体 Windows x64 机器按平台 Issue #81 完成总验收。
