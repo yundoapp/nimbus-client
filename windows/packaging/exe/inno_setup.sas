@@ -1,7 +1,8 @@
 [Setup]
 AppId={{APP_ID}}
 AppVersion={{APP_VERSION}}
-AppName={{DISPLAY_NAME}}
+AppName={code:YundoAppName}
+UninstallDisplayName={code:YundoAppName}
 AppPublisher={{PUBLISHER_NAME}}
 AppPublisherURL={{PUBLISHER_URL}}
 AppSupportURL={{PUBLISHER_URL}}
@@ -49,18 +50,40 @@ CloseApplications=force
 {% endfor %}
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: {% if CREATE_DESKTOP_ICON != true %}unchecked{% else %}checkedonce{% endif %}
-Name: "launchAtStartup"; Description: "{cm:AutoStartProgram,{{DISPLAY_NAME}}}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: {% if LAUNCH_AT_STARTUP != true %}unchecked{% else %}checkedonce{% endif %}
+Name: "launchAtStartup"; Description: "{cm:AutoStartProgram,Yundo}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: {% if LAUNCH_AT_STARTUP != true %}unchecked{% else %}checkedonce{% endif %}
 [Files]
 Source: "{{SOURCE_DIR}}\\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
-Name: "{autoprograms}\\{{DISPLAY_NAME}}"; Filename: "{app}\\{{EXECUTABLE_NAME}}"
-Name: "{autodesktop}\\{{DISPLAY_NAME}}"; Filename: "{app}\\{{EXECUTABLE_NAME}}"; Tasks: desktopicon
-Name: "{userstartup}\\{{DISPLAY_NAME}}"; Filename: "{app}\\{{EXECUTABLE_NAME}}"; WorkingDir: "{app}"; Tasks: launchAtStartup
+Name: "{autoprograms}\\{code:YundoAppName}"; Filename: "{app}\\{{EXECUTABLE_NAME}}"
+Name: "{autodesktop}\\{code:YundoAppName}"; Filename: "{app}\\{{EXECUTABLE_NAME}}"; IconFilename: "{app}\\{{EXECUTABLE_NAME}}"
+Name: "{userstartup}\\{code:YundoAppName}"; Filename: "{app}\\{{EXECUTABLE_NAME}}"; WorkingDir: "{app}"; Tasks: launchAtStartup
 [Run]
-Filename: "{app}\\{{EXECUTABLE_NAME}}"; Description: "{cm:LaunchProgram,{{DISPLAY_NAME}}}"; Flags: {% if PRIVILEGES_REQUIRED == 'admin' %}runascurrentuser{% endif %} nowait postinstall skipifsilent
+Filename: "{app}\\{{EXECUTABLE_NAME}}"; Description: "{cm:LaunchProgram,Yundo}"; Flags: {% if PRIVILEGES_REQUIRED == 'admin' %}runascurrentuser{% endif %} nowait postinstall skipifsilent
+
+[InstallDelete]
+Type: files; Name: "{autoprograms}\\Yundo.lnk"
+Type: files; Name: "{autoprograms}\\云渡.lnk"
+Type: files; Name: "{autodesktop}\\Yundo.lnk"
+Type: files; Name: "{autodesktop}\\云渡.lnk"
+Type: files; Name: "{userstartup}\\Yundo.lnk"
+Type: files; Name: "{userstartup}\\云渡.lnk"
+
+[Code]
+function YundoAppName(Param: String): String;
+var
+  LanguageId: Integer;
+begin
+  LanguageId := GetUILanguage;
+  if (LanguageId = $0804) or (LanguageId = $1004) then
+    Result := '云渡'
+  else if (LanguageId = $0404) or (LanguageId = $0C04) or
+    (LanguageId = $1404) then
+    Result := '雲渡'
+  else
+    Result := 'Yundo';
+end;
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{userappdata}\Yundo\Yundo"

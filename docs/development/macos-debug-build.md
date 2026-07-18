@@ -48,14 +48,14 @@ build/macos/Build/Products/Debug/Yundo Dev.app
 产物身份必须为：
 
 - macOS App 包名：`Yundo Dev.app`
-- 简体中文用户可见名称：`Yundo · 云渡开发版`
-- 繁体中文用户可见名称：`Yundo · 雲渡開發版`
+- 简体中文用户可见名称：`云渡开发版`
+- 繁体中文用户可见名称：`雲渡開發版`
 - 其他语言用户可见名称：`Yundo Dev`
 - Bundle ID：`app.yundo.client.dev`
 - 版本：`1.0.0+10000` 或后续递增版本
 - 包内包含独立签名的最小权限 helper 和对应 LaunchDaemon plist
 
-正式版对应的用户可见名称为简体中文 `Yundo · 云渡`、繁体中文 `Yundo · 雲渡`、其他语言 `Yundo`，macOS App 包名为 `Yundo.app`，Bundle ID 为 `app.yundo.client`。登录页、首页、关于页、窗口标题和菜单栏必须统一使用当前环境的用户可见名称。
+正式版对应的用户可见名称为简体中文 `云渡`、繁体中文 `雲渡`、其他语言 `Yundo`，macOS App 包名为 `Yundo.app`，Bundle ID 为 `app.yundo.client`。登录页、首页、关于页、窗口标题和菜单栏必须统一使用当前环境的用户可见名称。
 
 macOS TUN helper 的进程边界、签名要求和授权流程见 [macOS TUN 最小权限辅助进程](./macos-privileged-helper.md)。只读 helper 校验通过不等于 ad hoc Debug 包可以完成真实系统注册。
 

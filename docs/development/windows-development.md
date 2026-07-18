@@ -10,12 +10,12 @@ M4 Windows MVP 已完成不依赖实体 Windows 的身份隔离、共享业务�
 
 ## 身份边界
 
-| 构建 | 用户可见名称 | 窗口标题 | 本地数据 ProductName | 单实例身份 | 启动项包名 |
+| 构建 | 简体中文用户可见名称 | 其他语言用户可见名称 | 本地数据 ProductName | 单实例身份 | 启动项包名 |
 | --- | --- | --- | --- | --- | --- |
-| Debug | `Yundo Dev`，中文界面运行后显示云渡开发版名称 | `Yundo Dev` 启动后按 App 语言更新 | `Yundo Dev` | `YundoDevMutex` 与独立窗口类 | `Yundo.YundoDev` |
-| Release | `Yundo`，中文界面运行后显示云渡正式版名称 | `Yundo` 启动后按 App 语言更新 | `Yundo` | `YundoMutex` 与独立窗口类 | `Yundo.Yundo` |
+| Debug | `云渡开发版` | `Yundo Dev`，繁体中文为 `雲渡開發版` | `Yundo Dev` | `YundoDevMutex` 与独立窗口类 | `Yundo.YundoDev` |
+| Release | `云渡` | `Yundo`，繁体中文为 `雲渡` | `Yundo` | `YundoMutex` 与独立窗口类 | `Yundo.Yundo` |
 
-Windows 的 `path_provider` 使用可执行文件版本资源中的 CompanyName 与 ProductName 生成应用支持目录，因此 Debug 与 Release 不共享登录态、数据库、缓存和偏好。两种构建都使用 `Yundo.exe` 文件名，但窗口类、互斥锁、本地数据和启动项身份独立，可以并存。内部权限服务仍沿用上游 core 的固定服务协议；普通用户界面不展示服务名或网络技术细节。
+简体中文 Windows 安装正式版时，开始菜单、桌面和开机启动快捷方式统一显示 `云渡`，App 窗口与托盘菜单按 App 语言显示 `云渡`；其他系统语言保留 `Yundo`。Windows 的 `path_provider` 使用可执行文件版本资源中的 CompanyName 与 ProductName 生成应用支持目录，因此这里的内部 ProductName 继续保持稳定英文身份，Debug 与 Release 不共享登录态、数据库、缓存和偏好。两种构建都使用 `Yundo.exe` 文件名，但窗口类、互斥锁、本地数据和启动项身份独立，可以并存。内部权限服务仍沿用上游 core 的固定服务协议；普通用户界面不展示服务名或网络技术细节。
 
 ## 构建入口
 
@@ -92,5 +92,20 @@ CI 构建不能替代以下真机验收：UAC、虚拟网卡和路由、Windows 
 - 安装日志确认安装成功且不要求重启；程序文件身份为 `Yundo 1.0.0+10001`，未签名状态符合内部验收边界，卸载入口和桌面快捷方式已生成。
 - 安装后的 `app.so` 已检出生产 API 地址；虚拟机访问生产 health 返回 HTTP 200，数据库依赖正常。
 - `Yundo.exe` 在当前用户 Console 会话启动、进程响应正常，窗口标题与登录页显示 `Yundo · 云渡`。
+- 初验同时发现 Windows runner 仍引用旧版柱状图标，且安装器快捷方式固定显示 `Yundo`；后续修复还发现升级安装可能只删除旧快捷方式而不重建。三项均属于验收缺陷，不作为正式身份基线，已转入 `1.0.0+10003` 修复并重新验收。
 
 本次未执行登录后的 UAC、虚拟网卡、路由和真实加速；这些操作会改变 Windows 网络状态，且仍需在实体 Windows x64 机器按平台 Issue #81 完成总验收。
+
+## 2026-07-18 简体中文品牌复验
+
+已在系统语言为简体中文的 Windows 11 Pro ARM64 Parallels 虚拟机完成正式版 `Yundo 1.0.0+10003` 覆盖安装复验：
+
+- PR #24 的 CI run `29644717857` 通过 124 项测试、Debug/Release 双 bundle 校验、Inno Setup 打包和短期 artifact 上传。
+- Windows runner 的多尺寸 `app_icon.ico` 已由云渡统一 SVG 品牌源生成，安装器和应用不再使用旧版柱状图图标。
+- 正式版简体中文应用标题为 `云渡`；繁体中文为 `雲渡`；其他语言为 `Yundo`。开发版继续使用对应的独立开发版名称。
+- 安装器按 Windows 当前 UI 语言生成开始菜单、桌面和开机启动快捷方式名称；桌面快捷方式在安装和升级时固定重建，避免旧版升级后只删除旧快捷方式而不创建新快捷方式。
+- 最终安装包 SHA-256 为 `180263682a2c7578a2258436336b55b55d64f3d75127b2230e60e1980dffc9ee`；Mac 与 Windows 共享路径复核一致，安装日志记录成功且无需重启。
+- 覆盖安装后旧 `Yundo.lnk` 不存在，新 `云渡.lnk` 指向 `C:\Program Files\Yundo\Yundo.exe` 并显式使用该程序的新版图标。
+- 实际桌面、窗口标题、登录页和任务栏均已目视确认显示 `云渡` 与新版蓝色 Y 图标，进程版本为 `1.0.0+10003` 且保持响应。
+
+本次复验仍未触发 UAC、虚拟网卡、路由或真实加速；实体 Windows x64 的网络链路和长期驻留总验收边界不变。

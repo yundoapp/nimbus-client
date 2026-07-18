@@ -30,13 +30,34 @@ void main() {
     final packaging = File('scripts/package_windows.ps1').readAsStringSync();
     final makefile = File('Makefile').readAsStringSync();
 
+    final icon = File('windows/runner/resources/app_icon.ico').readAsBytesSync();
+    final iconImageCount = icon[4] | (icon[5] << 8);
+
     expect(exe, contains('display_name: Yundo'));
+    expect(exe, isNot(contains('  - zh')));
     expect(exe, contains('publisher_url: https://github.com/yundoapp/nimbus-client'));
     expect(msix, contains('identity_name: Yundo.Yundo'));
-    expect(msix, contains('msix_version: 1.0.0.10001'));
+    expect(msix, contains('msix_version: 1.0.0.10003'));
     expect(msix, contains('protocol_activation: yundo'));
+    expect(inno, contains('AppName={code:YundoAppName}'));
+    expect(inno, contains('LanguageId := GetUILanguage'));
+    expect(inno, contains("Result := '云渡'"));
+    expect(inno, contains("Result := '雲渡'"));
+    expect(inno, contains(r'Name: "{autodesktop}\\{code:YundoAppName}"'));
+    expect(inno, isNot(contains('Tasks: desktopicon')));
+    expect(inno, isNot(contains('Name: "desktopicon"')));
+    expect(
+      inno,
+      contains(
+        r'Name: "{autodesktop}\\{code:YundoAppName}"; Filename: "{app}\\{{EXECUTABLE_NAME}}"; IconFilename: "{app}\\{{EXECUTABLE_NAME}}"',
+      ),
+    );
+    expect(inno, contains(r'Name: "{autodesktop}\\Yundo.lnk"'));
+    expect(inno, contains(r'Name: "{autodesktop}\\云渡.lnk"'));
     expect(inno, contains('ArchitecturesAllowed=x64compatible'));
     expect(inno, contains('ArchitecturesInstallIn64BitMode=x64compatible'));
+    expect(icon.take(4), orderedEquals([0, 0, 1, 0]));
+    expect(iconImageCount, greaterThan(1));
     expect(makefile, contains('NIMBUS_API_BASE_URL?=https://api.yundo.app/api/v1'));
     expect(makefile, contains(r'--build-dart-define=NIMBUS_API_BASE_URL=$(NIMBUS_API_BASE_URL)'));
     expect(packaging, contains('Yundo-Windows-Portable-x64.zip'));
