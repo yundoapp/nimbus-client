@@ -884,7 +884,7 @@
       "switchSaved": "تم تغيير طريقة الوصول.",
       "limitReached": "تم بلوغ الحد",
       "add": "إضافة",
-      "empty": "لم تتم إضافة قواعد وصول بعد",
+      "empty": "لم تتم إضافة أي مواقع بعد",
       "deleteTooltip": "حذف",
       "deleteTitle": "حذف قاعدة الوصول",
       "deleteConfirm": "هل تريد حذف \"${value}\"؟"

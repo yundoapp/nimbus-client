@@ -870,7 +870,7 @@
       "switchSaved": "Mode d’accès modifié.",
       "limitReached": "Limite atteinte",
       "add": "Ajouter",
-      "empty": "Aucune règle d’accès ajoutée",
+      "empty": "Aucun site ajouté pour le moment",
       "deleteTooltip": "Supprimer",
       "deleteTitle": "Supprimer la règle d’accès",
       "deleteConfirm": "Supprimer « ${value} » ?"

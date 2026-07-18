@@ -878,7 +878,7 @@
       "switchSaved": "Access method changed.",
       "limitReached": "Limit reached",
       "add": "Add",
-      "empty": "No access rules added yet",
+      "empty": "No websites added yet",
       "deleteTooltip": "Delete",
       "deleteTitle": "Delete access rule",
       "deleteConfirm": "Delete \"${value}\"?"
