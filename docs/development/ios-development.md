@@ -79,6 +79,26 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   flutter build ios --simulator --debug
 ```
 
+构建成功后必须覆盖安装到当前启动的模拟器，并检查“已安装包”而不只是
+`build/` 目录中的产物：
+
+```bash
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+xcrun simctl terminate booted app.yundo.client.dev || true
+xcrun simctl install booted build/ios/iphonesimulator/Runner.app
+xcrun simctl launch booted app.yundo.client.dev
+
+INSTALLED_APP="$(xcrun simctl get_app_container booted app.yundo.client.dev app)"
+/usr/libexec/PlistBuddy \
+  -c 'Print :UISupportedInterfaceOrientations' \
+  "$INSTALLED_APP/Info.plist"
+```
+
+方向输出必须只包含 `UIInterfaceOrientationPortrait`。随后分别使用 Simulator
+的 `Device -> Orientation -> Landscape Left / Landscape Right` 尝试旋转；设备外框
+仍可模拟物理旋转，但 App 不得重新排版为横屏，`simctl io booted screenshot`
+得到的内部画面应保持宽小于高。完成后把 Simulator 恢复为 `Portrait`。
+
 模拟器可以验证 Flutter 页面、原生编译、Bundle ID 和 Keychain 通道，但不能代替 Packet Tunnel 系统授权和真实加速验证。
 
 ## 真机调试流程
@@ -102,6 +122,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 - 本次修改文件静态检查：0 个问题；全仓检查仍有 217 条既有上游告警，未由 M5 新增。
 - iPhone 17 Pro 模拟器：Debug 构建、安装和启动通过；简体中文开发版名称、浅色/深色首页、登录态恢复和窄屏滚动已检查。
 - iPhone 17 Pro 模拟器补充检查：iOS AppIcon 与启动页均使用云渡图标；认证恢复期间不渲染首页 shell，清空模拟器 Keychain 后首屏进入登录页；首页标题栏不再重复展示 App 图标、应用名和版本号。
+- iPhone 17 Pro（iOS 26.0）方向复核：先发现模拟器中的 11:27 旧安装包仍声明横屏；使用最新 `develop` 重新构建并覆盖安装后，已安装包只声明 `UIInterfaceOrientationPortrait`。尝试旋转设备时 App 不再横屏重排，内部截图保持 `1206 x 2622`，并已恢复模拟器为竖屏。
 - iOS arm64：`flutter build ios --debug --no-codesign` 通过，App 与 Packet Tunnel 均为 arm64，开发版 Bundle ID 分别为 `app.yundo.client.dev` 与 `app.yundo.client.dev.PacketTunnel`。
 - iOS 真机签名前置检查：`flutter build ios --debug` 已触发 Xcode 自动签名，但当前 Personal Team 无法创建包含 Network Extension/Personal VPN 能力的描述文件，签名安装不能继续。
 - macOS 共享代码回归：`Yundo Dev` 已完成构建、特权辅助进程校验、覆盖安装和启动。
