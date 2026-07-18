@@ -25,9 +25,9 @@ env:
   # TARGET_NAME_rpm: "Hiddify-rpm-x64"
   TARGET_NAME_apk: "Hiddify-Android"
   TARGET_NAME_aab: "Hiddify-Android"
-  TARGET_NAME_exe: "Hiddify-Windows-Setup-x64"
-  TARGET_NAME_msix: "Hiddify-Windows-x64"
-  TARGET_NAME_zip: "Hiddify-Windows-Portable-x64"
+  TARGET_NAME_exe: "Yundo-Windows-Setup-x64"
+  TARGET_NAME_msix: "Yundo-Windows-x64"
+  TARGET_NAME_zip: "Yundo-Windows-Portable-x64"
   TARGET_NAME_dmg: "Hiddify-MacOS"
   TARGET_NAME_pkg: "Hiddify-MacOS-Installer"
   TARGET_NAME_ipa: "Hiddify-iOS"
@@ -54,6 +54,34 @@ jobs:
       - name: make draftBuildCode
         id: draftBuildCode
         run: echo "::set-output name=datetime::$(date +'%d.%H.%M')"
+
+  windows-validation:
+    if: ${{ ! inputs.upload-artifact }}
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2.21.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Prepare Windows dependencies
+        shell: bash
+        run: |
+          make windows-install-deps
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+          make windows-prepare
+      - name: Build and verify Yundo Dev
+        shell: pwsh
+        run: |
+          flutter build windows --debug --target=lib/main.dart
+          ./scripts/verify_windows_bundle.ps1 -Configuration Debug -ExpectedProductName "Yundo Dev"
+      - name: Build and verify Yundo
+        shell: pwsh
+        run: |
+          flutter build windows --release --target=lib/main_prod.dart
+          ./scripts/verify_windows_bundle.ps1 -Configuration Release -ExpectedProductName "Yundo"
 
 
   build:
@@ -263,7 +291,7 @@ jobs:
           folder: 'dist'
           timestamp-server: 'http://timestamp.digicert.com'
           recursive: true
-          description: 'Hiddify'
+          description: 'Yundo'
 
       - name: Copy to out Windows
         if: matrix.platform == 'windows'

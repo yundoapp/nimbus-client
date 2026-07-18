@@ -1,12 +1,18 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
+import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'auto_start_notifier.g.dart';
+
+String windowsStartupPackageName({required bool isDebug}) => isDebug ? 'Yundo.YundoDev' : 'Yundo.Yundo';
+
+bool shouldEnableAutoStartByDefault({required bool initialized, required bool enabled}) => !initialized && !enabled;
 
 @Riverpod(keepAlive: true)
 class AutoStartNotifier extends _$AutoStartNotifier with InfraLogger {
@@ -19,9 +25,19 @@ class AutoStartNotifier extends _$AutoStartNotifier with InfraLogger {
     launchAtStartup.setup(
       appName: appInfo.name,
       appPath: Platform.resolvedExecutable,
-      packageName: "Hiddify.HiddifyNext",
+      packageName: PlatformUtils.isWindows
+          ? windowsStartupPackageName(isDebug: kDebugMode)
+          : (kDebugMode ? 'app.yundo.client.dev' : 'app.yundo.client'),
     );
-    final isEnabled = await launchAtStartup.isEnabled();
+    var isEnabled = await launchAtStartup.isEnabled();
+    final initialized = ref.read(Preferences.nimbusWindowsAutoStartInitialized);
+    if (PlatformUtils.isWindows && shouldEnableAutoStartByDefault(initialized: initialized, enabled: isEnabled)) {
+      await launchAtStartup.enable();
+      isEnabled = await launchAtStartup.isEnabled();
+    }
+    if (PlatformUtils.isWindows && !initialized) {
+      await ref.read(Preferences.nimbusWindowsAutoStartInitialized.notifier).update(true);
+    }
     loggy.info("auto start is [${isEnabled ? "Enabled" : "Disabled"}]");
     _startTimer();
     ref.onDispose(() => _timer?.cancel());

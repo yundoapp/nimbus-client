@@ -68,7 +68,7 @@ class SettingsPage extends HookConsumerWidget {
               page: const AboutPage(),
             ),
           ],
-          if (PlatformUtils.isIOS)
+          if (PlatformUtils.isIOS || PlatformUtils.isWindows)
             Material(
               child: ListTile(
                 title: Text(t.pages.settings.resetTunnel),

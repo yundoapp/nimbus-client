@@ -18,7 +18,11 @@ enum ServiceMode {
 
   final String key;
 
-  static ServiceMode get defaultMode => PlatformUtils.isDesktop ? systemProxy : tun;
+  static ServiceMode defaultForPlatform({required bool isWindows, required bool isDesktop}) =>
+      isWindows ? tun : (isDesktop ? systemProxy : tun);
+
+  static ServiceMode get defaultMode =>
+      defaultForPlatform(isWindows: PlatformUtils.isWindows, isDesktop: PlatformUtils.isDesktop);
 
   /// supported service mode based on platform, use this instead of [values] in UI
   static List<ServiceMode> get choices {
