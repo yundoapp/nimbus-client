@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-M4 Windows MVP 已启动。当前先完成不依赖实体 Windows 的身份隔离、共享业务逻辑、加速权限承载、托盘/窗口、启动项、自动加速、测试和 CI 构建；项目负责人提供 Windows 机器后，再完成真实安装、虚拟网卡、路由和长期驻留总验收。
+M4 Windows MVP 已完成不依赖实体 Windows 的身份隔离、共享业务逻辑、加速权限承载、托盘/窗口、启动项、自动加速、测试和 CI 构建。当前进入 Windows 安装验收：先用 Parallels Windows 11 ARM64 虚拟机验证 x64 安装包的安装、身份与启动，再在实体 Windows x64 机器完成虚拟网卡、路由和长期驻留总验收。
 
 本阶段不授权 GitHub Release、Microsoft Store、正式代码签名或面向用户发布安装包。
 
@@ -39,6 +39,15 @@ powershell -ExecutionPolicy Bypass -File scripts/verify_windows_bundle.ps1 -Conf
 
 上述命令只验证本地 bundle，不生成公开发布物。正式安装包、MSIX、代码签名和分发仍需单独确认。
 
+用于项目负责人 Windows 验收的无签名 EXE 安装包通过 Pull Request 临时生成：
+
+1. 给目标 PR 添加 `ci:windows-acceptance` label。
+2. CI 使用 `lib/main_prod.dart` 构建并校验 Release `Yundo` bundle。
+3. CI 生成 `Yundo-Windows-Setup-x64-<version>-build<build>.exe` 及 SHA-256 校验文件。
+4. `windows-acceptance` artifact 仅保留 3 天，不创建或更新 GitHub Release。
+
+该入口只用于当前项目内部验收；安装程序尚未经过 Developer ID 等效的 Windows 代码签名，Windows 可能显示未知发布者提示。公开发布、Microsoft Store、正式签名和面向真实用户分发仍需另行确认。
+
 ## 加速权限路径
 
 - Windows 新安装默认使用覆盖全局流量的加速模式。
@@ -56,7 +65,8 @@ Pull Request 会运行严格的 Windows 无签名验证任务：
 2. 运行 Flutter 全量测试。
 3. 构建并校验 Debug `Yundo Dev` bundle。
 4. 构建并校验 Release `Yundo` bundle。
-5. 不上传 artifact，不创建或更新 GitHub Release。
+5. 默认不上传 artifact；只有带 `ci:windows-acceptance` label 的 PR 才上传保留 3 天的内部验收安装包。
+6. 不创建或更新 GitHub Release。
 
 CI 构建不能替代以下真机验收：UAC、虚拟网卡和路由、Windows Defender/安全软件、托盘与任务栏、开机启动、睡眠唤醒、网络切换、卸载残留及真实加速。
 
