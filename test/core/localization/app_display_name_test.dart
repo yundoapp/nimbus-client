@@ -16,4 +16,11 @@ void main() {
     expect(appDisplayName(translations, Environment.dev), 'Yundo Dev');
     expect(appDisplayName(translations, Environment.prod), 'Yundo');
   });
+
+  test('简体中文首页空闲状态提示点击开始加速', () {
+    final translations = AppLocale.zhCn.buildSync();
+
+    expect(translations.connection.tapToConnect, '点击开始加速');
+    expect(translations.nimbus.home.connect, '点击开始加速');
+  });
 }

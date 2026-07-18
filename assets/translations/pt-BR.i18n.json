@@ -684,7 +684,7 @@
     }
   },
   "connection": {
-    "tapToConnect": "Acelerar",
+    "tapToConnect": "Clique para iniciar a aceleração",
     "connect": "Iniciar aceleração",
     "connecting": "Iniciando aceleração...",
     "connected": "Aceleração ativa",
@@ -765,7 +765,7 @@
       "locationTitle": "Região do servidor",
       "locationAuto": "Seleção automática",
       "locationDetail": "Escolher por país ou região",
-      "connect": "Acelerar",
+      "connect": "Clique para iniciar a aceleração",
       "updateRequired": "Atualização necessária"
     },
     "activation": {

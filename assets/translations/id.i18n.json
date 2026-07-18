@@ -684,7 +684,7 @@
     }
   },
   "connection": {
-    "tapToConnect": "Percepat",
+    "tapToConnect": "Klik untuk memulai percepatan",
     "connect": "Mulai percepatan",
     "connecting": "Memulai percepatan...",
     "connected": "Percepatan aktif",
@@ -765,7 +765,7 @@
       "locationTitle": "Wilayah server",
       "locationAuto": "Pilihan otomatis",
       "locationDetail": "Pilih berdasarkan negara atau wilayah",
-      "connect": "Percepat",
+      "connect": "Klik untuk memulai percepatan",
       "updateRequired": "Perlu pembaruan"
     },
     "activation": {

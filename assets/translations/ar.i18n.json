@@ -690,7 +690,7 @@
     }
   },
   "connection": {
-    "tapToConnect": "تسريع",
+    "tapToConnect": "اضغط لبدء التسريع",
     "connect": "بدء التسريع",
     "connecting": "جارٍ بدء التسريع...",
     "connected": "التسريع مفعّل",
@@ -771,7 +771,7 @@
       "locationTitle": "منطقة الخادم",
       "locationAuto": "اختيار تلقائي",
       "locationDetail": "اختر حسب الدولة أو المنطقة",
-      "connect": "تسريع",
+      "connect": "اضغط لبدء التسريع",
       "updateRequired": "يلزم التحديث"
     },
     "activation": {
