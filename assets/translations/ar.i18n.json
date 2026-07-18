@@ -202,7 +202,7 @@
     },
     "settings": {
       "title": "الإعدادات",
-      "resetTunnel": "إعادة تعيين إذن التسريع",
+      "resetTunnel": "إصلاح إذن التسريع",
       "options": {
         "import": {
           "clipboard": "استيراد الخيارات من الحافظة",

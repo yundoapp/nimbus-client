@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "Settings",
-      "resetTunnel": "Reset acceleration access",
+      "resetTunnel": "Fix acceleration access",
       "options": {
         "import": {
           "clipboard": "Import options from clipboard",

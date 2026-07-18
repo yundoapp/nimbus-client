@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "Ayarlar",
-      "resetTunnel": "Hızlandırma iznini sıfırla",
+      "resetTunnel": "Hızlandırma iznini düzelt",
       "options": {
         "import": {
           "clipboard": "Seçenekleri panodan içe aktar",

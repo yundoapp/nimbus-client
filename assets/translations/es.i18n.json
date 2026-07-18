@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "Ajustes",
-      "resetTunnel": "Restablecer permiso de aceleración",
+      "resetTunnel": "Reparar permiso de aceleración",
       "options": {
         "import": {
           "clipboard": "Importar opciones desde el portapapeles",
