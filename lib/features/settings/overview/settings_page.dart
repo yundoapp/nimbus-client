@@ -50,16 +50,6 @@ class SettingsPage extends HookConsumerWidget {
               page: const NimbusChangePasswordPage(),
             ),
           ),
-          if (PlatformUtils.isIOS)
-            Material(
-              child: ListTile(
-                title: Text(t.pages.settings.resetTunnel),
-                leading: const Icon(Icons.autorenew_rounded),
-                onTap: () async {
-                  await ref.read(resetTunnelNotifierProvider.notifier).run();
-                },
-              ),
-            ),
           ListTile(
             title: Text(t.nimbus.settings.issueReport),
             leading: const Icon(Icons.outlined_flag_rounded),
@@ -78,6 +68,16 @@ class SettingsPage extends HookConsumerWidget {
               page: const AboutPage(),
             ),
           ],
+          if (PlatformUtils.isIOS)
+            Material(
+              child: ListTile(
+                title: Text(t.pages.settings.resetTunnel),
+                leading: const Icon(Icons.autorenew_rounded),
+                onTap: () async {
+                  await ref.read(resetTunnelNotifierProvider.notifier).run();
+                },
+              ),
+            ),
           ListTile(
             title: Text(t.nimbus.settings.logout),
             leading: const Icon(Icons.logout_rounded),
