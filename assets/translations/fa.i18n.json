@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "تنظیمات",
-      "resetTunnel": "بازنشانی مجوز شتاب‌دهی",
+      "resetTunnel": "رفع مشکل مجوز شتاب‌دهی",
       "options": {
         "import": {
           "clipboard": "وارد کردن تنظیمات از کلیپ‌بورد",

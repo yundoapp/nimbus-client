@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "Paramètres",
-      "resetTunnel": "Réinitialiser l’autorisation d’accélération",
+      "resetTunnel": "Réparer l’autorisation d’accélération",
       "options": {
         "import": {
           "clipboard": "Importer les options depuis le presse-papiers",

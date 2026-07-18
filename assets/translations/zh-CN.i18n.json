@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "设置",
-      "resetTunnel": "重置加速权限",
+      "resetTunnel": "修复加速权限",
       "options": {
         "import": {
           "clipboard": "从剪贴板导入选项",

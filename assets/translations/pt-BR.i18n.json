@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "Configurações",
-      "resetTunnel": "Redefinir permissão de aceleração",
+      "resetTunnel": "Corrigir permissão de aceleração",
       "options": {
         "import": {
           "clipboard": "Importar opções da área de transferência",

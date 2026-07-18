@@ -196,7 +196,7 @@
     },
     "settings": {
       "title": "Pengaturan",
-      "resetTunnel": "Atur ulang izin percepatan",
+      "resetTunnel": "Perbaiki izin percepatan",
       "options": {
         "import": {
           "clipboard": "Impor opsi dari papan klip",
