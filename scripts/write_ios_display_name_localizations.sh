@@ -19,9 +19,20 @@ write_display_name() {
   strings_file="${locale_dir}/InfoPlist.strings"
 
   /bin/mkdir -p "${locale_dir}"
-  /usr/bin/plutil -create xml1 "${strings_file}"
-  /usr/bin/plutil -insert CFBundleDisplayName -string "${display_name}" "${strings_file}"
+  {
+    printf '"CFBundleDisplayName" = "%s";\n' "${display_name}"
+    printf '"CFBundleName" = "%s";\n' "${display_name}"
+  } | /usr/bin/iconv -f UTF-8 -t UTF-16 >"${strings_file}"
+  /usr/bin/plutil -lint "${strings_file}" >/dev/null
 }
 
 write_display_name "zh-Hans" "${zh_hans_name}"
+write_display_name "zh-Hans-CN" "${zh_hans_name}"
+write_display_name "zh_CN" "${zh_hans_name}"
 write_display_name "zh-Hant" "${zh_hant_name}"
+write_display_name "zh-Hant-TW" "${zh_hant_name}"
+write_display_name "zh-Hant-HK" "${zh_hant_name}"
+write_display_name "zh-Hant-MO" "${zh_hant_name}"
+write_display_name "zh_TW" "${zh_hant_name}"
+write_display_name "zh_HK" "${zh_hant_name}"
+write_display_name "zh_MO" "${zh_hant_name}"

@@ -85,6 +85,16 @@
 		<string>pt-BR</string>
 		<string>ru</string>
 		<string>tr</string>
+		<string>zh-Hans</string>
+		<string>zh-Hans-CN</string>
+		<string>zh-Hant</string>
+		<string>zh-Hant-TW</string>
+		<string>zh-Hant-HK</string>
+		<string>zh-Hant-MO</string>
+		<string>zh_CN</string>
+		<string>zh_TW</string>
+		<string>zh_HK</string>
+		<string>zh_MO</string>
 		<string>zh-CN</string>
 		<string>zh-TW</string>
 	</array>
