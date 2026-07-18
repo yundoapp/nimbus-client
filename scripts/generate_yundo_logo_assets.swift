@@ -306,4 +306,10 @@ writeICO(
   sizes: [16, 32, 48, 64, 128]
 )
 
-print("Generated \(generatedOutputCount) Yundo PNG assets and 1 tray ICO file from SVG sources")
+writeICO(
+  from: appIconSource,
+  to: repoURL.appendingPathComponent("windows/runner/resources/app_icon.ico"),
+  sizes: [16, 24, 32, 48, 64, 128, 256]
+)
+
+print("Generated \(generatedOutputCount) Yundo PNG assets and 2 ICO files from SVG sources")

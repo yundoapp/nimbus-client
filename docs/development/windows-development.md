@@ -10,12 +10,12 @@ M4 Windows MVP 已完成不依赖实体 Windows 的身份隔离、共享业务�
 
 ## 身份边界
 
-| 构建 | 用户可见名称 | 窗口标题 | 本地数据 ProductName | 单实例身份 | 启动项包名 |
+| 构建 | 简体中文用户可见名称 | 其他语言用户可见名称 | 本地数据 ProductName | 单实例身份 | 启动项包名 |
 | --- | --- | --- | --- | --- | --- |
-| Debug | `Yundo Dev`，中文界面运行后显示云渡开发版名称 | `Yundo Dev` 启动后按 App 语言更新 | `Yundo Dev` | `YundoDevMutex` 与独立窗口类 | `Yundo.YundoDev` |
-| Release | `Yundo`，中文界面运行后显示云渡正式版名称 | `Yundo` 启动后按 App 语言更新 | `Yundo` | `YundoMutex` 与独立窗口类 | `Yundo.Yundo` |
+| Debug | `云渡开发版` | `Yundo Dev`，繁体中文为 `雲渡開發版` | `Yundo Dev` | `YundoDevMutex` 与独立窗口类 | `Yundo.YundoDev` |
+| Release | `云渡` | `Yundo`，繁体中文为 `雲渡` | `Yundo` | `YundoMutex` 与独立窗口类 | `Yundo.Yundo` |
 
-Windows 的 `path_provider` 使用可执行文件版本资源中的 CompanyName 与 ProductName 生成应用支持目录，因此 Debug 与 Release 不共享登录态、数据库、缓存和偏好。两种构建都使用 `Yundo.exe` 文件名，但窗口类、互斥锁、本地数据和启动项身份独立，可以并存。内部权限服务仍沿用上游 core 的固定服务协议；普通用户界面不展示服务名或网络技术细节。
+简体中文 Windows 安装正式版时，开始菜单、桌面和开机启动快捷方式统一显示 `云渡`，App 窗口与托盘菜单按 App 语言显示 `云渡`；其他系统语言保留 `Yundo`。Windows 的 `path_provider` 使用可执行文件版本资源中的 CompanyName 与 ProductName 生成应用支持目录，因此这里的内部 ProductName 继续保持稳定英文身份，Debug 与 Release 不共享登录态、数据库、缓存和偏好。两种构建都使用 `Yundo.exe` 文件名，但窗口类、互斥锁、本地数据和启动项身份独立，可以并存。内部权限服务仍沿用上游 core 的固定服务协议；普通用户界面不展示服务名或网络技术细节。
 
 ## 构建入口
 
@@ -92,5 +92,6 @@ CI 构建不能替代以下真机验收：UAC、虚拟网卡和路由、Windows 
 - 安装日志确认安装成功且不要求重启；程序文件身份为 `Yundo 1.0.0+10001`，未签名状态符合内部验收边界，卸载入口和桌面快捷方式已生成。
 - 安装后的 `app.so` 已检出生产 API 地址；虚拟机访问生产 health 返回 HTTP 200，数据库依赖正常。
 - `Yundo.exe` 在当前用户 Console 会话启动、进程响应正常，窗口标题与登录页显示 `Yundo · 云渡`。
+- 初验同时发现 Windows runner 仍引用旧版柱状图标，且安装器快捷方式固定显示 `Yundo`；这两项属于验收缺陷，不作为正式身份基线，已转入 `1.0.0+10002` 修复并重新验收。
 
 本次未执行登录后的 UAC、虚拟网卡、路由和真实加速；这些操作会改变 Windows 网络状态，且仍需在实体 Windows x64 机器按平台 Issue #81 完成总验收。

@@ -45,13 +45,16 @@ void main() {
     expect(en.nimbus.home.locationAuto, 'Automatic selection');
   });
 
-  test('中文软件名同时显示英文名和中文名', () async {
+  test('软件名随中文界面显示本地化品牌名', () async {
     final zhCn = await AppLocale.zhCn.build();
     final zhTw = await AppLocale.zhTw.build();
     final en = await AppLocale.en.build();
 
-    expect(zhCn.common.appTitle, 'Yundo · 云渡');
-    expect(zhTw.common.appTitle, 'Yundo · 雲渡');
+    expect(zhCn.common.appTitle, '云渡');
+    expect(zhCn.common.devAppTitle, '云渡开发版');
+    expect(zhTw.common.appTitle, '雲渡');
+    expect(zhTw.common.devAppTitle, '雲渡開發版');
     expect(en.common.appTitle, 'Yundo');
+    expect(en.common.devAppTitle, 'Yundo Dev');
   });
 }
