@@ -57,8 +57,10 @@ endif
 
 ifeq ($(CHANNEL),prod)
 	TARGET=lib/main_prod.dart
+	NIMBUS_API_BASE_URL?=https://api.yundo.app/api/v1
 else
 	TARGET=lib/main.dart
+	NIMBUS_API_BASE_URL?=http://127.0.0.1:4000/api/v1
 endif
 
 BUILD_ARGS=--dart-define sentry_dsn=$(SENTRY_DSN)
@@ -293,6 +295,7 @@ windows-zip-release:
 	  --skip-clean \
 	  --build-target=$(TARGET) \
 	  --build-dart-define=sentry_dsn=$(SENTRY_DSN) \
+	  --build-dart-define=NIMBUS_API_BASE_URL=$(NIMBUS_API_BASE_URL) \
 	  --build-dart-define=portable=true
 	@FULL_PATH=$$(ls dist/*/*.zip | head -n 1); \
 	ZIP_DIR=$$(dirname "$$FULL_PATH"); \
@@ -314,7 +317,8 @@ windows-exe-release:
 	  --targets exe \
 	  --skip-clean \
 	  --build-target=$(TARGET) \
-	  --build-dart-define=sentry_dsn=$(SENTRY_DSN)
+	  --build-dart-define=sentry_dsn=$(SENTRY_DSN) \
+	  --build-dart-define=NIMBUS_API_BASE_URL=$(NIMBUS_API_BASE_URL)
 
 windows-msix-release:
 	fastforge package \
@@ -322,7 +326,8 @@ windows-msix-release:
 	  --targets msix \
 	  --skip-clean \
 	  --build-target=$(TARGET) \
-	  --build-dart-define=sentry_dsn=$(SENTRY_DSN)
+	  --build-dart-define=sentry_dsn=$(SENTRY_DSN) \
+	  --build-dart-define=NIMBUS_API_BASE_URL=$(NIMBUS_API_BASE_URL)
 
 linux-release: linux-deb-release linux-appimage-release
 
@@ -539,4 +544,3 @@ ios-temp-prepare:
 	flutter build ios-framework
 	cd ios
 	pod install
-	

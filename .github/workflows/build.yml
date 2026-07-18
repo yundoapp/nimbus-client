@@ -5,6 +5,9 @@ on:
       upload-artifact:
         type: boolean
         default: true
+      windows-acceptance-artifact:
+        type: boolean
+        default: false
       tag-name:
         type: string
         default: "draft"
@@ -80,8 +83,36 @@ jobs:
       - name: Build and verify Yundo
         shell: pwsh
         run: |
-          flutter build windows --release --target=lib/main_prod.dart
+          flutter build windows --release --target=lib/main_prod.dart --dart-define=NIMBUS_API_BASE_URL=https://api.yundo.app/api/v1
           ./scripts/verify_windows_bundle.ps1 -Configuration Release -ExpectedProductName "Yundo"
+      - name: Package Windows acceptance installer
+        if: ${{ inputs.windows-acceptance-artifact }}
+        shell: pwsh
+        run: |
+          fastforge package --platform windows --targets exe --skip-clean --build-target=lib/main_prod.dart --build-dart-define=NIMBUS_API_BASE_URL=https://api.yundo.app/api/v1
+          $installer = Get-ChildItem -Path dist -Recurse -Filter "*.exe" |
+            Where-Object { $_.Name -match "setup" } |
+            Select-Object -First 1
+          if ($null -eq $installer) {
+            throw "Windows acceptance installer was not generated"
+          }
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value
+          $artifactVersion = $version.Replace('+', '-build')
+          $outputDir = Join-Path $PWD "out\windows-acceptance"
+          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+          $outputPath = Join-Path $outputDir "Yundo-Windows-Setup-x64-$artifactVersion.exe"
+          Copy-Item -LiteralPath $installer.FullName -Destination $outputPath -Force
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $outputPath).Hash.ToLowerInvariant()
+          "$hash  $([IO.Path]::GetFileName($outputPath))" |
+            Set-Content -LiteralPath "$outputPath.sha256" -Encoding ascii
+      - name: Upload Windows acceptance installer
+        if: ${{ inputs.windows-acceptance-artifact }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-acceptance
+          path: out/windows-acceptance
+          if-no-files-found: error
+          retention-days: 3
 
 
   build:
