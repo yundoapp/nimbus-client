@@ -71,6 +71,9 @@ void main() {
     expect(inno, contains('Name: "brazilianportuguese"'));
     expect(inno, contains('Name: "chinesesimplified"'));
     expect(inno, contains('Name: "chinesetraditional"'));
+    expect(inno, contains("'tunnel install'"));
+    expect(inno, contains('Parameters: "tunnel uninstall"'));
+    expect(inno, contains("RaiseException(CustomMessage('ServiceInstallFailed'))"));
     expect(installerLanguageSetup, contains('Prepared 11 Windows installer languages'));
     expect(installerLanguageSetup, contains('@("Farsi.isl", "Indonesian.isl")'));
     expect(installerLanguageSetup, contains('c495623a97376d524f298b1b160e8fd612375c62'));

@@ -14,6 +14,7 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_control
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_proxy_mode_dialog.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -58,6 +59,16 @@ class HomePage extends HookConsumerWidget {
 
     Future<void> showActivationDialog() async {
       await showDialog<void>(context: context, builder: (_) => const _ActivationDialog());
+    }
+
+    Future<void> copyConnectionDiagnostic(NimbusConnectionDiagnostic diagnostic) async {
+      await Clipboard.setData(ClipboardData(text: diagnostic.summary));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.nimbus.errors.diagnosticsCopied)));
+    }
+
+    Future<void> showIssueReport() async {
+      await showDialog<void>(context: context, builder: (_) => const NimbusIssueReportDialog());
     }
 
     Future<void> showNoPlanDialog() async {
@@ -169,6 +180,13 @@ class HomePage extends HookConsumerWidget {
                         if (connectionState.errorMessage != null) ...[
                           _ConnectionNoticeBanner(
                             message: connectionState.errorMessage!,
+                            diagnostic: connectionState.diagnostic,
+                            copyLabel: t.nimbus.errors.copyDiagnostics,
+                            reportLabel: t.nimbus.settings.issueReport,
+                            onCopy: connectionState.diagnostic == null
+                                ? null
+                                : () => copyConnectionDiagnostic(connectionState.diagnostic!),
+                            onReport: showIssueReport,
                             onDismiss: () => ref.read(nimbusConnectionControllerProvider.notifier).clearNotice(),
                           ),
                           const Gap(12),
@@ -191,9 +209,22 @@ class HomePage extends HookConsumerWidget {
 }
 
 class _ConnectionNoticeBanner extends StatelessWidget {
-  const _ConnectionNoticeBanner({required this.message, required this.onDismiss});
+  const _ConnectionNoticeBanner({
+    required this.message,
+    required this.diagnostic,
+    required this.copyLabel,
+    required this.reportLabel,
+    required this.onCopy,
+    required this.onReport,
+    required this.onDismiss,
+  });
 
   final String message;
+  final NimbusConnectionDiagnostic? diagnostic;
+  final String copyLabel;
+  final String reportLabel;
+  final VoidCallback? onCopy;
+  final VoidCallback onReport;
   final VoidCallback onDismiss;
 
   @override
@@ -209,21 +240,70 @@ class _ConnectionNoticeBanner extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 6, 8),
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 6, 10),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.error_outline_rounded, size: 21, color: colors.error),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(Icons.error_outline_rounded, size: 21, color: colors.error),
+            ),
             const Gap(12),
             Expanded(
-              child: Text(
-                message,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colors.error,
-                  height: 1.4,
-                  fontWeight: FontWeight.w500,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.error,
+                      height: 1.45,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (diagnostic != null) ...[
+                    const Gap(6),
+                    Text(
+                      diagnostic!.code,
+                      key: const Key('home-connection-diagnostic-code'),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colors.error.withValues(alpha: 0.82),
+                        fontFamily: 'monospace',
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                    const Gap(2),
+                    Wrap(
+                      spacing: 4,
+                      children: [
+                        TextButton.icon(
+                          key: const Key('home-copy-connection-diagnostic'),
+                          onPressed: onCopy,
+                          icon: const Icon(Icons.copy_rounded, size: 16),
+                          label: Text(copyLabel),
+                          style: TextButton.styleFrom(
+                            foregroundColor: colors.error,
+                            minimumSize: const Size(0, 36),
+                            padding: const EdgeInsetsDirectional.only(end: 10),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                        TextButton.icon(
+                          key: const Key('home-report-connection-problem'),
+                          onPressed: onReport,
+                          icon: const Icon(Icons.outlined_flag_rounded, size: 16),
+                          label: Text(reportLabel),
+                          style: TextButton.styleFrom(
+                            foregroundColor: colors.error,
+                            minimumSize: const Size(0, 36),
+                            padding: const EdgeInsetsDirectional.only(end: 10),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
             ),
             IconButton(

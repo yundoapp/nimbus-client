@@ -209,9 +209,9 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
         await _privilegedHelper.startTunnel(config);
       }
       return const CoreStatus.started();
-    } on WindowsTunnelServicePermissionException catch (error) {
+    } on WindowsTunnelServiceException catch (error) {
       loggy.warning('Windows acceleration service is not available: $error');
-      return CoreStatus.stopped(alert: CoreAlert.requestSystemPrivilege, message: error.message);
+      return CoreStatus.stopped(alert: _windowsCoreAlert(error.kind), message: error.message);
     } on PlatformException catch (error) {
       loggy.warning('macOS privileged helper is not available: ${error.code}');
       return CoreStatus.stopped(alert: CoreAlert.requestSystemPrivilege, message: error.code);
@@ -219,6 +219,15 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
       return CoreStatus.stopped(alert: CoreAlert.startService, message: error.toString());
     }
   }
+
+  CoreAlert _windowsCoreAlert(WindowsTunnelFailureKind kind) => switch (kind) {
+    WindowsTunnelFailureKind.serviceExecutableMissing => CoreAlert.windowsServiceExecutableMissing,
+    WindowsTunnelFailureKind.authorizationDenied => CoreAlert.windowsAuthorizationDenied,
+    WindowsTunnelFailureKind.serviceUnavailable => CoreAlert.windowsServiceUnavailable,
+    WindowsTunnelFailureKind.networkComponentUnavailable => CoreAlert.windowsNetworkComponentUnavailable,
+    WindowsTunnelFailureKind.networkComponentConflict => CoreAlert.windowsNetworkComponentConflict,
+    WindowsTunnelFailureKind.startFailed => CoreAlert.windowsTunnelStartFailed,
+  };
 
   @override
   Future<bool> restart(String path, String name) async {

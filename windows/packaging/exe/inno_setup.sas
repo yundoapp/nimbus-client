@@ -56,6 +56,19 @@ CloseApplications=force
 {% if locale == 'uk' %}Name: "ukrainian"; MessagesFile: "compiler:Languages\\Ukrainian.isl"{% endif %}
 {% endfor %}
 
+[CustomMessages]
+english.ServiceInstallFailed=The system acceleration component could not be installed. Restart Windows and run the Yundo installer again as an administrator.
+arabic.ServiceInstallFailed=تعذر تثبيت مكوّن تسريع النظام. أعد تشغيل Windows ثم شغّل مثبّت Yundo مرة أخرى بصلاحيات المسؤول.
+spanish.ServiceInstallFailed=No se pudo instalar el componente de aceleración del sistema. Reinicia Windows y vuelve a ejecutar el instalador de Yundo como administrador.
+farsi.ServiceInstallFailed=مؤلفه شتاب‌دهی سیستم نصب نشد. Windows را راه‌اندازی مجدد کنید و نصب‌کننده Yundo را دوباره با دسترسی مدیر اجرا کنید.
+french.ServiceInstallFailed=Le composant d’accélération système n’a pas pu être installé. Redémarrez Windows, puis relancez le programme d’installation de Yundo en tant qu’administrateur.
+indonesian.ServiceInstallFailed=Komponen akselerasi sistem tidak dapat dipasang. Mulai ulang Windows lalu jalankan kembali pemasang Yundo sebagai administrator.
+brazilianportuguese.ServiceInstallFailed=Não foi possível instalar o componente de aceleração do sistema. Reinicie o Windows e execute novamente o instalador do Yundo como administrador.
+russian.ServiceInstallFailed=Не удалось установить системный компонент ускорения. Перезапустите Windows и снова запустите установщик Yundo от имени администратора.
+turkish.ServiceInstallFailed=Sistem hızlandırma bileşeni yüklenemedi. Windows’u yeniden başlatın ve Yundo yükleyicisini yönetici olarak tekrar çalıştırın.
+chinesesimplified.ServiceInstallFailed=无法安装系统加速组件。请重启 Windows 后，以管理员身份重新运行云渡安装程序。
+chinesetraditional.ServiceInstallFailed=無法安裝系統加速元件。請重新啟動 Windows 後，以管理員身分重新執行雲渡安裝程式。
+
 [Tasks]
 Name: "launchAtStartup"; Description: "{cm:AutoStartProgram,Yundo}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: {% if LAUNCH_AT_STARTUP != true %}unchecked{% else %}checkedonce{% endif %}
 [Files]
@@ -68,6 +81,9 @@ Name: "{autodesktop}\\{code:YundoAppName}"; Filename: "{app}\\{{EXECUTABLE_NAME}
 Name: "{userstartup}\\{code:YundoAppName}"; Filename: "{app}\\{{EXECUTABLE_NAME}}"; WorkingDir: "{app}"; Tasks: launchAtStartup
 [Run]
 Filename: "{app}\\{{EXECUTABLE_NAME}}"; Description: "{cm:LaunchProgram,Yundo}"; Flags: {% if PRIVILEGES_REQUIRED == 'admin' %}runascurrentuser{% endif %} nowait postinstall skipifsilent
+
+[UninstallRun]
+Filename: "{app}\\YundoService.exe"; Parameters: "tunnel uninstall"; Flags: runhidden waituntilterminated; RunOnceId: "RemoveYundoAccelerationService"
 
 [InstallDelete]
 Type: files; Name: "{autoprograms}\\Yundo.lnk"
@@ -104,4 +120,17 @@ begin
   Exec('net', 'stop "HiddifyTunnelService"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
   Exec('sc.exe', 'delete "HiddifyTunnelService"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
   Result := True;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    if (not Exec(ExpandConstant('{app}\\YundoService.exe'), 'tunnel install',
+      ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode)) or
+      (ResultCode <> 0) then
+      RaiseException(CustomMessage('ServiceInstallFailed'));
+  end;
 end;

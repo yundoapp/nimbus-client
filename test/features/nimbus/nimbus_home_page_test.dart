@@ -44,6 +44,9 @@ void main() {
     expect(find.text('tester'), findsOneWidget);
     expect(find.ancestor(of: find.text('tester'), matching: find.byType(SingleChildScrollView)), findsOneWidget);
     expect(find.text(_connectionError), findsOneWidget);
+    expect(find.text('W-SVC-02'), findsOneWidget);
+    expect(find.byKey(const Key('home-copy-connection-diagnostic')), findsOneWidget);
+    expect(find.byKey(const Key('home-report-connection-problem')), findsOneWidget);
     final banner = tester.widget<Material>(find.byKey(const Key('home-connection-notice')));
     final colors = Theme.of(tester.element(find.byKey(const Key('home-connection-notice')))).colorScheme;
     final message = tester.widget<Text>(find.text(_connectionError));
@@ -53,6 +56,7 @@ void main() {
     expect(message.style?.fontWeight, FontWeight.w500);
     expect(closeButton.constraints, const BoxConstraints.tightFor(width: 44, height: 44));
     expect(find.byType(AlertDialog), findsNothing);
+
     expect(tester.takeException(), isNull);
   });
 
@@ -196,7 +200,15 @@ class _DisconnectedConnectionNotifier extends ConnectionNotifier {
 
 class _ConnectionErrorController extends NimbusConnectionController {
   @override
-  NimbusConnectionState build() => const NimbusConnectionState(errorMessage: _connectionError);
+  NimbusConnectionState build() => const NimbusConnectionState(
+    errorMessage: _connectionError,
+    diagnostic: NimbusConnectionDiagnostic(
+      code: 'W-SVC-02',
+      failureCode: 'WINDOWS_SERVICE_UNAVAILABLE',
+      stage: 'SERVICE_START',
+      summary: 'safe diagnostics',
+    ),
+  );
 }
 
 class _FakeNimbusAuthRepository extends NimbusAuthRepository {
