@@ -7,6 +7,12 @@ import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.d
 import 'package:hiddify/hiddifycore/core_interface/windows_tunnel_service.dart';
 
 void main() {
+  test('configuration failures expose a safe structural detail code', () {
+    expect(nimbusConfigFailureDetailCode('managed config has no local mixed or socks inbound'), 'MISSING_LOCAL_BRIDGE');
+    expect(nimbusConfigFailureDetailCode('parse error at secret.example'), 'CONFIG_PARSE_FAILED');
+    expect(nimbusConfigFailureDetailCode(null), 'CONFIG_REJECTED');
+  });
+
   late Translations translations;
 
   setUpAll(() async {

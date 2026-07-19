@@ -169,7 +169,7 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
 
   String _trayIconPath(ConnectionStatus connection) {
     const images = Assets.images;
-    if (PlatformUtils.isWindows) return images.trayIconIco;
+    if (PlatformUtils.isWindows) return images.yundoTrayWindows;
     return images.trayIconPng.path;
   }
 

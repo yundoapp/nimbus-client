@@ -91,7 +91,7 @@ install(FILES "../hiddify-core/bin/libcronet.dll" DESTINATION "${INSTALL_BUNDLE_
 COMPONENT Runtime RENAME libcronet.dll)
 
 install(FILES "../hiddify-core/bin/HiddifyCli.exe" DESTINATION "${CMAKE_INSTALL_PREFIX}"
-COMPONENT Runtime RENAME YundoService.exe)
+  COMPONENT Runtime)
 
 
 if(PLUGIN_BUNDLED_LIBRARIES)

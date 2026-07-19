@@ -294,19 +294,46 @@ class NimbusAuthRepository {
     required String contact,
     required Map<String, Object?> diagnostics,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      'issue-reports',
-      data: {
-        'category': category,
-        'description': sanitizeNimbusIssueReportText(description),
-        'contact': sanitizeNimbusIssueReportText(contact),
-        'diagnostics': sanitizeNimbusIssueDiagnostics(diagnostics),
-      },
-      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
-    );
+    final sanitizedDescription = sanitizeNimbusIssueReportText(description);
+    final sanitizedContact = sanitizeNimbusIssueReportText(contact);
+    final sanitizedDiagnostics = sanitizeNimbusIssueDiagnostics(diagnostics);
+    late Response<Map<String, dynamic>> response;
+    try {
+      response = await _postIssueReport(
+        session,
+        data: {
+          'category': category,
+          'description': sanitizedDescription,
+          'contact': sanitizedContact,
+          'diagnostics': sanitizedDiagnostics,
+        },
+      );
+    } on DioException catch (error) {
+      if (!shouldRetryLegacyIssueReport(error)) rethrow;
+      response = await _postIssueReport(
+        session,
+        data: {
+          'description': buildLegacyIssueReportDescription(
+            category: category,
+            description: sanitizedDescription,
+            contact: sanitizedContact,
+          ),
+          'diagnostics': sanitizedDiagnostics,
+        },
+      );
+    }
     final data = Map<String, dynamic>.from(response.data ?? const {});
     return NimbusIssueReport.fromJson(Map<String, dynamic>.from(data['item'] as Map? ?? const {}));
   }
+
+  Future<Response<Map<String, dynamic>>> _postIssueReport(
+    NimbusAuthSession session, {
+    required Map<String, Object?> data,
+  }) => _dio.post<Map<String, dynamic>>(
+    'issue-reports',
+    data: data,
+    options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+  );
 
   Future<NimbusAppVersionCheck> checkAppVersion({required String platform, required String version}) async {
     final response = await _dio.get<Map<String, dynamic>>(

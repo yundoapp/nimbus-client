@@ -145,12 +145,14 @@ class NimbusConnectionFailurePresentation {
     required this.diagnosticCode,
     required this.failureCode,
     required this.stage,
+    this.detailCode,
   });
 
   final String message;
   final String diagnosticCode;
   final String failureCode;
   final String stage;
+  final String? detailCode;
 }
 
 enum NimbusDiagnosticPlatform {
@@ -184,6 +186,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   int? _lastDownloadTotal;
   bool _sessionClosedByServer = false;
   bool _transportReady = false;
+  bool _suppressPreparingFailure = false;
   DateTime? _lastDisconnectAt;
 
   NimbusAuthRepository get _repository => ref.read(nimbusAuthRepositoryProvider);
@@ -349,9 +352,10 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     _transportReady = false;
 
     NimbusConnectPlan plan;
+    late NimbusRulesPackage rulesPackage;
     try {
       final appVersion = _appVersion();
-      var rulesPackage = await _prepareRulesPackage(session);
+      rulesPackage = await _prepareRulesPackage(session);
       plan = await _repository.createConnectPlan(
         session: session,
         selectedLocation: authState.selectedLocationCode,
@@ -384,10 +388,22 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
 
     try {
       final profile = _managedProfileEntity();
-      final result = await ref
+      _suppressPreparingFailure = true;
+      var result = await ref
           .read(connectionRepositoryProvider)
           .connect(profile, ref.read(Preferences.disableMemoryLimit))
           .run();
+      final initialFailure = result.fold((failure) => failure, (_) => null);
+      if (Platform.isWindows && initialFailure is InvalidConfig) {
+        loggy.warning('Windows core rejected the managed rules config; retrying without remote rule sets');
+        await ref.read(connectionNotifierProvider.notifier).abortConnection();
+        await _writeManagedProfile(plan, rulesPackage, includeRemoteRuleSets: false);
+        result = await ref
+            .read(connectionRepositoryProvider)
+            .connect(profile, ref.read(Preferences.disableMemoryLimit))
+            .run();
+      }
+      _suppressPreparingFailure = false;
       result.match((failure) => throw failure, (_) => null);
       _transportReady = true;
       await _handleConnectionStatus(ref.read(connectionNotifierProvider));
@@ -409,6 +425,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       await _fail(presentation.message, diagnostic: _connectionDiagnostic(presentation));
       loggy.warning('failed to start managed connection', error);
     } finally {
+      _suppressPreparingFailure = false;
       await _deleteManagedProfileFile();
     }
   }
@@ -461,6 +478,12 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     final plan = state.plan;
     final session = ref.read(nimbusAuthControllerProvider).session;
     if (plan == null || session == null) return;
+    final isPreparingFailure = switch (next) {
+      AsyncError() => true,
+      AsyncData(value: Disconnected(:final connectionFailure)) => connectionFailure != null,
+      _ => false,
+    };
+    if (_suppressPreparingFailure && isPreparingFailure) return;
 
     if (next case AsyncData(:final value)
         when shouldFailNimbusPreparingDisconnected(
@@ -650,12 +673,21 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     }
   }
 
-  Future<void> _writeManagedProfile(NimbusConnectPlan plan, NimbusRulesPackage rulesPackage) async {
+  Future<void> _writeManagedProfile(
+    NimbusConnectPlan plan,
+    NimbusRulesPackage rulesPackage, {
+    bool includeRemoteRuleSets = true,
+  }) async {
     final resolver = ref.read(profilePathResolverProvider);
     await resolver.directory.create(recursive: true);
     await resolver
         .file(_managedProfileId)
-        .writeAsString(const JsonEncoder.withIndent('  ').convert(_buildConfig(plan, rulesPackage)));
+        .writeAsString(
+          const JsonEncoder.withIndent(
+            '  ',
+          ).convert(_buildConfig(plan, rulesPackage, includeRemoteRuleSets: includeRemoteRuleSets)),
+          flush: true,
+        );
 
     final profile = _managedProfileEntity();
     final dataSource = ref.read(profileDataSourceProvider);
@@ -686,7 +718,11 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     );
   }
 
-  Map<String, dynamic> _buildConfig(NimbusConnectPlan plan, NimbusRulesPackage rulesPackage) {
+  Map<String, dynamic> _buildConfig(
+    NimbusConnectPlan plan,
+    NimbusRulesPackage rulesPackage, {
+    bool includeRemoteRuleSets = true,
+  }) {
     _assertSupportedRulesPackage(rulesPackage);
     final patch = plan.singBoxConfigPatch;
     final outbounds = _normalizeOutbounds(patch['outbounds']);
@@ -702,22 +738,27 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       isAutomaticMode: proxyMode == NimbusProxyMode.auto,
       customWebsiteAccessEnabled: customWebsiteAccessEnabled,
       userRules: rulesPackage.userRules,
-    );
+    ).where((rule) => includeRemoteRuleSets || rule.kind != 'rule_set').toList();
+    final publicRules = rulesPackage.publicRules
+        .where((rule) => includeRemoteRuleSets || rule.kind != 'rule_set')
+        .toList();
     final proxyTag = _proxyOutboundTag(routePatch, outbounds);
-    final existingRules = _normalizeRules(routePatch['rules']);
-    final existingRuleSets = _normalizeRules(routePatch['rule_set']);
+    final existingRules = _normalizeRules(
+      routePatch['rules'],
+    ).where((rule) => includeRemoteRuleSets || !rule.containsKey('rule_set')).toList();
+    final existingRuleSets = includeRemoteRuleSets ? _normalizeRules(routePatch['rule_set']) : <Map<String, dynamic>>[];
     final existingRuleSetTags = existingRuleSets.map((ruleSet) => ruleSet['tag']).whereType<String>().toSet();
     final httpClients = buildNimbusHttpClients(proxyTag);
     final managedRuleSets = buildNimbusRuleSets([
       ...activeUserRules,
-      ...rulesPackage.publicRules,
+      ...publicRules,
     ], proxyTag).where((ruleSet) => !existingRuleSetTags.contains(ruleSet['tag']));
     final routeRuleSets = [...managedRuleSets, ...existingRuleSets];
     final routeRules = proxyMode == NimbusProxyMode.global
         ? <Map<String, dynamic>>[]
         : [
             ...buildNimbusRouteRules(activeUserRules, proxyTag),
-            ...buildNimbusRouteRules(rulesPackage.publicRules, proxyTag),
+            ...buildNimbusRouteRules(publicRules, proxyTag),
             nimbusFallbackRouteRule(),
             ...existingRules,
           ];
@@ -875,6 +916,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         'diagnosticCode=${presentation.diagnosticCode}',
         'failureCode=${presentation.failureCode}',
         'stage=${presentation.stage}',
+        if (presentation.detailCode != null) 'detailCode=${presentation.detailCode}',
         'appVersion=${appInfo.version}+${appInfo.buildNumber}',
         'platform=${appInfo.operatingSystem}',
         'osVersion=${appInfo.operatingSystemVersion}',
@@ -948,11 +990,12 @@ NimbusConnectionFailurePresentation presentNimbusConnectionFailure(
       failureCode: 'MISSING_SYSTEM_PRIVILEGE',
       stage: 'SYSTEM_AUTHORIZATION',
     ),
-    InvalidConfig() => NimbusConnectionFailurePresentation(
+    InvalidConfig(:final message) => NimbusConnectionFailurePresentation(
       message: t.nimbus.errors.configurationUnavailable,
       diagnosticCode: 'C-CONFIG-01',
       failureCode: 'INVALID_MANAGED_CONFIG',
       stage: 'CONFIGURATION',
+      detailCode: nimbusConfigFailureDetailCode(message),
     ),
     InvalidConfigOption() => NimbusConnectionFailurePresentation(
       message: t.nimbus.errors.configurationUnavailable,
@@ -985,6 +1028,24 @@ NimbusConnectionFailurePresentation presentNimbusConnectionFailure(
       stage: 'START',
     ),
   };
+}
+
+String nimbusConfigFailureDetailCode(String? message) {
+  final normalized = message?.toLowerCase() ?? '';
+  if (normalized.contains('no inbounds')) return 'MISSING_INBOUNDS';
+  if (normalized.contains('exactly one tun')) return 'INVALID_TUN_INBOUND';
+  if (normalized.contains('no local mixed') || normalized.contains('no local socks')) return 'MISSING_LOCAL_BRIDGE';
+  if (normalized.contains('loopback')) return 'INVALID_LOCAL_BRIDGE';
+  if (normalized.contains('invalid port')) return 'INVALID_LOCAL_PORT';
+  if (normalized.contains('no such file') ||
+      normalized.contains('cannot find') ||
+      normalized.contains('reading config')) {
+    return 'CONFIG_FILE_UNAVAILABLE';
+  }
+  if (normalized.contains('parse') || normalized.contains('json')) return 'CONFIG_PARSE_FAILED';
+  if (normalized.contains('rule_set') || normalized.contains('rule set')) return 'RULE_SET_INCOMPATIBLE';
+  if (normalized.contains('outbound') || normalized.contains('detour')) return 'OUTBOUND_INCOMPATIBLE';
+  return 'CONFIG_REJECTED';
 }
 
 NimbusConnectionFailurePresentation presentNimbusPreparationFailure(String message) {

@@ -10,7 +10,8 @@ void main() {
     final window = File('windows/runner/win32_window.cpp').readAsStringSync();
 
     expect(cmake, contains('set(BINARY_NAME "Yundo")'));
-    expect(cmake, contains('RENAME YundoService.exe'));
+    expect(cmake, contains('"../hiddify-core/bin/HiddifyCli.exe"'));
+    expect(cmake, isNot(contains('RENAME YundoService.exe')));
     expect(main, contains('L"Yundo Dev"'));
     expect(main, contains('L"Yundo"'));
     expect(main, contains('L"YundoDevMutex"'));
@@ -34,7 +35,9 @@ void main() {
     final makefile = File('Makefile').readAsStringSync();
 
     final icon = File('windows/runner/resources/app_icon.ico').readAsBytesSync();
+    final trayIcon = File('assets/images/yundo_tray_windows.ico').readAsBytesSync();
     final iconImageCount = icon[4] | (icon[5] << 8);
+    final trayIconImageCount = trayIcon[4] | (trayIcon[5] << 8);
 
     expect(exe, contains('display_name: Yundo'));
     const installerLocales = ['en', 'ar', 'es', 'fa', 'fr', 'id', 'pt-BR', 'ru', 'tr', 'zh-CN', 'zh-TW'];
@@ -73,6 +76,9 @@ void main() {
     expect(inno, contains('Name: "chinesetraditional"'));
     expect(inno, contains("'tunnel install'"));
     expect(inno, contains('Parameters: "tunnel uninstall"'));
+    expect(inno, contains(r'Type: files; Name: "{app}\\YundoService.exe"'));
+    expect(inno, contains("Get-Service -Name ''HiddifyTunnelService''"));
+    expect(inno, contains("BeginConnect(''127.0.0.1'', 18020"));
     expect(inno, contains("RaiseException(CustomMessage('ServiceInstallFailed'))"));
     expect(inno, contains('Flags: runasoriginaluser nowait postinstall skipifsilent'));
     expect(inno, isNot(contains('runascurrentuser')));
@@ -86,6 +92,12 @@ void main() {
     expect(indonesianInstallerMessages, contains('LanguageID=\$0421'));
     expect(icon.take(4), orderedEquals([0, 0, 1, 0]));
     expect(iconImageCount, greaterThan(1));
+    expect(trayIcon.take(4), orderedEquals([0, 0, 1, 0]));
+    expect(trayIconImageCount, greaterThan(1));
+    expect(
+      File('lib/features/system_tray/notifier/system_tray_notifier.dart').readAsStringSync(),
+      contains('images.yundoTrayWindows'),
+    );
     expect(makefile, contains('NIMBUS_API_BASE_URL?=https://api.yundo.app/api/v1'));
     expect(makefile, contains(r'--build-dart-define=NIMBUS_API_BASE_URL=$(NIMBUS_API_BASE_URL)'));
     expect(packaging, contains('Yundo-Windows-Portable-x64.zip'));

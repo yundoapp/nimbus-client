@@ -195,7 +195,7 @@ class WindowsTunnelService {
   }
 
   Future<void> _runElevatedControl(String action) async {
-    final executable = File(p.join(File(Platform.resolvedExecutable).parent.path, 'YundoService.exe'));
+    final executable = File(p.join(File(Platform.resolvedExecutable).parent.path, 'HiddifyCli.exe'));
     if (!await executable.exists()) {
       throw const WindowsTunnelServiceException(
         WindowsTunnelFailureKind.serviceExecutableMissing,

@@ -13,7 +13,7 @@ $bundle = Join-Path $PSScriptRoot "..\build\windows\x64\runner\$Configuration"
 $executable = Join-Path $bundle "Yundo.exe"
 $requiredFiles = @(
     $executable,
-    (Join-Path $bundle "YundoService.exe"),
+    (Join-Path $bundle "HiddifyCli.exe"),
     (Join-Path $bundle "hiddify-core.dll"),
     (Join-Path $bundle "libcronet.dll"),
     (Join-Path $bundle "flutter_windows.dll"),

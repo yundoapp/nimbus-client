@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_issue_report_sanitizer.dart';
 
@@ -35,5 +36,43 @@ void main() {
     expect(diagnostics, containsPair('uplink', 1024));
     expect(diagnostics, isNot(contains('refreshToken')));
     expect(diagnostics, isNot(contains('nodeConfig')));
+  });
+
+  test('旧版 API 拒绝新增字段时允许兼容重试', () {
+    final error = DioException.badResponse(
+      statusCode: 400,
+      requestOptions: RequestOptions(path: 'issue-reports'),
+      response: Response<Map<String, Object?>>(
+        requestOptions: RequestOptions(path: 'issue-reports'),
+        statusCode: 400,
+        data: const {
+          'code': 'VALIDATION_FAILED',
+          'fields': ['category'],
+        },
+      ),
+    );
+
+    expect(shouldRetryLegacyIssueReport(error), isTrue);
+    expect(
+      buildLegacyIssueReportDescription(category: 'connection', description: '无法加速', contact: 'user@example.com'),
+      '[connection]\n无法加速\nContact: user@example.com',
+    );
+  });
+
+  test('其他校验错误不会被兼容重试掩盖', () {
+    final error = DioException.badResponse(
+      statusCode: 400,
+      requestOptions: RequestOptions(path: 'issue-reports'),
+      response: Response<Map<String, Object?>>(
+        requestOptions: RequestOptions(path: 'issue-reports'),
+        statusCode: 400,
+        data: const {
+          'code': 'VALIDATION_FAILED',
+          'fields': ['diagnostics'],
+        },
+      ),
+    );
+
+    expect(shouldRetryLegacyIssueReport(error), isFalse);
   });
 }

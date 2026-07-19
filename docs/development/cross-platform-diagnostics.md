@@ -65,10 +65,12 @@ Yundo acceleration diagnostics
 diagnosticCode=I-PERM-01
 failureCode=MISSING_SYSTEM_PERMISSION
 stage=SYSTEM_PERMISSION
-appVersion=1.1.0+10010
+appVersion=1.1.1+10011
 platform=ios
 osVersion=...
 ```
+
+配置失败可额外包含稳定、脱敏的结构详情，例如 `detailCode=RULE_SET_INCOMPATIBLE`；不得复制底层解析原文、节点地址或本地路径。Windows 会依据系统注册表 Build 识别 Windows 10/11，避免兼容层产品名造成误判。
 
 问题上报保持与已部署 API 兼容，将诊断元数据写入现有白名单字段 `connectionStatus`：
 
@@ -77,6 +79,8 @@ DISCONNECTED; diagnostic=I-PERM-01; failure=MISSING_SYSTEM_PERMISSION; stage=SYS
 ```
 
 同时上报 App 版本、平台、系统版本、规则版本、节点地区代码、套餐状态和流量汇总。客户端不上传密码、令牌、激活码、完整 UUID、连接配置、访问 URL、网页内容、DNS 明细或本机用户路径；自然文本和诊断字段在离开设备前都要经过脱敏与白名单过滤。
+
+问题上报优先使用当前 API 的类别和联系方式字段；若已部署旧 API 明确拒绝这两个新增字段，则自动降级为旧请求结构重试。兼容重试只针对服务端返回的新增字段校验失败，不掩盖其他接口错误。
 
 ## 验证
 

@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 const _redacted = '[REDACTED]';
 
 final _authorizationPattern = RegExp(r'(authorization\s*[:=]\s*bearer\s+)[^\s,;]+', caseSensitive: false);
@@ -46,6 +48,28 @@ Map<String, Object?> sanitizeNimbusIssueDiagnostics(Map<String, Object?> diagnos
     for (final entry in diagnostics.entries)
       if (_allowedDiagnosticKeys.contains(entry.key)) entry.key: _sanitizeDiagnosticValue(entry.value),
   };
+}
+
+bool shouldRetryLegacyIssueReport(Object error) {
+  if (error is! DioException) return false;
+  final data = error.response?.data;
+  if (data is! Map || data['code'] != 'VALIDATION_FAILED') return false;
+  final fields = data['fields'];
+  return fields is List && fields.any((field) => field == 'category' || field == 'contact');
+}
+
+String buildLegacyIssueReportDescription({
+  required String category,
+  required String description,
+  required String contact,
+}) {
+  final parts = <String>[
+    '[$category]',
+    if (description.trim().isNotEmpty) description.trim(),
+    if (contact.trim().isNotEmpty) 'Contact: ${contact.trim()}',
+  ];
+  final value = parts.join('\n');
+  return value.length <= 1000 ? value : value.substring(0, 1000);
 }
 
 Object? _sanitizeDiagnosticValue(Object? value) {

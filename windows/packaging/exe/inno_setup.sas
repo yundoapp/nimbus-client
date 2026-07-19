@@ -83,9 +83,10 @@ Name: "{userstartup}\\{code:YundoAppName}"; Filename: "{app}\\{{EXECUTABLE_NAME}
 Filename: "{app}\\{{EXECUTABLE_NAME}}"; Description: "{cm:LaunchProgram,Yundo}"; Flags: runasoriginaluser nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: "{app}\\YundoService.exe"; Parameters: "tunnel uninstall"; Flags: runhidden waituntilterminated; RunOnceId: "RemoveYundoAccelerationService"
+Filename: "{app}\\HiddifyCli.exe"; Parameters: "tunnel uninstall"; Flags: runhidden waituntilterminated; RunOnceId: "RemoveYundoAccelerationService"
 
 [InstallDelete]
+Type: files; Name: "{app}\\YundoService.exe"
 Type: files; Name: "{autoprograms}\\Yundo.lnk"
 Type: files; Name: "{autoprograms}\\云渡.lnk"
 Type: files; Name: "{autodesktop}\\Yundo.lnk"
@@ -128,7 +129,19 @@ var
 begin
   if CurStep = ssPostInstall then
   begin
-    if (not Exec(ExpandConstant('{app}\\YundoService.exe'), 'tunnel install',
+    if (not Exec(ExpandConstant('{app}\\HiddifyCli.exe'), 'tunnel install',
+      ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode)) or
+      (ResultCode <> 0) then
+      RaiseException(CustomMessage('ServiceInstallFailed'));
+    if (not Exec('powershell.exe',
+      '-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "' +
+      '$service = Get-Service -Name ''HiddifyTunnelService'' -ErrorAction SilentlyContinue; ' +
+      'if (($null -eq $service) -or ($service.Status -ne ''Running'')) { exit 1 }; ' +
+      '$deadline = (Get-Date).AddSeconds(15); ' +
+      'do { $client = New-Object System.Net.Sockets.TcpClient; ' +
+      'try { $attempt = $client.BeginConnect(''127.0.0.1'', 18020, $null, $null); ' +
+      'if ($attempt.AsyncWaitHandle.WaitOne(500) -and $client.Connected) { exit 0 } } ' +
+      'finally { $client.Close() }; Start-Sleep -Milliseconds 250 } while ((Get-Date) -lt $deadline); exit 1"',
       ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode)) or
       (ResultCode <> 0) then
       RaiseException(CustomMessage('ServiceInstallFailed'));
