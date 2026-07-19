@@ -1,6 +1,7 @@
 import 'package:dartx/dartx.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
+import 'package:hiddify/hiddifycore/core_interface/windows_tunnel_service.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 
 part 'core_status.freezed.dart';
@@ -83,6 +84,37 @@ sealed class CoreStatus with _$CoreStatus {
 
         CoreAlert.requestSystemPrivilege => const ConnectionFailure.missingPrivilege(),
 
+        CoreAlert.windowsServiceExecutableMissing => ConnectionFailure.unexpected(
+          WindowsTunnelServiceException(
+            WindowsTunnelFailureKind.serviceExecutableMissing,
+            message ?? 'missing executable',
+          ),
+        ),
+        CoreAlert.windowsAuthorizationDenied => ConnectionFailure.unexpected(
+          WindowsTunnelServiceException(
+            WindowsTunnelFailureKind.authorizationDenied,
+            message ?? 'authorization denied',
+          ),
+        ),
+        CoreAlert.windowsServiceUnavailable => ConnectionFailure.unexpected(
+          WindowsTunnelServiceException(WindowsTunnelFailureKind.serviceUnavailable, message ?? 'service unavailable'),
+        ),
+        CoreAlert.windowsNetworkComponentUnavailable => ConnectionFailure.unexpected(
+          WindowsTunnelServiceException(
+            WindowsTunnelFailureKind.networkComponentUnavailable,
+            message ?? 'network component unavailable',
+          ),
+        ),
+        CoreAlert.windowsNetworkComponentConflict => ConnectionFailure.unexpected(
+          WindowsTunnelServiceException(
+            WindowsTunnelFailureKind.networkComponentConflict,
+            message ?? 'network component conflict',
+          ),
+        ),
+        CoreAlert.windowsTunnelStartFailed => ConnectionFailure.unexpected(
+          WindowsTunnelServiceException(WindowsTunnelFailureKind.startFailed, message ?? 'tunnel start failed'),
+        ),
+
         CoreAlert.startCommandServer ||
         CoreAlert.createService ||
         CoreAlert.startService ||
@@ -107,5 +139,11 @@ enum CoreAlert {
   startService,
   alreadyStarted,
   startFailed,
+  windowsServiceExecutableMissing,
+  windowsAuthorizationDenied,
+  windowsServiceUnavailable,
+  windowsNetworkComponentUnavailable,
+  windowsNetworkComponentConflict,
+  windowsTunnelStartFailed,
   unknown,
 }

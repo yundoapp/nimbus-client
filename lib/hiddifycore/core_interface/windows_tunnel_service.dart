@@ -75,13 +75,23 @@ class WindowsTunnelSettings {
   );
 }
 
-class WindowsTunnelServicePermissionException implements Exception {
-  const WindowsTunnelServicePermissionException(this.message);
+enum WindowsTunnelFailureKind {
+  serviceExecutableMissing,
+  authorizationDenied,
+  serviceUnavailable,
+  networkComponentUnavailable,
+  networkComponentConflict,
+  startFailed,
+}
 
+class WindowsTunnelServiceException implements Exception {
+  const WindowsTunnelServiceException(this.kind, this.message);
+
+  final WindowsTunnelFailureKind kind;
   final String message;
 
   @override
-  String toString() => message;
+  String toString() => '${kind.name}: $message';
 }
 
 class WindowsTunnelService {
@@ -118,12 +128,18 @@ class WindowsTunnelService {
       await startRequest(request);
       return;
     } on GrpcError catch (error) {
-      if (error.code != StatusCode.unavailable) rethrow;
+      if (error.code != StatusCode.unavailable) {
+        throw _classifyStartError(error);
+      }
     }
 
     await (_controlRunner ?? _runElevatedControl)('install');
     await (_serviceWaiter ?? _waitForService)();
-    await startRequest(request);
+    try {
+      await startRequest(request);
+    } on GrpcError catch (error) {
+      throw _classifyStartError(error);
+    }
   }
 
   Future<bool> stop() async {
@@ -172,31 +188,76 @@ class WindowsTunnelService {
         await channel.shutdown();
       }
     }
-    throw const WindowsTunnelServicePermissionException('acceleration service did not become ready');
+    throw const WindowsTunnelServiceException(
+      WindowsTunnelFailureKind.serviceUnavailable,
+      'acceleration service did not become ready',
+    );
   }
 
   Future<void> _runElevatedControl(String action) async {
     final executable = File(p.join(File(Platform.resolvedExecutable).parent.path, 'YundoService.exe'));
     if (!await executable.exists()) {
-      throw const WindowsTunnelServicePermissionException('acceleration service executable is missing');
+      throw const WindowsTunnelServiceException(
+        WindowsTunnelFailureKind.serviceExecutableMissing,
+        'acceleration service executable is missing',
+      );
     }
 
     const command = r'''
 $process = Start-Process -FilePath $env:YUNDO_SERVICE_EXECUTABLE -ArgumentList @('tunnel', $env:YUNDO_SERVICE_CONTROL) -Verb RunAs -WindowStyle Hidden -PassThru -Wait
 exit $process.ExitCode
 ''';
-    final result = await Process.run(
-      'powershell.exe',
-      const ['-NoProfile', '-NonInteractive', '-Command', command],
-      environment: {
-        ...Platform.environment,
-        'YUNDO_SERVICE_EXECUTABLE': executable.path,
-        'YUNDO_SERVICE_CONTROL': action,
-      },
-    );
-    if (result.exitCode != 0) {
-      throw WindowsTunnelServicePermissionException('acceleration service permission was not granted: $action');
+    ProcessResult result;
+    try {
+      result = await Process.run(
+        'powershell.exe',
+        const ['-NoProfile', '-NonInteractive', '-Command', command],
+        environment: {
+          ...Platform.environment,
+          'YUNDO_SERVICE_EXECUTABLE': executable.path,
+          'YUNDO_SERVICE_CONTROL': action,
+        },
+      );
+    } on ProcessException catch (error) {
+      throw WindowsTunnelServiceException(
+        WindowsTunnelFailureKind.serviceUnavailable,
+        'failed to launch acceleration service control: ${error.errorCode}',
+      );
     }
+    if (result.exitCode != 0) {
+      throw WindowsTunnelServiceException(
+        WindowsTunnelFailureKind.authorizationDenied,
+        'acceleration service permission was not granted: $action (${result.exitCode})',
+      );
+    }
+  }
+
+  WindowsTunnelServiceException _classifyStartError(GrpcError error) {
+    final detail = '${error.codeName}: ${error.message ?? 'no detail'}';
+    final normalized = detail.toLowerCase();
+
+    if (error.code == StatusCode.permissionDenied ||
+        normalized.contains('access is denied') ||
+        normalized.contains('access denied') ||
+        normalized.contains('permission denied')) {
+      return WindowsTunnelServiceException(WindowsTunnelFailureKind.authorizationDenied, detail);
+    }
+    if (error.code == StatusCode.unavailable || error.code == StatusCode.deadlineExceeded) {
+      return WindowsTunnelServiceException(WindowsTunnelFailureKind.serviceUnavailable, detail);
+    }
+    if (normalized.contains('wintun') ||
+        normalized.contains('driver') ||
+        normalized.contains('network adapter') ||
+        normalized.contains('network component')) {
+      return WindowsTunnelServiceException(WindowsTunnelFailureKind.networkComponentUnavailable, detail);
+    }
+    if (normalized.contains('already exists') ||
+        normalized.contains('being used by another process') ||
+        normalized.contains('device or resource busy') ||
+        normalized.contains('object name already exists')) {
+      return WindowsTunnelServiceException(WindowsTunnelFailureKind.networkComponentConflict, detail);
+    }
+    return WindowsTunnelServiceException(WindowsTunnelFailureKind.startFailed, detail);
   }
 
   ClientChannel _channel() => ClientChannel(

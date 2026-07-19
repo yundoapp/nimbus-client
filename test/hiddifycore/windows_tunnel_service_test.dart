@@ -71,8 +71,53 @@ void main() {
       controlRunner: (_) async => controlRuns += 1,
     );
 
-    await expectLater(service.start(_tunnelConfig), throwsA(isA<GrpcError>()));
+    await expectLater(
+      service.start(_tunnelConfig),
+      throwsA(
+        isA<WindowsTunnelServiceException>().having(
+          (error) => error.kind,
+          'kind',
+          WindowsTunnelFailureKind.authorizationDenied,
+        ),
+      ),
+    );
     expect(controlRuns, 0);
+  });
+
+  test('classifies a missing Windows network component', () async {
+    final service = WindowsTunnelService(
+      isWindows: () => true,
+      requestStarter: (_) async => throw const GrpcError.unknown('Wintun driver could not be loaded'),
+    );
+
+    await expectLater(
+      service.start(_tunnelConfig),
+      throwsA(
+        isA<WindowsTunnelServiceException>().having(
+          (error) => error.kind,
+          'kind',
+          WindowsTunnelFailureKind.networkComponentUnavailable,
+        ),
+      ),
+    );
+  });
+
+  test('classifies an existing Windows network component conflict', () async {
+    final service = WindowsTunnelService(
+      isWindows: () => true,
+      requestStarter: (_) async => throw const GrpcError.unknown('object name already exists'),
+    );
+
+    await expectLater(
+      service.start(_tunnelConfig),
+      throwsA(
+        isA<WindowsTunnelServiceException>().having(
+          (error) => error.kind,
+          'kind',
+          WindowsTunnelFailureKind.networkComponentConflict,
+        ),
+      ),
+    );
   });
 
   test('reset stops and uninstalls the Windows permission service', () async {

@@ -9,6 +9,7 @@ import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -23,6 +24,7 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
     final repository = ref.watch(nimbusAuthRepositoryProvider);
     final appInfo = ref.watch(appInfoProvider).asData?.value;
     final connectionStatus = ref.watch(connectionNotifierProvider).asData?.value;
+    final connectionDiagnostic = ref.watch(nimbusConnectionControllerProvider).diagnostic;
     final stats = ref.watch(statsNotifierProvider).asData?.value;
     final category = useState('connection');
     final descriptionController = useTextEditingController();
@@ -49,7 +51,7 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
             'platform': appInfo?.operatingSystem,
             'osVersion': appInfo?.operatingSystemVersion,
             'rulesVersion': authState.me?.rules.publicRulesVersion,
-            'connectionStatus': _safeConnectionStatus(connectionStatus),
+            'connectionStatus': _safeConnectionStatus(connectionStatus, connectionDiagnostic),
             'selectedLocation': authState.selectedLocationCode,
             'subscriptionStatus': authState.me?.subscription.status,
             'uplink': stats?.uplink.toInt() ?? 0,
@@ -200,10 +202,14 @@ class NimbusIssueReportPage extends StatelessWidget {
   Widget build(BuildContext context) => const NimbusIssueReportDialog(asPage: true);
 }
 
-String _safeConnectionStatus(ConnectionStatus? status) => switch (status) {
-  Disconnected() => 'DISCONNECTED',
-  Connecting() => 'CONNECTING',
-  Connected() => 'CONNECTED',
-  Disconnecting() => 'DISCONNECTING',
-  null => 'UNKNOWN',
-};
+String _safeConnectionStatus(ConnectionStatus? status, NimbusConnectionDiagnostic? diagnostic) {
+  final connection = switch (status) {
+    Disconnected() => 'DISCONNECTED',
+    Connecting() => 'CONNECTING',
+    Connected() => 'CONNECTED',
+    Disconnecting() => 'DISCONNECTING',
+    null => 'UNKNOWN',
+  };
+  if (diagnostic == null) return connection;
+  return '$connection; diagnostic=${diagnostic.code}; failure=${diagnostic.failureCode}; stage=${diagnostic.stage}';
+}
