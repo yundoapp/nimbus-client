@@ -80,7 +80,7 @@ Name: "{autoprograms}\\{code:YundoAppName}"; Filename: "{app}\\{{EXECUTABLE_NAME
 Name: "{autodesktop}\\{code:YundoAppName}"; Filename: "{app}\\{{EXECUTABLE_NAME}}"; IconFilename: "{app}\\{{EXECUTABLE_NAME}}"
 Name: "{userstartup}\\{code:YundoAppName}"; Filename: "{app}\\{{EXECUTABLE_NAME}}"; WorkingDir: "{app}"; Tasks: launchAtStartup
 [Run]
-Filename: "{app}\\{{EXECUTABLE_NAME}}"; Description: "{cm:LaunchProgram,Yundo}"; Flags: {% if PRIVILEGES_REQUIRED == 'admin' %}runascurrentuser{% endif %} nowait postinstall skipifsilent
+Filename: "{app}\\{{EXECUTABLE_NAME}}"; Description: "{cm:LaunchProgram,Yundo}"; Flags: runasoriginaluser nowait postinstall skipifsilent
 
 [UninstallRun]
 Filename: "{app}\\YundoService.exe"; Parameters: "tunnel uninstall"; Flags: runhidden waituntilterminated; RunOnceId: "RemoveYundoAccelerationService"

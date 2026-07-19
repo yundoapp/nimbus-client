@@ -74,6 +74,8 @@ void main() {
     expect(inno, contains("'tunnel install'"));
     expect(inno, contains('Parameters: "tunnel uninstall"'));
     expect(inno, contains("RaiseException(CustomMessage('ServiceInstallFailed'))"));
+    expect(inno, contains('Flags: runasoriginaluser nowait postinstall skipifsilent'));
+    expect(inno, isNot(contains('runascurrentuser')));
     expect(installerLanguageSetup, contains('Prepared 11 Windows installer languages'));
     expect(installerLanguageSetup, contains('@("Farsi.isl", "Indonesian.isl")'));
     expect(installerLanguageSetup, contains('c495623a97376d524f298b1b160e8fd612375c62'));
