@@ -910,6 +910,12 @@
       "noPlan": "请先激活套餐后再加速。",
       "updateRequired": "当前版本需要更新后继续使用。",
       "connectFailed": "未能开始加速。请检查网络后重试；如仍失败，请复制诊断信息并上报问题。",
+      "configurationUnavailable": "连接准备信息未能生成。请检查网络、重新登录后重试；如仍失败，请上报问题。",
+      "systemComponentUnavailable": "系统加速组件没有正常运行。请重启设备后重试；如仍失败，请上报问题。",
+      "notificationPermissionRequired": "云渡需要通知权限才能在后台提示加速状态。请在系统设置中允许后重试。",
+      "unsupportedLocalSettings": "当前设备保留了不再支持的本地设置。请更新云渡并重启 App 后重试；如仍失败，请上报问题。",
+      "systemStartFailed": "系统加速组件未能启动。请重启设备、退出其他加速类 App 后重试；如仍失败，请复制诊断信息并上报问题。",
+      "statusUnavailable": "暂时无法确认加速状态。请先停止加速后重试；如仍失败，请复制诊断信息并上报问题。",
       "windowsServiceMissing": "系统加速组件安装不完整。请重新安装云渡，并在安装时允许管理员授权。",
       "windowsAuthorizationRequired": "未完成系统授权。请让管理员为云渡完成一次授权，之后普通账号即可直接使用。",
       "windowsServiceUnavailable": "系统加速组件没有启动。请重启 Windows 后重试；如仍失败，请重新安装云渡。",
@@ -922,9 +928,9 @@
       "sessionEnded": "这次加速已结束。需要时可以再次加速。",
       "disconnectedTitle": "加速已停止",
       "cannotConnectTitle": "无法加速",
-      "missingSystemPermission": "需要允许系统网络权限后才能加速。",
-      "missingPrivilege": "需要系统授权后才能加速。",
-      "otherConnectionActive": "系统检测到另一款代理 App 正在运行。请先断开或退出该 App，再开启云渡加速。"
+      "missingSystemPermission": "请按系统提示允许云渡所需的网络权限后重试；如未出现提示，请前往系统设置检查。",
+      "missingPrivilege": "请按云渡请求完成系统授权后重试；如未出现提示，请重启设备。",
+      "otherConnectionActive": "系统检测到另一款加速类 App 正在运行。请先停止或退出该 App，再开启云渡加速。"
     },
     "apiError": {
       "invalidCredentials": "用户名或密码不正确。",

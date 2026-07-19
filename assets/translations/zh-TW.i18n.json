@@ -910,6 +910,12 @@
       "noPlan": "請先啟用套餐後再加速。",
       "updateRequired": "目前版本需要更新後繼續使用。",
       "connectFailed": "無法開始加速。請檢查網路後再試；若仍失敗，請複製診斷資訊並回報問題。",
+      "configurationUnavailable": "連線準備資訊未能產生。請檢查網路、重新登入後重試；如仍失敗，請回報問題。",
+      "systemComponentUnavailable": "系統加速元件沒有正常執行。請重新啟動裝置後重試；如仍失敗，請回報問題。",
+      "notificationPermissionRequired": "雲渡需要通知權限才能在背景提示加速狀態。請在系統設定中允許後重試。",
+      "unsupportedLocalSettings": "目前裝置保留了不再支援的本機設定。請更新雲渡並重新啟動 App 後重試；如仍失敗，請回報問題。",
+      "systemStartFailed": "系統加速元件未能啟動。請重新啟動裝置、結束其他加速類 App 後重試；如仍失敗，請複製診斷資訊並回報問題。",
+      "statusUnavailable": "暫時無法確認加速狀態。請先停止加速後重試；如仍失敗，請複製診斷資訊並回報問題。",
       "windowsServiceMissing": "系統加速元件安裝不完整。請重新安裝雲渡，並在安裝時允許管理員授權。",
       "windowsAuthorizationRequired": "尚未完成系統授權。請讓管理員為雲渡完成一次授權，之後一般帳號即可直接使用。",
       "windowsServiceUnavailable": "系統加速元件未啟動。請重新啟動 Windows 後再試；若仍失敗，請重新安裝雲渡。",
@@ -922,9 +928,9 @@
       "sessionEnded": "這次加速已結束。需要時可以再次加速。",
       "disconnectedTitle": "加速已停止",
       "cannotConnectTitle": "無法加速",
-      "missingSystemPermission": "需要允許系統網路權限後才能加速。",
-      "missingPrivilege": "需要系統授權後才能加速。",
-      "otherConnectionActive": "系統偵測到另一個代理 App 正在執行。請先中斷連線或結束該 App，再開啟雲渡加速。"
+      "missingSystemPermission": "請依系統提示允許雲渡所需的網路權限後重試；如未出現提示，請前往系統設定檢查。",
+      "missingPrivilege": "請依雲渡要求完成系統授權後重試；如未出現提示，請重新啟動裝置。",
+      "otherConnectionActive": "系統偵測到另一個加速類 App 正在執行。請先停止或結束該 App，再開啟雲渡加速。"
     },
     "apiError": {
       "invalidCredentials": "使用者名稱或密碼不正確。",

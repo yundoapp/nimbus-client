@@ -902,6 +902,12 @@
       "noPlan": "Activez un forfait avant de lancer l’accélération.",
       "updateRequired": "Mettez l’app à jour pour continuer.",
       "connectFailed": "L’accélération n’a pas pu démarrer. Vérifiez le réseau et réessayez. Si le problème persiste, copiez le diagnostic et signalez-le.",
+      "configurationUnavailable": "La connexion n’a pas pu être préparée. Vérifiez le réseau, reconnectez-vous et réessayez. Si le problème persiste, signalez-le.",
+      "systemComponentUnavailable": "Le composant d’accélération système ne fonctionne pas. Redémarrez l’appareil et réessayez. Si le problème persiste, signalez-le.",
+      "notificationPermissionRequired": "Yundo a besoin de l’autorisation de notification pour afficher l’état de l’accélération en arrière-plan. Autorisez-la dans les réglages système et réessayez.",
+      "unsupportedLocalSettings": "Cet appareil conserve un réglage local qui n’est plus pris en charge. Mettez Yundo à jour, redémarrez l’app et réessayez. Si le problème persiste, signalez-le.",
+      "systemStartFailed": "Le composant d’accélération système n’a pas pu démarrer. Redémarrez l’appareil, fermez les autres apps d’accélération et réessayez. Si le problème persiste, copiez le diagnostic et signalez-le.",
+      "statusUnavailable": "Yundo n’a pas pu confirmer l’état de l’accélération. Arrêtez l’accélération et réessayez. Si le problème persiste, copiez le diagnostic et signalez-le.",
       "windowsServiceMissing": "Le composant d’accélération système est incomplet. Réinstallez Yundo et autorisez l’administrateur pendant l’installation.",
       "windowsAuthorizationRequired": "L’autorisation système n’a pas été effectuée. Demandez à un administrateur d’autoriser Yundo une fois ; les utilisateurs standard pourront ensuite l’utiliser.",
       "windowsServiceUnavailable": "Le composant d’accélération système n’a pas démarré. Redémarrez Windows et réessayez. Si le problème persiste, réinstallez Yundo.",
@@ -914,9 +920,9 @@
       "sessionEnded": "Cette session d’accélération est terminée. Vous pouvez la relancer quand vous en avez besoin.",
       "disconnectedTitle": "Accélération arrêtée",
       "cannotConnectTitle": "Accélération impossible",
-      "missingSystemPermission": "Autorisez le réseau système requis avant de lancer l’accélération.",
-      "missingPrivilege": "Une autorisation système est requise avant de lancer l’accélération.",
-      "otherConnectionActive": "Le système a détecté une autre application proxy en cours d’exécution. Déconnectez-la ou quittez-la avant de lancer l’accélération Yundo."
+      "missingSystemPermission": "Suivez l’invite système pour autoriser l’accès réseau requis par Yundo, puis réessayez. Si aucune invite n’apparaît, vérifiez les réglages système.",
+      "missingPrivilege": "Effectuez l’autorisation système demandée par Yundo, puis réessayez. Si aucune invite n’apparaît, redémarrez l’appareil.",
+      "otherConnectionActive": "Le système a détecté une autre application d’accélération en cours d’exécution. Arrêtez-la ou quittez-la avant de lancer l’accélération Yundo."
     },
     "apiError": {
       "invalidCredentials": "Nom d’utilisateur ou mot de passe incorrect.",

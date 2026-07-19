@@ -153,6 +153,26 @@ class NimbusConnectionFailurePresentation {
   final String stage;
 }
 
+enum NimbusDiagnosticPlatform {
+  windows('W'),
+  macos('M'),
+  ios('I'),
+  android('A'),
+  unknown('C');
+
+  const NimbusDiagnosticPlatform(this.codePrefix);
+
+  final String codePrefix;
+
+  static NimbusDiagnosticPlatform get current {
+    if (Platform.isWindows) return NimbusDiagnosticPlatform.windows;
+    if (Platform.isMacOS) return NimbusDiagnosticPlatform.macos;
+    if (Platform.isIOS) return NimbusDiagnosticPlatform.ios;
+    if (Platform.isAndroid) return NimbusDiagnosticPlatform.android;
+    return NimbusDiagnosticPlatform.unknown;
+  }
+}
+
 class NimbusConnectionController extends Notifier<NimbusConnectionState> with AppLogger {
   static const _macOSPrivilegedHelper = MacOSPrivilegedHelper();
 
@@ -354,7 +374,8 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       state = state.copyWith(isPreparing: true, plan: plan, traffic: plan.traffic, connectedReported: false);
     } catch (error) {
       loggy.warning('failed to prepare managed connection: ${_diagnosticError(error)}');
-      await _fail(_describeError(error));
+      final presentation = presentNimbusPreparationFailure(_describeError(error));
+      await _fail(presentation.message, diagnostic: _connectionDiagnostic(presentation));
       if (_repository.isUnauthorized(error)) {
         await ref.read(nimbusAuthControllerProvider.notifier).refreshAfterUnauthorized(session);
       }
@@ -372,25 +393,20 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       await _handleConnectionStatus(ref.read(connectionNotifierProvider));
     } on ConnectionFailure catch (failure) {
       _transportReady = false;
-      final presentation = presentNimbusConnectionFailure(failure, _t, isWindows: Platform.isWindows);
+      final presentation = presentNimbusConnectionFailure(failure, _t, platform: NimbusDiagnosticPlatform.current);
       await _safeReportResult(session: session, plan: plan, status: 'failed', failureCode: presentation.failureCode);
       state = const NimbusConnectionState();
       await _fail(presentation.message, diagnostic: _connectionDiagnostic(presentation));
     } catch (error) {
       _transportReady = false;
-      await _safeReportResult(session: session, plan: plan, status: 'failed', failureCode: 'CLIENT_START_FAILED');
-      state = const NimbusConnectionState();
-      await _fail(
-        _t.nimbus.errors.connectFailed,
-        diagnostic: _connectionDiagnostic(
-          const NimbusConnectionFailurePresentation(
-            message: '',
-            diagnosticCode: 'C-START-01',
-            failureCode: 'CLIENT_START_FAILED',
-            stage: 'START',
-          ),
-        ),
+      final presentation = presentNimbusConnectionFailure(
+        ConnectionFailure.unexpected(error),
+        _t,
+        platform: NimbusDiagnosticPlatform.current,
       );
+      await _safeReportResult(session: session, plan: plan, status: 'failed', failureCode: presentation.failureCode);
+      state = const NimbusConnectionState();
+      await _fail(presentation.message, diagnostic: _connectionDiagnostic(presentation));
       loggy.warning('failed to start managed connection', error);
     } finally {
       await _deleteManagedProfileFile();
@@ -414,7 +430,8 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         '(systemProxy=${conflict.systemProxyEnabled}, tunneledRoutes=${conflict.tunneledRouteCount})',
       );
       if (showErrors) {
-        await _fail(_t.nimbus.errors.otherConnectionActive);
+        final presentation = presentNimbusConnectionConflict(_t, platform: NimbusDiagnosticPlatform.current);
+        await _fail(presentation.message, diagnostic: _connectionDiagnostic(presentation));
       } else if (state.isPreparing) {
         state = state.copyWith(isPreparing: false, plan: null, errorMessage: null, connectedReported: false);
       }
@@ -453,7 +470,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         )) {
       final failure = (value as Disconnected).connectionFailure!;
       await _handleDisconnected(session: session, plan: plan, failure: failure);
-      final presentation = presentNimbusConnectionFailure(failure, _t, isWindows: Platform.isWindows);
+      final presentation = presentNimbusConnectionFailure(failure, _t, platform: NimbusDiagnosticPlatform.current);
       await _fail(presentation.message, diagnostic: _connectionDiagnostic(presentation));
       return;
     }
@@ -475,17 +492,8 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       final wasPreparing = state.isPreparing && !state.connectedReported;
       await _handleDisconnected(session: session, plan: plan, failureCode: error.runtimeType.toString());
       if (wasPreparing) {
-        await _fail(
-          _t.nimbus.errors.connectFailed,
-          diagnostic: _connectionDiagnostic(
-            const NimbusConnectionFailurePresentation(
-              message: '',
-              diagnosticCode: 'C-STATUS-01',
-              failureCode: 'CLIENT_STATUS_FAILED',
-              stage: 'STATUS',
-            ),
-          ),
-        );
+        final presentation = presentNimbusConnectionStatusFailure(_t, platform: NimbusDiagnosticPlatform.current);
+        await _fail(presentation.message, diagnostic: _connectionDiagnostic(presentation));
       }
     }
   }
@@ -518,7 +526,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
             failureCode ??
             (failure == null
                 ? 'CLIENT_START_FAILED'
-                : presentNimbusConnectionFailure(failure, _t, isWindows: Platform.isWindows).failureCode),
+                : presentNimbusConnectionFailure(failure, _t, platform: NimbusDiagnosticPlatform.current).failureCode),
       );
     }
     state = const NimbusConnectionState();
@@ -878,9 +886,9 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
 NimbusConnectionFailurePresentation presentNimbusConnectionFailure(
   ConnectionFailure failure,
   Translations t, {
-  required bool isWindows,
+  required NimbusDiagnosticPlatform platform,
 }) {
-  final windowsError = isWindows
+  final windowsError = platform == NimbusDiagnosticPlatform.windows
       ? switch (failure) {
           UnexpectedConnectionFailure(error: final WindowsTunnelServiceException error) => error,
           _ => null,
@@ -930,53 +938,86 @@ NimbusConnectionFailurePresentation presentNimbusConnectionFailure(
   return switch (failure) {
     MissingVpnPermission() => NimbusConnectionFailurePresentation(
       message: t.nimbus.errors.missingSystemPermission,
-      diagnosticCode: 'P-SYS-01',
+      diagnosticCode: '${platform.codePrefix}-PERM-01',
       failureCode: 'MISSING_SYSTEM_PERMISSION',
       stage: 'SYSTEM_PERMISSION',
     ),
     MissingPrivilege() => NimbusConnectionFailurePresentation(
       message: t.nimbus.errors.missingPrivilege,
-      diagnosticCode: 'P-AUTH-01',
+      diagnosticCode: '${platform.codePrefix}-AUTH-01',
       failureCode: 'MISSING_SYSTEM_PRIVILEGE',
       stage: 'SYSTEM_AUTHORIZATION',
     ),
     InvalidConfig() => NimbusConnectionFailurePresentation(
-      message: t.nimbus.errors.connectFailed,
+      message: t.nimbus.errors.configurationUnavailable,
       diagnosticCode: 'C-CONFIG-01',
       failureCode: 'INVALID_MANAGED_CONFIG',
       stage: 'CONFIGURATION',
     ),
     InvalidConfigOption() => NimbusConnectionFailurePresentation(
-      message: t.nimbus.errors.connectFailed,
+      message: t.nimbus.errors.configurationUnavailable,
       diagnosticCode: 'C-CONFIG-02',
       failureCode: 'INVALID_CONFIG_OPTION',
       stage: 'CONFIGURATION',
     ),
     BackgroundCoreNotAvailable() => NimbusConnectionFailurePresentation(
-      message: t.nimbus.errors.connectFailed,
-      diagnosticCode: 'C-CORE-01',
+      message: t.nimbus.errors.systemComponentUnavailable,
+      diagnosticCode: '${platform.codePrefix}-CORE-01',
       failureCode: 'CORE_NOT_AVAILABLE',
       stage: 'CORE_START',
     ),
     MissingNotificationPermission() => NimbusConnectionFailurePresentation(
-      message: t.nimbus.errors.connectFailed,
-      diagnosticCode: 'C-NOTIFY-01',
+      message: t.nimbus.errors.notificationPermissionRequired,
+      diagnosticCode: '${platform.codePrefix}-NOTIFY-01',
       failureCode: 'MISSING_NOTIFICATION_PERMISSION',
       stage: 'NOTIFICATION_PERMISSION',
     ),
     MissingWarpLicense() || MissingPsiphonLicense() => NimbusConnectionFailurePresentation(
-      message: t.nimbus.errors.connectFailed,
+      message: t.nimbus.errors.unsupportedLocalSettings,
       diagnosticCode: 'C-OPTION-01',
       failureCode: 'UNSUPPORTED_LOCAL_OPTION',
       stage: 'LOCAL_OPTION',
     ),
     UnexpectedConnectionFailure() => NimbusConnectionFailurePresentation(
-      message: t.nimbus.errors.connectFailed,
-      diagnosticCode: 'C-START-01',
+      message: t.nimbus.errors.systemStartFailed,
+      diagnosticCode: '${platform.codePrefix}-START-01',
       failureCode: 'CLIENT_START_FAILED',
       stage: 'START',
     ),
   };
+}
+
+NimbusConnectionFailurePresentation presentNimbusPreparationFailure(String message) {
+  return NimbusConnectionFailurePresentation(
+    message: message,
+    diagnosticCode: 'C-PLAN-01',
+    failureCode: 'PLAN_PREPARATION_FAILED',
+    stage: 'PLAN_PREPARATION',
+  );
+}
+
+NimbusConnectionFailurePresentation presentNimbusConnectionConflict(
+  Translations t, {
+  required NimbusDiagnosticPlatform platform,
+}) {
+  return NimbusConnectionFailurePresentation(
+    message: t.nimbus.errors.otherConnectionActive,
+    diagnosticCode: '${platform.codePrefix}-NET-02',
+    failureCode: 'OTHER_CONNECTION_ACTIVE',
+    stage: 'NETWORK_CONFLICT',
+  );
+}
+
+NimbusConnectionFailurePresentation presentNimbusConnectionStatusFailure(
+  Translations t, {
+  required NimbusDiagnosticPlatform platform,
+}) {
+  return NimbusConnectionFailurePresentation(
+    message: t.nimbus.errors.statusUnavailable,
+    diagnosticCode: '${platform.codePrefix}-STATUS-01',
+    failureCode: 'CLIENT_STATUS_FAILED',
+    stage: 'STATUS',
+  );
 }
 
 bool shouldRecheckConnectionConflict(DateTime? lastDisconnectAt, DateTime now) {

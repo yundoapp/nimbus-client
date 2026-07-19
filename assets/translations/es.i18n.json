@@ -910,6 +910,12 @@
       "noPlan": "Activa un plan antes de acelerar.",
       "updateRequired": "Actualiza la app para continuar.",
       "connectFailed": "No se pudo iniciar la aceleración. Comprueba la red y vuelve a intentarlo. Si continúa, copia el diagnóstico e informa del problema.",
+      "configurationUnavailable": "No se pudo preparar la conexión. Comprueba la red, vuelve a iniciar sesión e inténtalo de nuevo. Si continúa, informa del problema.",
+      "systemComponentUnavailable": "El componente de aceleración del sistema no funciona. Reinicia el dispositivo e inténtalo de nuevo. Si continúa, informa del problema.",
+      "notificationPermissionRequired": "Yundo necesita permiso de notificaciones para mostrar el estado de aceleración en segundo plano. Permítelo en los ajustes del sistema e inténtalo de nuevo.",
+      "unsupportedLocalSettings": "Este dispositivo conserva un ajuste local que ya no es compatible. Actualiza Yundo, reinicia la app e inténtalo de nuevo. Si continúa, informa del problema.",
+      "systemStartFailed": "No se pudo iniciar el componente de aceleración del sistema. Reinicia el dispositivo, cierra otras apps de aceleración e inténtalo de nuevo. Si continúa, copia el diagnóstico e informa del problema.",
+      "statusUnavailable": "Yundo no pudo confirmar el estado de aceleración. Detén la aceleración e inténtalo de nuevo. Si continúa, copia el diagnóstico e informa del problema.",
       "windowsServiceMissing": "El componente de aceleración del sistema está incompleto. Reinstala Yundo y permite la autorización del administrador durante la instalación.",
       "windowsAuthorizationRequired": "No se completó la autorización del sistema. Pide a un administrador que autorice Yundo una vez; después los usuarios normales podrán usarlo directamente.",
       "windowsServiceUnavailable": "El componente de aceleración del sistema no se inició. Reinicia Windows y vuelve a intentarlo. Si continúa, reinstala Yundo.",
@@ -922,9 +928,9 @@
       "sessionEnded": "Esta sesión de aceleración terminó. Puedes iniciarla de nuevo cuando la necesites.",
       "disconnectedTitle": "Aceleración detenida",
       "cannotConnectTitle": "No se puede acelerar",
-      "missingSystemPermission": "Permite el permiso de red del sistema antes de acelerar.",
-      "missingPrivilege": "Se requiere autorización del sistema antes de acelerar.",
-      "otherConnectionActive": "El sistema detectó otra aplicación proxy en ejecución. Desconéctala o ciérrala antes de iniciar la aceleración de Yundo."
+      "missingSystemPermission": "Sigue el aviso del sistema para permitir a Yundo el acceso de red necesario y vuelve a intentarlo. Si no aparece, revisa los ajustes del sistema.",
+      "missingPrivilege": "Completa la autorización del sistema solicitada por Yundo y vuelve a intentarlo. Si no aparece ningún aviso, reinicia el dispositivo.",
+      "otherConnectionActive": "El sistema detectó otra aplicación de aceleración en ejecución. Deténla o ciérrala antes de iniciar la aceleración de Yundo."
     },
     "apiError": {
       "invalidCredentials": "Usuario o contraseña incorrectos.",

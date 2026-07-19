@@ -910,6 +910,12 @@
       "noPlan": "Hızlandırmadan önce bir plan etkinleştirin.",
       "updateRequired": "Devam etmek için uygulamayı güncelleyin.",
       "connectFailed": "Hızlandırma başlatılamadı. Ağı kontrol edip tekrar deneyin. Sorun sürerse tanı bilgisini kopyalayıp bildirin.",
+      "configurationUnavailable": "Bağlantı hazırlanamadı. Ağı kontrol edin, yeniden oturum açın ve tekrar deneyin. Sorun sürerse bildirin.",
+      "systemComponentUnavailable": "Sistem hızlandırma bileşeni çalışmıyor. Cihazı yeniden başlatıp tekrar deneyin. Sorun sürerse bildirin.",
+      "notificationPermissionRequired": "Yundo'nun arka planda hızlandırma durumunu gösterebilmesi için bildirim izni gerekir. Sistem ayarlarından izin verip tekrar deneyin.",
+      "unsupportedLocalSettings": "Bu cihazda artık desteklenmeyen bir yerel ayar var. Yundo'yu güncelleyin, uygulamayı yeniden başlatın ve tekrar deneyin. Sorun sürerse bildirin.",
+      "systemStartFailed": "Sistem hızlandırma bileşeni başlatılamadı. Cihazı yeniden başlatın, diğer hızlandırma uygulamalarını kapatın ve tekrar deneyin. Sorun sürerse tanı bilgisini kopyalayıp bildirin.",
+      "statusUnavailable": "Yundo hızlandırma durumunu doğrulayamadı. Hızlandırmayı durdurup tekrar deneyin. Sorun sürerse tanı bilgisini kopyalayıp bildirin.",
       "windowsServiceMissing": "Sistem hızlandırma bileşeni eksik. Yundo’yu yeniden yükleyin ve kurulum sırasında yönetici yetkisine izin verin.",
       "windowsAuthorizationRequired": "Sistem yetkilendirmesi tamamlanmadı. Bir yöneticiden Yundo’yu bir kez yetkilendirmesini isteyin; ardından standart kullanıcılar doğrudan kullanabilir.",
       "windowsServiceUnavailable": "Sistem hızlandırma bileşeni başlamadı. Windows’u yeniden başlatıp tekrar deneyin. Sorun sürerse Yundo’yu yeniden yükleyin.",
@@ -922,9 +928,9 @@
       "sessionEnded": "Bu hızlandırma oturumu sona erdi. İhtiyacınız olduğunda hızlandırmayı yeniden başlatabilirsiniz.",
       "disconnectedTitle": "Hızlandırma durduruldu",
       "cannotConnectTitle": "Hızlandırılamıyor",
-      "missingSystemPermission": "Hızlandırmadan önce gerekli sistem ağ iznine izin verin.",
-      "missingPrivilege": "Hızlandırmadan önce sistem yetkilendirmesi gerekiyor.",
-      "otherConnectionActive": "Sistem başka bir proxy uygulamasının çalıştığını algıladı. Yundo hızlandırmasını başlatmadan önce bağlantısını kesin veya uygulamadan çıkın."
+      "missingSystemPermission": "Sistem istemini izleyerek Yundo için gerekli ağ iznini verin ve tekrar deneyin. İstem görünmezse sistem ayarlarını kontrol edin.",
+      "missingPrivilege": "Yundo'nun istediği sistem yetkilendirmesini tamamlayıp tekrar deneyin. İstem görünmezse cihazı yeniden başlatın.",
+      "otherConnectionActive": "Sistem başka bir hızlandırma uygulamasının çalıştığını algıladı. Yundo hızlandırmasını başlatmadan önce durdurun veya uygulamadan çıkın."
     },
     "apiError": {
       "invalidCredentials": "Kullanıcı adı veya parola hatalı.",

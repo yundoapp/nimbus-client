@@ -910,6 +910,12 @@
       "noPlan": "Activate a plan before starting acceleration.",
       "updateRequired": "Update the app to continue.",
       "connectFailed": "Acceleration could not start. Check your network and try again. If it still fails, copy the diagnostics and report the issue.",
+      "configurationUnavailable": "The connection setup could not be prepared. Check your network, sign in again, and retry. If it still fails, report the issue.",
+      "systemComponentUnavailable": "The system acceleration component is not running. Restart your device and try again. If it still fails, report the issue.",
+      "notificationPermissionRequired": "Notification permission is required to show background acceleration status. Allow it in system settings and try again.",
+      "unsupportedLocalSettings": "This device has a local setting that is no longer supported. Update Yundo, restart the app, and try again. If it still fails, report the issue.",
+      "systemStartFailed": "The system acceleration component could not start. Restart your device, close other acceleration apps, and try again. If it still fails, copy the diagnostics and report the issue.",
+      "statusUnavailable": "Yundo could not confirm the acceleration status. Stop acceleration and try again. If it still fails, copy the diagnostics and report the issue.",
       "windowsServiceMissing": "The system acceleration component is incomplete. Reinstall Yundo and allow administrator authorization during setup.",
       "windowsAuthorizationRequired": "System authorization was not completed. Ask an administrator to authorize Yundo once; normal users can then use it directly.",
       "windowsServiceUnavailable": "The system acceleration component did not start. Restart Windows and try again. If it still fails, reinstall Yundo.",
@@ -922,9 +928,9 @@
       "sessionEnded": "This acceleration session has ended. You can start acceleration again whenever you need it.",
       "disconnectedTitle": "Acceleration stopped",
       "cannotConnectTitle": "Unable to accelerate",
-      "missingSystemPermission": "Allow the required system network permission before starting acceleration.",
-      "missingPrivilege": "System authorization is required before starting acceleration.",
-      "otherConnectionActive": "The system detected another proxy app running. Disconnect or quit it before starting Yundo acceleration."
+      "missingSystemPermission": "Follow the system prompt to allow Yundo's required network permission, then try again. If no prompt appears, check system settings.",
+      "missingPrivilege": "Complete the system authorization requested by Yundo, then try again. If no prompt appears, restart the device.",
+      "otherConnectionActive": "The system detected another acceleration app running. Stop or quit it before starting Yundo acceleration."
     },
     "apiError": {
       "invalidCredentials": "Invalid username or password.",
