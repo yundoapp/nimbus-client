@@ -51,7 +51,7 @@ class NimbusIssueReportDialog extends HookConsumerWidget {
             'platform': appInfo?.operatingSystem,
             'osVersion': appInfo?.operatingSystemVersion,
             'rulesVersion': authState.me?.rules.publicRulesVersion,
-            'connectionStatus': _safeConnectionStatus(connectionStatus, connectionDiagnostic),
+            'connectionStatus': buildNimbusIssueConnectionStatus(connectionStatus, connectionDiagnostic),
             'selectedLocation': authState.selectedLocationCode,
             'subscriptionStatus': authState.me?.subscription.status,
             'uplink': stats?.uplink.toInt() ?? 0,
@@ -202,7 +202,7 @@ class NimbusIssueReportPage extends StatelessWidget {
   Widget build(BuildContext context) => const NimbusIssueReportDialog(asPage: true);
 }
 
-String _safeConnectionStatus(ConnectionStatus? status, NimbusConnectionDiagnostic? diagnostic) {
+String buildNimbusIssueConnectionStatus(ConnectionStatus? status, NimbusConnectionDiagnostic? diagnostic) {
   final connection = switch (status) {
     Disconnected() => 'DISCONNECTED',
     Connecting() => 'CONNECTING',

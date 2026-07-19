@@ -910,6 +910,12 @@
       "noPlan": "Aktifkan paket sebelum mempercepat.",
       "updateRequired": "Perbarui aplikasi untuk melanjutkan.",
       "connectFailed": "Akselerasi tidak dapat dimulai. Periksa jaringan dan coba lagi. Jika masih gagal, salin diagnostik dan laporkan masalah.",
+      "configurationUnavailable": "Persiapan koneksi gagal. Periksa jaringan, masuk kembali, lalu coba lagi. Jika masih gagal, laporkan masalah.",
+      "systemComponentUnavailable": "Komponen akselerasi sistem tidak berjalan. Mulai ulang perangkat dan coba lagi. Jika masih gagal, laporkan masalah.",
+      "notificationPermissionRequired": "Yundo memerlukan izin notifikasi untuk menampilkan status akselerasi di latar belakang. Izinkan melalui pengaturan sistem lalu coba lagi.",
+      "unsupportedLocalSettings": "Perangkat ini menyimpan pengaturan lokal yang tidak lagi didukung. Perbarui Yundo, mulai ulang aplikasi, lalu coba lagi. Jika masih gagal, laporkan masalah.",
+      "systemStartFailed": "Komponen akselerasi sistem tidak dapat dimulai. Mulai ulang perangkat, tutup aplikasi akselerasi lain, lalu coba lagi. Jika masih gagal, salin diagnostik dan laporkan masalah.",
+      "statusUnavailable": "Yundo tidak dapat memastikan status akselerasi. Hentikan akselerasi lalu coba lagi. Jika masih gagal, salin diagnostik dan laporkan masalah.",
       "windowsServiceMissing": "Komponen akselerasi sistem tidak lengkap. Pasang ulang Yundo dan izinkan otorisasi administrator saat pemasangan.",
       "windowsAuthorizationRequired": "Otorisasi sistem belum selesai. Minta administrator mengotorisasi Yundo satu kali; setelah itu pengguna biasa dapat langsung memakainya.",
       "windowsServiceUnavailable": "Komponen akselerasi sistem tidak dimulai. Mulai ulang Windows dan coba lagi. Jika masih gagal, pasang ulang Yundo.",
@@ -922,9 +928,9 @@
       "sessionEnded": "Sesi percepatan ini telah berakhir. Anda bisa memulainya lagi saat diperlukan.",
       "disconnectedTitle": "Percepatan dihentikan",
       "cannotConnectTitle": "Tidak dapat mempercepat",
-      "missingSystemPermission": "Izinkan izin jaringan sistem yang diperlukan sebelum mempercepat.",
-      "missingPrivilege": "Otorisasi sistem diperlukan sebelum mempercepat.",
-      "otherConnectionActive": "Sistem mendeteksi aplikasi proxy lain sedang berjalan. Putuskan atau tutup aplikasi tersebut sebelum memulai percepatan Yundo."
+      "missingSystemPermission": "Ikuti petunjuk sistem untuk mengizinkan akses jaringan yang diperlukan Yundo, lalu coba lagi. Jika tidak ada petunjuk, periksa pengaturan sistem.",
+      "missingPrivilege": "Selesaikan otorisasi sistem yang diminta Yundo, lalu coba lagi. Jika tidak ada petunjuk, mulai ulang perangkat.",
+      "otherConnectionActive": "Sistem mendeteksi aplikasi akselerasi lain sedang berjalan. Hentikan atau tutup aplikasi tersebut sebelum memulai akselerasi Yundo."
     },
     "apiError": {
       "invalidCredentials": "Nama pengguna atau kata sandi salah.",
