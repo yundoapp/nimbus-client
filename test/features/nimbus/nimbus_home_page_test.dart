@@ -55,6 +55,41 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('手机竖屏首页先展示使用情况再展示套餐信息', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          translationsProvider.overrideWith((ref) => AppLocale.zhCn.build()),
+          environmentProvider.overrideWith((ref) => Environment.dev),
+          appInfoProvider.overrideWith(_FakeAppInfo.new),
+          sharedPreferencesProvider.overrideWith((ref) => preferences),
+          nimbusAuthRepositoryProvider.overrideWithValue(_FakeNimbusAuthRepository(preferences)),
+          nimbusAuthControllerProvider.overrideWith(_ActiveSubscriptionNimbusAuthController.new),
+          nimbusAppVersionControllerProvider.overrideWith(_NoopNimbusAppVersionController.new),
+          connectionNotifierProvider.overrideWith(_DisconnectedConnectionNotifier.new),
+          nimbusConnectionControllerProvider.overrideWith(_ConnectionErrorController.new),
+        ],
+        child: MaterialApp(theme: ThemeData.light(), home: const _ReadyHomePage()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final usageTitle = find.text('使用情况');
+    final planTitle = find.text('当前套餐');
+    expect(usageTitle, findsOneWidget);
+    expect(planTitle, findsOneWidget);
+    expect(tester.getTopLeft(usageTitle).dy, lessThan(tester.getTopLeft(planTitle).dy));
+    expect(tester.takeException(), isNull);
+  });
 }
 
 const _connectionError = '系统检测到另一款代理 App 正在运行。请先断开或退出该 App，再开启云渡加速。';
@@ -108,6 +143,35 @@ class _AuthenticatedNimbusAuthController extends NimbusAuthController {
         rules: NimbusRulesInfo(),
       ),
       locations: NimbusLocationsList(
+        items: [NimbusLocation(code: 'auto', displayName: '')],
+      ),
+    );
+  }
+
+  @override
+  Future<void> loadLocations() async {}
+}
+
+class _ActiveSubscriptionNimbusAuthController extends NimbusAuthController {
+  @override
+  NimbusAuthState build() {
+    return NimbusAuthState.authenticated(
+      session: _session,
+      me: NimbusMe(
+        user: const NimbusUser(id: 'user-id', username: 'tester', status: 'active'),
+        subscription: NimbusSubscription(
+          status: 'active',
+          planName: '月度套餐',
+          startedAt: DateTime(2026, 7, 8),
+          expiresAt: DateTime(2026, 8, 8),
+          quotaBytes: 100 * 1024 * 1024 * 1024,
+          usedBytes: 3 * 1024 * 1024 * 1024,
+          remainingBytes: 97 * 1024 * 1024 * 1024,
+        ),
+        devices: const NimbusDeviceQuota(used: 1, limit: 3),
+        rules: const NimbusRulesInfo(),
+      ),
+      locations: const NimbusLocationsList(
         items: [NimbusLocation(code: 'auto', displayName: '')],
       ),
     );

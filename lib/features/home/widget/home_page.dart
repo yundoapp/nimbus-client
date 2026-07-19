@@ -443,6 +443,42 @@ class _NimbusStatusPanel extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  t.nimbus.home.cycleUsage,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sectionTitleStyle,
+                ),
+              ),
+              const Gap(12),
+              Text(progressText, style: theme.textTheme.labelMedium?.copyWith(color: muted)),
+            ],
+          ),
+          const Gap(7),
+          LinearProgressIndicator(
+            value: progress,
+            semanticsValue: progressText,
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(999),
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          ),
+          const Gap(12),
+          Row(
+            children: [
+              Expanded(
+                child: _StatusText(label: t.nimbus.home.used, value: usedText, color: muted),
+              ),
+              Expanded(
+                child: _StatusText(label: t.nimbus.home.unused, value: remainingText, color: muted, alignEnd: true),
+              ),
+            ],
+          ),
+          const Gap(14),
+          Divider(height: 1, color: theme.colorScheme.outlineVariant.withValues(alpha: 0.62)),
+          const Gap(14),
           LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth >= 320;
@@ -476,42 +512,6 @@ class _NimbusStatusPanel extends ConsumerWidget {
             start: startedText,
             end: expiresText,
             semanticsLabel: t.nimbus.home.validity(start: startedText, end: expiresText),
-          ),
-          const Gap(12),
-          Divider(height: 1, color: theme.colorScheme.outlineVariant.withValues(alpha: 0.62)),
-          const Gap(14),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  t.nimbus.home.cycleUsage,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sectionTitleStyle,
-                ),
-              ),
-              const Gap(12),
-              Text(progressText, style: theme.textTheme.labelMedium?.copyWith(color: muted)),
-            ],
-          ),
-          const Gap(7),
-          LinearProgressIndicator(
-            value: progress,
-            semanticsValue: progressText,
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(999),
-            backgroundColor: theme.colorScheme.surfaceContainerHighest,
-          ),
-          const Gap(12),
-          Row(
-            children: [
-              Expanded(
-                child: _StatusText(label: t.nimbus.home.used, value: usedText, color: muted),
-              ),
-              Expanded(
-                child: _StatusText(label: t.nimbus.home.unused, value: remainingText, color: muted, alignEnd: true),
-              ),
-            ],
           ),
         ],
       ),
