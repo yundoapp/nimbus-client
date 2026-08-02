@@ -238,6 +238,9 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   void handleAppResumed() {}
 
   Future<void> _connectInternal({required bool showErrors}) async {
+    final startupReady = await ensureStartupRecovery(reason: 'connection request', showErrors: showErrors);
+    if (!startupReady) return;
+
     final current = ref.read(connectionNotifierProvider).valueOrNull;
     if (current is Connected || current is Connecting || current is Disconnecting) {
       if (showErrors) _fail(_t.nimbus.errors.connectFailed, code: 'Y-CONNECTION-001', stage: 'preflight');
@@ -302,6 +305,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       await ref.read(Preferences.startedByUser.notifier).update(true);
       _handleConnectionStatus(ref.read(connectionNotifierProvider));
     } on ConnectionFailure catch (error) {
+      await _cleanupFailedConnectionAttempt();
       _fail(
         _t.nimbus.errors.connectFailed,
         code: 'Y-CONNECTION-002',
@@ -310,6 +314,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       );
     } catch (error, stackTrace) {
       loggy.warning('failed to prepare standard Hiddify profile', error, stackTrace);
+      await _cleanupFailedConnectionAttempt();
       _fail(
         _t.nimbus.errors.configurationUnavailable,
         code: 'Y-CONFIG-002',
@@ -317,6 +322,11 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         stage: 'prepare',
       );
     }
+  }
+
+  Future<void> _cleanupFailedConnectionAttempt() async {
+    await ref.read(connectionNotifierProvider.notifier).abortConnection();
+    await _removeManagedProfile();
   }
 
   Future<void> _disconnectInternal({required String reason, required bool reportToServer}) async {
