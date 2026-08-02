@@ -589,6 +589,7 @@ class NimbusConnectPlan {
     required this.singBoxConfigPatch,
     required this.rulesManifest,
     this.publicRulesVersion,
+    this.profileContent,
   });
 
   factory NimbusConnectPlan.fromJson(Map<String, dynamic> json) {
@@ -602,6 +603,7 @@ class NimbusConnectPlan {
       heartbeatIntervalSeconds: _int(json['heartbeatIntervalSeconds']) ?? 60,
       traffic: NimbusConnectTraffic.fromJson(Map<String, dynamic>.from(json['traffic'] as Map? ?? const {})),
       singBoxConfigPatch: Map<String, dynamic>.from(json['singBoxConfigPatch'] as Map? ?? const {}),
+      profileContent: json['profileContent'] as String?,
     );
   }
 
@@ -613,6 +615,10 @@ class NimbusConnectPlan {
   final NimbusRulesManifest rulesManifest;
   final int heartbeatIntervalSeconds;
   final NimbusConnectTraffic traffic;
+
+  /// Complete Hiddify-compatible profile content. The client must not build a
+  /// sing-box runtime config from [singBoxConfigPatch].
+  final String? profileContent;
   final Map<String, dynamic> singBoxConfigPatch;
 }
 

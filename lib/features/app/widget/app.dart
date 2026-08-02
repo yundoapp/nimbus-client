@@ -15,6 +15,9 @@ import 'package:hiddify/core/theme/app_theme.dart';
 import 'package:hiddify/core/theme/theme_preferences.dart';
 import 'package:hiddify/features/app_update/notifier/app_update_notifier.dart';
 import 'package:hiddify/features/connection/widget/connection_wrapper.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_desktop_behavior_controller.dart';
+import 'package:hiddify/features/nimbus/route_history/notifier/nimbus_route_history_notifier.dart';
 import 'package:hiddify/features/per_app_proxy/overview/per_app_proxy_service_notifier.dart';
 import 'package:hiddify/features/profile/notifier/profiles_update_notifier.dart';
 import 'package:hiddify/features/shortcut/shortcut_wrapper.dart';
@@ -39,12 +42,15 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
   void onPause(WidgetRef ref) {
     if (PlatformUtils.isDesktop) return;
     isOnPauseCalled = true;
+    ref.read(nimbusConnectionControllerProvider.notifier).handleAppPaused();
     ref.read(hiddifyCoreServiceProvider).closeFront();
   }
 
   void onResume(WidgetRef ref) {
     // if (PlatformUtils.isDesktop) return;
-    ref.read(hiddifyCoreServiceProvider).init();
+    ref.read(hiddifyCoreServiceProvider).init().then((_) {
+      ref.read(nimbusConnectionControllerProvider.notifier).handleAppResumed();
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (isOnPauseCalled && PlatformUtils.isAndroid) ref.invalidate(perAppProxyServiceProvider);
@@ -65,6 +71,8 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
     ref.listen(foregroundProfilesUpdateNotifierProvider, (_, _) {});
     if (PlatformUtils.isAndroid) ref.listen(perAppProxyServiceProvider, (_, _) {});
     if (PlatformUtils.isDesktop) ref.listen(systemTrayNotifierProvider, (_, _) {});
+    if (PlatformUtils.isDesktop) ref.listen(nimbusDesktopBehaviorControllerProvider, (_, _) {});
+    if (!kIsWeb) ref.listen(nimbusRouteHistoryProvider, (_, _) {});
 
     // updating ActiveBreakpointNotifier value
     useEffect(() {

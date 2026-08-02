@@ -3,21 +3,14 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:gap/gap.dart';
 import 'package:hiddify/core/localization/translations.dart';
-import 'package:hiddify/core/model/failures.dart';
-import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
-import 'package:hiddify/core/router/dialog/widgets/custom_alert_dialog.dart';
-import 'package:hiddify/core/theme/theme_extensions.dart';
 import 'package:hiddify/core/widget/animated_text.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
-import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
-import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
-import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
-import 'package:hiddify/features/settings/data/config_option_repository.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
-import 'package:hiddify/gen/assets.gen.dart';
-import 'package:hiddify/singbox/model/singbox_config_enum.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+const _yundoLogoColor = Color(0xFF4F67AA);
 
 // TODO: rewrite
 class ConnectionButton extends HookConsumerWidget {
@@ -26,12 +19,8 @@ class ConnectionButton extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
-    final connectionStatus = ref.watch(connectionNotifierProvider);
-    final activeProxy = ref.watch(activeProxyNotifierProvider);
-    final delay = activeProxy.valueOrNull?.urlTestDelay ?? 0;
-
+    final connectionStatus = ref.watch(nimbusOwnedConnectionStatusProvider);
     final requiresReconnect = ref.watch(configOptionNotifierProvider).valueOrNull;
-    final today = DateTime.now();
     // final animationController = useAnimationController(
     //   duration: const Duration(seconds: 1),
     // )..repeat(reverse: true); // Ensure the animation loops indefinitely
@@ -61,8 +50,6 @@ class ConnectionButton extends HookConsumerWidget {
     //   //     }
     //   //   },
     //   // );
-
-    const buttonTheme = ConnectionButtonTheme.light;
 
     //   // return CircleDesignWidget(
     //   //   onTap: switch (connectionStatus) {
@@ -112,33 +99,23 @@ class ConnectionButton extends HookConsumerWidget {
     //     (ref.watch(ConfigOptions.enableWarp) && ref.watch(ConfigOptions.warpDetourMode) == WarpDetourMode.warpOverProxy)
     //     ? t.connection.secure
     //     : "";
-    var secureLabel = '';
-    if (delay <= 0 || delay > 65000 || connectionStatus.value != const Connected()) {
-      secureLabel = "";
-    }
+    const secureLabel = '';
     return _ConnectionButton(
       onTap: switch (connectionStatus) {
         AsyncData(value: Connected()) when requiresReconnect == true => () async {
-          final activeProfile = await ref.read(activeProfileProvider.future);
-          return await ref.read(connectionNotifierProvider.notifier).reconnect(activeProfile);
+          return await ref.read(nimbusConnectionControllerProvider.notifier).reconnect();
         },
         AsyncData(value: Disconnected()) || AsyncError() => () async {
-          if (ref.read(activeProfileProvider).valueOrNull == null) {
-            await ref.read(dialogNotifierProvider.notifier).showNoActiveProfile();
-            ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile();
-          }
           if (await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
-            return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
+            return await ref.read(nimbusConnectionControllerProvider.notifier).connect(userInitiated: true);
           }
         },
         AsyncData(value: Connected()) => () async {
           if (requiresReconnect == true &&
               await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
-            return await ref
-                .read(connectionNotifierProvider.notifier)
-                .reconnect(await ref.read(activeProfileProvider.future));
+            return await ref.read(nimbusConnectionControllerProvider.notifier).reconnect();
           }
-          return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
+          return await ref.read(nimbusConnectionControllerProvider.notifier).disconnect(userInitiated: true);
         },
         _ => () {},
       },
@@ -148,41 +125,17 @@ class ConnectionButton extends HookConsumerWidget {
       },
       label: switch (connectionStatus) {
         AsyncData(value: Connected()) when requiresReconnect == true => t.connection.reconnect,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => t.connection.connecting,
         AsyncData(value: final status) => status.present(t),
         _ => "",
       },
-      buttonColor: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => Colors.teal,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => const Color.fromARGB(255, 185, 176, 103),
-        AsyncData(value: Connected()) => buttonTheme.connectedColor!,
-        AsyncData(value: _) => buttonTheme.idleColor!,
-        _ => Colors.red,
+      semanticsLabel: switch (connectionStatus.valueOrNull) {
+        Connected() => t.connection.disconnect,
+        Connecting() => t.connection.connecting,
+        Disconnecting() => t.connection.disconnecting,
+        _ => t.connection.connect,
       },
-      image: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => Assets.images.disconnectNorouz,
-        AsyncData(value: Connected()) => Assets.images.connectNorouz,
-        AsyncData(value: _) => Assets.images.disconnectNorouz,
-        _ => Assets.images.disconnectNorouz,
-        AsyncData(value: Disconnected()) || AsyncError() => Assets.images.disconnectNorouz,
-        AsyncData(value: Connected()) => Assets.images.connectNorouz,
-        _ => Assets.images.disconnectNorouz,
-      },
-      newButtonColor: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => Colors.teal,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => const Color.fromARGB(255, 185, 176, 103),
-        AsyncData(value: Connected()) => buttonTheme.connectedColor!,
-        AsyncData(value: _) => buttonTheme.idleColor!,
-        _ => Colors.red,
-      },
-      animated: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => false,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => false,
-        AsyncData(value: Connected()) => true,
-        AsyncData(value: _) => true,
-        _ => false,
-      },
-      useImage: today.day >= 19 && today.day <= 23 && today.month == 3,
+      buttonColor: _yundoLogoColor,
+      status: connectionStatus.valueOrNull,
       secureLabel: secureLabel,
     );
   }
@@ -193,28 +146,37 @@ class _ConnectionButton extends StatelessWidget {
     required this.onTap,
     required this.enabled,
     required this.label,
+    required this.semanticsLabel,
     required this.buttonColor,
-    required this.image,
-    required this.useImage,
-    required this.newButtonColor,
-    required this.animated,
+    required this.status,
     required this.secureLabel,
   });
 
   final VoidCallback onTap;
   final bool enabled;
   final String label;
+  final String semanticsLabel;
   final Color buttonColor;
-  final AssetGenImage image;
-  final bool useImage;
   final String secureLabel;
-
-  final Color newButtonColor;
-
-  final bool animated;
+  final ConnectionStatus? status;
 
   @override
   Widget build(BuildContext context) {
+    final isConnected = status is Connected;
+    final isConnecting = status is Connecting;
+    final isDisconnecting = status is Disconnecting;
+    final isSwitching = isConnecting || isDisconnecting;
+    final transitionColor = isDisconnecting
+        ? Theme.of(context).colorScheme.onSurfaceVariant
+        : Theme.of(context).colorScheme.primary;
+
+    Widget connectionIcon = const Icon(Icons.rocket_launch_rounded, size: 60, color: Colors.white);
+    if (isConnected) {
+      connectionIcon = connectionIcon
+          .animate(onPlay: (controller) => controller.repeat(reverse: true))
+          .scaleXY(begin: 0.97, end: 1.04, duration: const Duration(milliseconds: 1600), curve: Curves.easeInOut);
+    }
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -222,39 +184,90 @@ class _ConnectionButton extends StatelessWidget {
         Semantics(
           button: true,
           enabled: enabled,
-          label: label,
-          child: Container(
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [BoxShadow(blurRadius: 16, color: buttonColor.withValues(alpha: .5))],
-            ),
+          label: semanticsLabel,
+          child: SizedBox(
             width: 148,
             height: 148,
-            child: Material(
-              key: const ValueKey("home_connection_button"),
-              shape: const CircleBorder(),
-              color: Colors.white,
-              child: InkWell(
-                focusColor: Colors.grey,
-                onTap: onTap,
-                child: Padding(
-                  padding: const EdgeInsets.all(36),
-                  child: TweenAnimationBuilder(
-                    tween: ColorTween(end: buttonColor),
-                    duration: const Duration(milliseconds: 250),
-                    builder: (context, value, child) {
-                      if (useImage) {
-                        return image.image();
-                      } else {
-                        return Assets.images.logo.svg(colorFilter: ColorFilter.mode(value!, BlendMode.srcIn));
-                      }
-                    },
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                if (isConnected)
+                  Transform.scale(
+                    scale: 1.055,
+                    child: Container(
+                      width: 148,
+                      height: 148,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: buttonColor.withValues(alpha: 0.32), width: 1.5),
+                      ),
+                    ),
+                  ),
+                if (isConnected)
+                  Container(
+                        width: 148,
+                        height: 148,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: buttonColor.withValues(alpha: 0.62), width: 2),
+                        ),
+                      )
+                      .animate(onPlay: (controller) => controller.repeat())
+                      .scaleXY(
+                        begin: 0.96,
+                        end: 1.16,
+                        duration: const Duration(milliseconds: 2200),
+                        curve: Curves.easeOutCubic,
+                      )
+                      .fade(begin: 0.55, end: 0, duration: const Duration(milliseconds: 2200), curve: Curves.easeOut),
+                if (isSwitching)
+                  Transform.scale(
+                    scale: 1.08,
+                    child: SizedBox(
+                      key: const ValueKey('home_connection_progress'),
+                      width: 148,
+                      height: 148,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        strokeCap: StrokeCap.round,
+                        color: transitionColor.withValues(alpha: 0.9),
+                        backgroundColor: transitionColor.withValues(alpha: 0.14),
+                      ),
+                    ),
+                  ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        blurRadius: isConnected ? 22 : 16,
+                        spreadRadius: isConnected ? 2 : 0,
+                        color: buttonColor.withValues(alpha: isConnected ? 0.46 : 0.32),
+                      ),
+                    ],
+                  ),
+                  width: 148,
+                  height: 148,
+                  child: Material(
+                    key: const ValueKey("home_connection_button"),
+                    shape: const CircleBorder(),
+                    color: buttonColor,
+                    child: InkWell(
+                      focusColor: Colors.white.withValues(alpha: 0.16),
+                      hoverColor: Colors.white.withValues(alpha: 0.08),
+                      splashColor: Colors.white.withValues(alpha: 0.18),
+                      onTap: enabled ? onTap : null,
+                      child: Center(child: connectionIcon),
+                    ),
                   ),
                 ),
-              ),
-            ).animate(target: enabled ? 0 : 1).blurXY(end: 1),
-          ).animate(target: enabled ? 0 : 1).scaleXY(end: .88, curve: Curves.easeIn),
+              ],
+            ),
+          ),
         ),
         const Gap(16),
         ExcludeSemantics(

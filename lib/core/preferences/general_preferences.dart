@@ -16,6 +16,8 @@ part 'general_preferences.g.dart';
 
 bool _debugIntroPage = false;
 
+enum NimbusProxyMode { auto, global }
+
 abstract class Preferences {
   static final introCompleted = PreferencesNotifier.create(
     "intro_completed",
@@ -80,6 +82,25 @@ abstract class Preferences {
   );
 
   static final silentStart = PreferencesNotifier.create<bool, bool>("silent_start", false);
+
+  static final nimbusAutoConnect = PreferencesNotifier.create<bool, bool>("nimbus_auto_connect", true);
+
+  static final nimbusRouteHistoryEnabled = PreferencesNotifier.create<bool, bool>(
+    "nimbus_route_history_enabled",
+    false,
+  );
+
+  static final nimbusProxyMode = PreferencesNotifier.create<NimbusProxyMode, String>(
+    "nimbus_proxy_mode",
+    NimbusProxyMode.auto,
+    mapFrom: NimbusProxyMode.values.byName,
+    mapTo: (value) => value.name,
+  );
+
+  static final nimbusCustomWebsiteAccessEnabled = PreferencesNotifier.create<bool, bool>(
+    "nimbus_custom_website_access_enabled",
+    true,
+  );
 
   static final disableMemoryLimit = PreferencesNotifier.create<bool, bool>(
     "disable_memory_limit",

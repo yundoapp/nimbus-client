@@ -1,32 +1,57 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hiddify/core/theme/app_theme_mode.dart';
 import 'package:hiddify/core/theme/theme_extensions.dart';
 
 class AppTheme {
-  AppTheme(this.mode, this.fontFamily);
+  AppTheme(this.mode, this.fontFamily, {TargetPlatform? platform}) : platform = platform ?? defaultTargetPlatform;
+
   final AppThemeMode mode;
   final String fontFamily;
+  final TargetPlatform platform;
 
   ThemeData lightTheme(ColorScheme? lightColorScheme) {
     final ColorScheme scheme = lightColorScheme ?? ColorScheme.fromSeed(seedColor: const Color(0xFF293CA0));
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: scheme,
-      fontFamily: fontFamily,
-      extensions: const <ThemeExtension<dynamic>>{ConnectionButtonTheme.light},
-    );
+    return _buildTheme(scheme: scheme, extensions: const <ThemeExtension<dynamic>>{ConnectionButtonTheme.light});
   }
 
   ThemeData darkTheme(ColorScheme? darkColorScheme) {
     final ColorScheme scheme =
         darkColorScheme ?? ColorScheme.fromSeed(seedColor: const Color(0xFF293CA0), brightness: Brightness.dark);
-    return ThemeData(
+    return _buildTheme(
+      scheme: scheme,
+      scaffoldBackgroundColor: mode.trueBlack ? Colors.black : scheme.surface,
+      extensions: const <ThemeExtension<dynamic>>{ConnectionButtonTheme.light},
+    );
+  }
+
+  ThemeData _buildTheme({
+    required ColorScheme scheme,
+    Color? scaffoldBackgroundColor,
+    required Set<ThemeExtension<dynamic>> extensions,
+  }) {
+    final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: mode.trueBlack ? Colors.black : scheme.background,
       fontFamily: fontFamily,
-      extensions: const <ThemeExtension<dynamic>>{ConnectionButtonTheme.light},
+      scaffoldBackgroundColor: scaffoldBackgroundColor,
+      extensions: extensions,
+    );
+    return base.copyWith(textTheme: _comfortableTextTheme(base.textTheme));
+  }
+
+  TextTheme _comfortableTextTheme(TextTheme base) {
+    final isMobile = platform == TargetPlatform.iOS || platform == TargetPlatform.android;
+    return base.copyWith(
+      labelSmall: base.labelSmall?.copyWith(fontSize: isMobile ? 13 : 12, height: 1.25),
+      labelMedium: base.labelMedium?.copyWith(fontSize: isMobile ? 14 : 13, height: 1.25),
+      labelLarge: base.labelLarge?.copyWith(fontSize: isMobile ? 15 : 14, height: 1.25),
+      bodySmall: base.bodySmall?.copyWith(fontSize: isMobile ? 14 : 13, height: 1.4),
+      bodyMedium: base.bodyMedium?.copyWith(fontSize: isMobile ? 16 : 15, height: 1.4),
+      bodyLarge: base.bodyLarge?.copyWith(fontSize: isMobile ? 17 : 16, height: 1.45),
+      titleSmall: base.titleSmall?.copyWith(fontSize: isMobile ? 17 : 15, height: 1.3),
+      titleMedium: base.titleMedium?.copyWith(fontSize: isMobile ? 19 : 17, height: 1.3),
     );
   }
 
