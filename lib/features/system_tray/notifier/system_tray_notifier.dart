@@ -1,16 +1,18 @@
+import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:hiddify/core/app_info/app_info_provider.dart';
+import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
-import 'package:hiddify/core/model/constants.dart';
+import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
-import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_desktop_behavior_controller.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
-import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/window/notifier/window_notifier.dart';
 import 'package:hiddify/gen/assets.gen.dart';
-import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
-import 'package:hiddify/singbox/model/singbox_config_enum.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tray_manager/tray_manager.dart';
@@ -18,9 +20,95 @@ import 'package:window_manager/window_manager.dart';
 
 part 'system_tray_notifier.g.dart';
 
+String trayTooltipText(
+  String appDisplayName,
+  Translations translations,
+  ConnectionStatus connection,
+  int urlTestDelay,
+) {
+  final status = switch (connection) {
+    Disconnected() => translations.nimbus.tray.disconnected,
+    Connecting() => translations.connection.connecting,
+    Connected() => translations.connection.connected,
+    Disconnecting() => translations.connection.disconnecting,
+  };
+  final tooltip = '$appDisplayName - $status';
+  final hasDelay = connection is Connected && urlTestDelay > 0 && urlTestDelay < 65000;
+  return hasDelay ? '$tooltip : ${urlTestDelay}ms' : tooltip;
+}
+
+const _trayProxyModeKeyPrefix = 'proxy-mode:';
+const _trayLocationKeyPrefix = 'location:';
+
+String trayProxyModeKey(NimbusProxyMode mode) => '$_trayProxyModeKeyPrefix${mode.name}';
+
+NimbusProxyMode? trayProxyModeFromKey(String key) {
+  if (!key.startsWith(_trayProxyModeKeyPrefix)) return null;
+  final modeName = key.substring(_trayProxyModeKeyPrefix.length);
+  for (final mode in NimbusProxyMode.values) {
+    if (mode.name == modeName) return mode;
+  }
+  return null;
+}
+
+String trayLocationKey(String locationCode) => '$_trayLocationKeyPrefix${Uri.encodeComponent(locationCode)}';
+
+String? trayLocationCodeFromKey(String key) {
+  if (!key.startsWith(_trayLocationKeyPrefix)) return null;
+  try {
+    return Uri.decodeComponent(key.substring(_trayLocationKeyPrefix.length));
+  } on FormatException {
+    return null;
+  }
+}
+
+String trayMenuCacheKey(
+  Translations translations,
+  ConnectionStatus connection,
+  NimbusProxyMode proxyMode,
+  NimbusAuthState authState,
+  String languageCode,
+) => jsonEncode({
+  'openLabel': translations.nimbus.tray.openMainWindow,
+  'connectionLabel': switch (connection) {
+    Disconnected() => translations.connection.connect,
+    Connecting() => translations.connection.connecting,
+    Connected() => translations.connection.disconnect,
+    Disconnecting() => translations.connection.disconnecting,
+  },
+  'connectionEnabled': !connection.isSwitching,
+  'modeLabel': translations.nimbus.home.connectionMode,
+  'modeEnabled': !connection.isSwitching,
+  'modeItems': NimbusProxyMode.values
+      .map(
+        (mode) => {
+          'key': trayProxyModeKey(mode),
+          'label': _proxyModeLabel(translations, mode),
+          'checked': mode == proxyMode,
+        },
+      )
+      .toList(),
+  'locationLabel': translations.nimbus.home.locationTitle,
+  'locationEnabled': _locationsReady(authState) && !connection.isSwitching,
+  'locationItems': _trayLocations(authState)
+      .map(
+        (location) => {
+          'key': trayLocationKey(location.code),
+          'label': _locationDisplayName(translations, location, languageCode),
+          'checked': location.code == authState.selectedLocationCode,
+        },
+      )
+      .toList(),
+  'quitLabel': translations.common.quit,
+});
+
 @Riverpod(keepAlive: true)
 class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogger {
   bool listenerAdded = false;
+  String? _lastTrayIconPath;
+  String? _lastTrayTooltip;
+  String? _lastTrayMenuKey;
+
   @override
   Future<void> build() async {
     assert(PlatformUtils.isDesktop);
@@ -33,30 +121,33 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
 
   Future<void> _initializeTray() async {
     final t = await ref.watch(translationsProvider.future);
-    final urlTestDelay = await ref
-        .watch(activeProxyNotifierProvider.future)
-        .catchError((e) {
-          loggy.warning("error getting active proxy", e);
-          return OutboundInfo(urlTestDelay: 0);
-        })
-        .then((connection) => connection.urlTestDelay);
-    final connection = await ref
-        .watch(connectionNotifierProvider.future)
-        .catchError((e) {
-          loggy.warning("error getting connection status", e);
-          return const ConnectionStatus.disconnected();
-        })
-        .then((connection) => _modifyConnectionStatus(connection, urlTestDelay));
-    final serviceMode = ref.watch(ConfigOptions.serviceMode);
+    final appDisplayName = ref.watch(appInfoProvider).requireValue.name;
+    final locale = ref.watch(localePreferencesProvider);
+    final proxyMode = ref.watch(Preferences.nimbusProxyMode);
+    final authState = ref.watch(nimbusAuthControllerProvider);
+    if (authState.isAuthenticated && authState.locations == null && !authState.isLoading) {
+      Future.microtask(() => ref.read(nimbusAuthControllerProvider.notifier).loadLocations());
+    }
+    final urlTestDelay = ref.watch(activeProxyNotifierProvider.select((value) => value.valueOrNull?.urlTestDelay ?? 0));
+    final connection =
+        ref.watch(nimbusOwnedConnectionStatusProvider).valueOrNull ?? const ConnectionStatus.disconnected();
 
-    await trayManager.setIcon(_trayIconPath(connection), isTemplate: PlatformUtils.isMacOS);
-    if (!PlatformUtils.isLinux) await trayManager.setToolTip(_trayTooltip(connection, urlTestDelay, t));
-    await trayManager.setContextMenu(_trayMenu(connection, serviceMode, t));
+    final tooltip = _trayTooltip(appDisplayName, t, connection, urlTestDelay);
+    await _setTrayIcon(connection);
+    if (!PlatformUtils.isLinux) await _setTrayTooltip(tooltip);
+    await _setTrayMenu(t, connection, proxyMode, authState, locale.languageCode);
   }
 
-  Menu _trayMenu(ConnectionStatus connection, ServiceMode serviceMode, Translations t) => Menu(
+  Menu _trayMenu(
+    Translations t,
+    ConnectionStatus connection,
+    NimbusProxyMode proxyMode,
+    NimbusAuthState authState,
+    String languageCode,
+  ) => Menu(
     items: [
-      if (PlatformUtils.isLinux) ...[MenuItem(key: 'dashboard', label: t.common.dashboard), MenuItem.separator()],
+      MenuItem(key: 'open', label: t.nimbus.tray.openMainWindow),
+      MenuItem.separator(),
       MenuItem(
         key: 'connection',
         label: switch (connection) {
@@ -67,15 +158,37 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
         },
         disabled: connection.isSwitching,
       ),
+      MenuItem.separator(),
       MenuItem.submenu(
-        label: t.pages.settings.inbound.serviceMode,
-        icon: Assets.images.trayIconIco,
+        key: 'proxy-mode-menu',
+        label: t.nimbus.home.connectionMode,
+        disabled: connection.isSwitching,
         submenu: Menu(
-          items: [
-            ...ServiceMode.values.map(
-              (e) => MenuItem.checkbox(checked: e == serviceMode, key: e.name, label: e.present(t)),
-            ),
-          ],
+          items: NimbusProxyMode.values
+              .map(
+                (mode) => MenuItem.checkbox(
+                  key: trayProxyModeKey(mode),
+                  label: _proxyModeLabel(t, mode),
+                  checked: mode == proxyMode,
+                ),
+              )
+              .toList(),
+        ),
+      ),
+      MenuItem.submenu(
+        key: 'location-menu',
+        label: t.nimbus.home.locationTitle,
+        disabled: !_locationsReady(authState) || connection.isSwitching,
+        submenu: Menu(
+          items: _trayLocations(authState)
+              .map(
+                (location) => MenuItem.checkbox(
+                  key: trayLocationKey(location.code),
+                  label: _locationDisplayName(t, location, languageCode),
+                  checked: location.code == authState.selectedLocationCode,
+                ),
+              )
+              .toList(),
         ),
       ),
       MenuItem.separator(),
@@ -83,72 +196,110 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
     ],
   );
 
-  String _trayIconPath(ConnectionStatus status) {
-    final isDarkMode = WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
-    const images = Assets.images;
-    final isWindows = PlatformUtils.isWindows;
-    switch (status) {
-      case Connected():
-        return isWindows ? images.trayIconConnectedIco : images.trayIconConnectedPng.path;
-      case Connecting():
-      case Disconnecting():
-        return isWindows ? images.trayIconDisconnectedIco : images.trayIconDisconnectedPng.path;
-      case Disconnected():
-        return isWindows
-            ? isDarkMode
-                  ? images.trayIconIco
-                  : images.trayIconDarkIco
-            : isDarkMode
-            ? images.trayIconDarkPng.path
-            : images.trayIconPng.path;
+  Future<void> _setTrayIcon(ConnectionStatus connection) async {
+    final iconPath = _trayIconPath(connection);
+    if (_lastTrayIconPath == iconPath) return;
+    _lastTrayIconPath = iconPath;
+    try {
+      await trayManager.setIcon(iconPath);
+    } catch (_) {
+      if (_lastTrayIconPath == iconPath) _lastTrayIconPath = null;
+      rethrow;
     }
   }
 
-  String _trayTooltip(ConnectionStatus connection, int urlTestDelay, Translations t) {
-    final r = "${Constants.appName} - ${connection.present(t)}";
-    if (connection is Connected) {
-      if (Platform.isMacOS) windowManager.setBadgeLabel("${urlTestDelay}ms");
-      return '$r : ${urlTestDelay}ms"';
-    } else {
-      if (Platform.isMacOS) windowManager.setBadgeLabel("-ms");
-      return r;
+  String _trayIconPath(ConnectionStatus connection) {
+    if (PlatformUtils.isWindows) {
+      return switch (connection) {
+        Connected() => Assets.images.trayIconConnectedIco,
+        Connecting() || Disconnecting() => Assets.images.trayIconDisconnectedIco,
+        Disconnected() => Assets.images.trayIconIco,
+      };
+    }
+    return switch (connection) {
+      Connected() => Assets.images.trayIconConnectedPng.path,
+      Connecting() || Disconnecting() => Assets.images.trayIconDisconnectedPng.path,
+      Disconnected() => Assets.images.trayIconPng.path,
+    };
+  }
+
+  Future<void> _setTrayTooltip(String tooltip) async {
+    if (_lastTrayTooltip == tooltip) return;
+    _lastTrayTooltip = tooltip;
+    try {
+      await trayManager.setToolTip(tooltip);
+    } catch (_) {
+      if (_lastTrayTooltip == tooltip) _lastTrayTooltip = null;
+      rethrow;
     }
   }
 
-  ConnectionStatus _modifyConnectionStatus(ConnectionStatus connection, int urlTestDelay) {
-    if (connection is Connected) {
-      return urlTestDelay > 0 && urlTestDelay < 65000 ? const Connected() : const Connecting();
-    } else {
-      return connection;
+  Future<void> _setTrayMenu(
+    Translations t,
+    ConnectionStatus connection,
+    NimbusProxyMode proxyMode,
+    NimbusAuthState authState,
+    String languageCode,
+  ) async {
+    final menuKey = trayMenuCacheKey(t, connection, proxyMode, authState, languageCode);
+    if (_lastTrayMenuKey == menuKey) return;
+    _lastTrayMenuKey = menuKey;
+    try {
+      await trayManager.setContextMenu(_trayMenu(t, connection, proxyMode, authState, languageCode));
+    } catch (_) {
+      if (_lastTrayMenuKey == menuKey) _lastTrayMenuKey = null;
+      rethrow;
     }
+  }
+
+  Future<void> _handleMenuAction(String key) async {
+    final proxyMode = trayProxyModeFromKey(key);
+    if (proxyMode != null) {
+      if (proxyMode == ref.read(Preferences.nimbusProxyMode)) return;
+      await ref.read(Preferences.nimbusProxyMode.notifier).update(proxyMode);
+      await ref.read(nimbusConnectionControllerProvider.notifier).reapplyIfConnected();
+      return;
+    }
+
+    final locationCode = trayLocationCodeFromKey(key);
+    if (locationCode != null) {
+      final locations = ref.read(nimbusAuthControllerProvider).locations?.items ?? const <NimbusLocation>[];
+      NimbusLocation? selectedLocation;
+      for (final location in locations) {
+        if (location.code == locationCode) {
+          selectedLocation = location;
+          break;
+        }
+      }
+      if (selectedLocation != null) {
+        await ref.read(nimbusConnectionControllerProvider.notifier).selectLocation(selectedLocation);
+      }
+      return;
+    }
+
+    if (key == 'open') {
+      await ref.read(windowNotifierProvider.notifier).show();
+    } else if (key == 'connection') {
+      await ref.read(nimbusDesktopBehaviorControllerProvider.notifier).toggleConnectionFromTray();
+    } else if (key == 'quit') {
+      await ref.read(windowNotifierProvider.notifier).exit();
+    }
+  }
+
+  String _trayTooltip(String appDisplayName, Translations t, ConnectionStatus connection, int urlTestDelay) {
+    final hasDelay = connection is Connected && urlTestDelay > 0 && urlTestDelay < 65000;
+    if (Platform.isMacOS) windowManager.setBadgeLabel(hasDelay ? "${urlTestDelay}ms" : "");
+    return trayTooltipText(appDisplayName, t, connection, urlTestDelay);
   }
 
   @override
   Future<void> onTrayMenuItemClick(MenuItem menuItem) async {
-    // if (menuItem.key == 'dashboard') {
-    //   await ref.read(windowNotifierProvider.notifier).open();
-    // }
-    if (menuItem.key == 'dashboard') {
-      await ref.read(windowNotifierProvider.notifier).show();
-    } else if (menuItem.key == 'connection') {
-      await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-    } else if (menuItem.key == 'quit') {
-      await ref.read(windowNotifierProvider.notifier).exit();
-    } else {
-      final newMode = ServiceMode.values.byName(menuItem.key!);
-      loggy.debug("switching service mode: [$newMode]");
-      await ref.read(ConfigOptions.serviceMode.notifier).update(newMode);
-    }
+    await _handleMenuAction(menuItem.key ?? '');
   }
 
   @override
   Future<void> onTrayIconMouseDown() async {
-    // if (Platform.isMacOS) {
-    //   await trayManager.popUpContextMenu();
-    // } else {
-    //   await ref.read(windowNotifierProvider.notifier).hideOrShow();
-    // }
-    await ref.read(windowNotifierProvider.notifier).showOrHide();
+    await ref.read(windowNotifierProvider.notifier).show();
   }
 
   @override
@@ -157,175 +308,18 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
   }
 }
 
-// @Riverpod(keepAlive: true)
-// class SystemTrayNotifier extends _$SystemTrayNotifier with AppLogger {
-//   @override
-//   Future<void> build() async {
-//     if (!PlatformUtils.isDesktop) return;
+bool _locationsReady(NimbusAuthState authState) =>
+    authState.isAuthenticated && authState.locations != null && authState.locations!.items.isNotEmpty;
 
-//     final activeProxy = await ref.watch(activeProxyNotifierProvider.future);
-//     final delay = activeProxy.urlTestDelay;
-//     final newConnectionStatus = delay > 0 && delay < 65000;
-//     ConnectionStatus connection;
-//     try {
-//       connection = await ref.watch(connectionNotifierProvider.future);
-//     } catch (e) {
-//       loggy.warning("error getting connection status", e);
-//       connection = const ConnectionStatus.disconnected();
-//     }
+List<NimbusLocation> _trayLocations(NimbusAuthState authState) =>
+    authState.locations?.items ?? const [NimbusLocation(code: 'auto', displayName: '')];
 
-//     final t = await ref.watch(translationsProvider.future);
+String _proxyModeLabel(Translations t, NimbusProxyMode mode) => switch (mode) {
+  NimbusProxyMode.auto => t.nimbus.proxyMode.auto,
+  NimbusProxyMode.global => t.nimbus.proxyMode.global,
+};
 
-//     var tooltip = Constants.appName;
-//     final serviceMode = ref.watch(ConfigOptions.serviceMode);
-//     if (connection is Disconnected) {
-//       setIcon(connection);
-//     } else if (newConnectionStatus) {
-//       setIcon(const Connected());
-//       tooltip = "$tooltip - ${connection.present(t)}";
-//       if (newConnectionStatus) {
-//         tooltip = "$tooltip : ${delay}ms";
-//       } else {
-//         tooltip = "$tooltip : -";
-//       }
-//       // else if (delay>1000)
-//       //   SystemTrayNotifier.setIcon(timeout ? Disconnecting() : Connecting());
-//     } else {
-//       setIcon(const Disconnecting());
-//       tooltip = "$tooltip - ${connection.present(t)}";
-//     }
-//     if (Platform.isMacOS) {
-//       windowManager.setBadgeLabel("${delay}ms");
-//     }
-//     if (!Platform.isLinux) await trayManager.setToolTip(tooltip);
-
-//     // final destinations = <(String label, String location)>[
-//     //   (t.home.pageTitle, const HomeRoute().location),
-//     //   (t.proxies.pageTitle, const ProfilesOverviewRoute().location),
-//     //   (t.logs.title, const LogsOverviewRoute().location),
-//     //   // (t.settings.pageTitle, const SettingsRoute().location),
-//     //   (t.about.pageTitle, const AboutRoute().location),
-//     // ];
-
-//     // loggy.debug('updating system tray');
-
-//     final menu = Menu(
-//       items: [
-//         MenuItem(
-//           label: t.tray.dashboard,
-//           onClick: (_) async {
-//             await ref.read(windowNotifierProvider.notifier).open();
-//           },
-//         ),
-//         MenuItem.separator(),
-//         MenuItem.checkbox(
-//           label: switch (connection) {
-//             Disconnected() => t.tray.status.connect,
-//             Connecting() => t.tray.status.connecting,
-//             Connected() => t.tray.status.disconnect,
-//             Disconnecting() => t.tray.status.disconnecting,
-//           },
-//           // checked: connection.isConnected,
-//           checked: false,
-//           disabled: connection.isSwitching,
-//           onClick: (_) async {
-//            await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-//          },
-//        ),
-//         MenuItem.separator(),
-//         MenuItem(
-//           label: t.config.serviceMode,
-//           icon: Assets.images.trayIconIco,
-//           disabled: true,
-//         ),
-
-//         ...ServiceMode.values.map(
-//           (e) => MenuItem.checkbox(
-//             checked: e == serviceMode,
-//             key: e.name,
-//             label: e.present(t),
-//             onClick: (menuItem) async {
-//               final newMode = ServiceMode.values.byName(menuItem.key!);
-//               loggy.debug("switching service mode: [$newMode]");
-//               await ref.read(ConfigOptions.serviceMode.notifier).update(newMode);
-//             },
-//           ),
-//         ),
-
-//         // MenuItem.submenu(
-//         //   label: t.tray.open,
-//         //   submenu: Menu(
-//         //     items: [
-//         //       ...destinations.map(
-//         //         (e) => MenuItem(
-//         //           label: e.$1,
-//         //           onClick: (_) async {
-//         //             await ref.read(windowNotifierProvider.notifier).open();
-//         //             ref.read(routerProvider).go(e.$2);
-//         //           },
-//         //         ),
-//         //       ),
-//         //     ],
-//         //   ),
-//         // ),
-//         MenuItem.separator(),
-//         MenuItem(
-//           label: t.tray.quit,
-//           onClick: (_) async {
-//             return ref.read(windowNotifierProvider.notifier).quit();
-//           },
-//         ),
-//       ],
-//     );
-
-//     await trayManager.setContextMenu(menu);
-//   }
-
-//   static void setIcon(ConnectionStatus status) {
-//     if (!PlatformUtils.isDesktop) return;
-//     trayManager
-//         .setIcon(
-//           _trayIconPath(status),
-//           isTemplate: Platform.isMacOS,
-//         )
-//         .asStream();
-//   }
-
-//   static String _trayIconPath(ConnectionStatus status) {
-//     if (Platform.isWindows) {
-//       final Brightness brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
-//       final isDarkMode = brightness == Brightness.dark;
-//       switch (status) {
-//         case Connected():
-//           return Assets.images.trayIconConnectedIco;
-//         case Connecting():
-//           return Assets.images.trayIconDisconnectedIco;
-//         case Disconnecting():
-//           return Assets.images.trayIconDisconnectedIco;
-//         case Disconnected():
-//           if (isDarkMode) {
-//             return Assets.images.trayIconIco;
-//           } else {
-//             return Assets.images.trayIconDarkIco;
-//           }
-//       }
-//     }
-//     // const isDarkMode = false;
-//     switch (status) {
-//       case Connected():
-//         return Assets.images.trayIconConnectedPng.path;
-//       case Connecting():
-//         return Assets.images.trayIconDisconnectedPng.path;
-//       case Disconnecting():
-//         return Assets.images.trayIconDisconnectedPng.path;
-//       case Disconnected():
-//         // if (isDarkMode) {
-//         //   return Assets.images.trayIconDarkPng.path;
-//         // } else {
-//         //   return Assets.images.trayIconPng.path;
-//         // }
-//         return Assets.images.trayIconPng.path;
-//     }
-//     // return Assets.images.trayIconPng.path;
-//   }
-// }
+String _locationDisplayName(Translations t, NimbusLocation location, String languageCode) {
+  if (location.code == 'auto') return t.nimbus.home.locationAuto;
+  return location.displayNameForLanguage(languageCode);
+}
