@@ -53,10 +53,22 @@ cd "${repo_root}"
 [[ -d "${built_app}" ]] || fail "找不到 macOS Debug 产物：${built_app}"
 bundle_id="$(plutil -extract CFBundleIdentifier raw -o - "${built_app}/Contents/Info.plist")"
 [[ "${bundle_id}" == "${expected_bundle_id}" ]] || fail "Bundle ID 不正确：${bundle_id}"
-[[ -f "${built_app}/Contents/Frameworks/hiddify-core.dylib" ]] \
-  || fail "构建产物缺少 Hiddify Core"
+# Xcode 的 Copy Files 阶段按上游 Core 源文件 basename 输出；在最终 App
+# 包边界重命名，避免用户在进程/文件管理器里看到上游产品名。
+legacy_core="${built_app}/Contents/Frameworks/hiddify-core.dylib"
+branded_core="${built_app}/Contents/Frameworks/YundoCore.dylib"
+if [[ -f "${legacy_core}" && ! -e "${branded_core}" ]]; then
+  mv "${legacy_core}" "${branded_core}"
+elif [[ -f "${legacy_core}" && -f "${branded_core}" ]]; then
+  rm -f "${legacy_core}"
+fi
+[[ -f "${branded_core}" ]] \
+  || fail "构建产物缺少 Yundo Core"
 [[ ! -e "${built_app}/Contents/Library/HelperTools/YundoPrivilegedHelper" ]] \
   || fail "新分支禁止带入旧云渡 PrivilegedHelper"
+if find "${built_app}" -iname '*hiddify*' -print -quit | grep -q .; then
+  fail "构建产物仍包含 Hiddify 可见文件名"
+fi
 # Hiddify 的 LaunchAtLogin-Legacy 会在 Flutter 构建后复制嵌套 App；按包层级
 # 重新做 ad hoc 签名，避免嵌套 Info.plist 未被封入签名导致 macOS 拒绝启动。
 login_item="${built_app}/Contents/Library/LoginItems/LaunchAtLoginHelper.app"
@@ -73,7 +85,7 @@ if [[ -d "${installed_app}" ]]; then
   ditto "${installed_app}" "${backup_app}"
 fi
 
-if ! ditto "${built_app}" "${installed_app}"; then
+if ! rm -rf "${installed_app}" || ! ditto "${built_app}" "${installed_app}"; then
   restore_existing_app "${backup_app}"
   fail "覆盖安装失败，已尝试恢复原有 Yundo Dev.app"
 fi

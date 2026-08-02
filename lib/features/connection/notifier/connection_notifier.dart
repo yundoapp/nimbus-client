@@ -10,6 +10,7 @@ import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
+import 'package:hiddify/hiddifycore/hiddify_core_service_provider.dart';
 import 'package:hiddify/hiddifycore/init_signal.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -112,14 +113,10 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   }
 
   Future<void> abortConnection() async {
-    if (state case AsyncData(:final value)) {
-      switch (value) {
-        case Connected() || Connecting():
-          loggy.debug("aborting connection");
-          await _disconnect();
-        default:
-      }
-    }
+    final core = ref.read(hiddifyCoreServiceProvider);
+    if (!core.core.isInitialized()) return;
+    loggy.debug("aborting connection and stopping native core");
+    await _disconnect();
   }
 
   final _singleStart = SingleCall();

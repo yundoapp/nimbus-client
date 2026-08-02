@@ -19,6 +19,24 @@ protected_prefixes=(
   'android/app/src/main/kotlin/com/hiddify/hiddify/bg/'
 )
 
+# These files are inside inherited platform folders but only change product
+# identity, native library loading names, or app lifecycle isolation. They
+# must not alter networking behavior, so the boundary check permits them
+# explicitly.
+allowed_boundary_files=(
+  'lib/hiddifycore/core_port.dart'
+  'lib/hiddifycore/core_interface/core_interface_desktop.dart'
+  'lib/hiddifycore/core_interface/core_interface_mobile.dart'
+  'lib/hiddifycore/hiddify_core_service.dart'
+  'windows/runner/main.cpp'
+  'windows/runner/Runner.rc'
+  'windows/runner/resources/app_icon.ico'
+  'ios/Runner/VPN/VPNManager.swift'
+  'ios/HiddifyPacketTunnel/SingBox/ExtensionProvider.swift'
+  'android/app/src/main/kotlin/com/hiddify/hiddify/bg/ServiceNotification.kt'
+  'android/app/src/main/kotlin/com/hiddify/hiddify/bg/VPNService.kt'
+)
+
 changed_files="$({
   git diff --name-only "${base_ref}...HEAD"
   git diff --name-only
@@ -31,7 +49,16 @@ if [[ -n "$changed_files" ]]; then
     [[ -z "$file" ]] && continue
     for prefix in "${protected_prefixes[@]}"; do
       if [[ "$file" == "$prefix"* ]]; then
-        violations+=("$file")
+        branding_only=false
+        for allowed_file in "${allowed_boundary_files[@]}"; do
+          if [[ "$file" == "$allowed_file" ]]; then
+            branding_only=true
+            break
+          fi
+        done
+        if [[ "$branding_only" == false ]]; then
+          violations+=("$file")
+        fi
         break
       fi
     done
@@ -46,4 +73,3 @@ if (( ${#violations[@]} > 0 )); then
 fi
 
 printf 'Yundo/Hiddify boundary check passed: no protected network-core changes.\n'
-

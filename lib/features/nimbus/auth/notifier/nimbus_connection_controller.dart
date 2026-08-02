@@ -138,6 +138,7 @@ class NimbusConnectionDiagnostic {
 class NimbusConnectionController extends Notifier<NimbusConnectionState> with AppLogger {
   Future<void>? _connectFuture;
   Future<void>? _disconnectFuture;
+  bool _shutdownRequested = false;
 
   NimbusAuthRepository get _repository => ref.read(nimbusAuthRepositoryProvider);
   Translations get _t => ref.read(translationsProvider).requireValue;
@@ -220,6 +221,18 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     }
   }
 
+  Future<void> shutdown() async {
+    loggy.info('application shutdown requested; stopping native connection');
+    _shutdownRequested = true;
+    ref.read(nimbusAutoConnectSessionControllerProvider.notifier).suppress();
+    await ref.read(connectionNotifierProvider.notifier).abortConnection();
+    final activeConnect = _connectFuture;
+    if (activeConnect != null) {
+      await activeConnect.timeout(const Duration(seconds: 2), onTimeout: () {}).catchError((_) {});
+    }
+    await disconnect(reason: 'APP_EXIT', reportToServer: false);
+  }
+
   Future<bool> ensureStartupRecovery({required String reason, bool showErrors = false}) async {
     loggy.info('Hiddify startup recovery [$reason]');
     final current = ref.read(connectionNotifierProvider).valueOrNull;
@@ -238,6 +251,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   void handleAppResumed() {}
 
   Future<void> _connectInternal({required bool showErrors}) async {
+    if (_shutdownRequested) return;
     final startupReady = await ensureStartupRecovery(reason: 'connection request', showErrors: showErrors);
     if (!startupReady) return;
 
@@ -280,6 +294,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         appVersion: appInfo.version,
         rulesManifest: rulesManifest,
       );
+      if (_shutdownRequested) return;
       state = state.copyWith(plan: plan, traffic: plan.traffic);
 
       final profileContent = plan.profileContent?.trim();
@@ -295,6 +310,10 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       }
       _validateStandardProfileContent(profileContent);
       final validatedProfileContent = await _installStandardProfile(profileContent);
+      if (_shutdownRequested) {
+        await _cleanupFailedConnectionAttempt();
+        return;
+      }
       final profile = await ref.read(activeProfileProvider.future);
       if (profile == null) throw const FormatException('Hiddify active profile is unavailable');
       final profileFile = ref.read(profilePathResolverProvider).file(profile.id);
@@ -307,6 +326,10 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
           .connect(profile, ref.read(Preferences.disableMemoryLimit))
           .run();
       result.match((failure) => throw failure, (_) => null);
+      if (_shutdownRequested) {
+        await _cleanupFailedConnectionAttempt();
+        return;
+      }
       await ref.read(Preferences.startedByUser.notifier).update(true);
       _handleConnectionStatus(ref.read(connectionNotifierProvider));
     } on ConnectionFailure catch (error) {

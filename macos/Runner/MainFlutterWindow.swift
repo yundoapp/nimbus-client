@@ -10,6 +10,26 @@ class MainFlutterWindow: NSWindow {
     self.contentViewController = flutterViewController
     self.setFrame(windowFrame, display: true)
 
+    let lifecycleChannel = FlutterMethodChannel(
+      name: "yundo.application.lifecycle",
+      binaryMessenger: flutterViewController.engine.binaryMessenger
+    )
+    NotificationCenter.default.addObserver(
+      forName: Notification.Name("YundoApplicationShouldTerminate"),
+      object: nil,
+      queue: .main
+    ) { _ in
+      lifecycleChannel.invokeMethod("applicationShouldTerminate", arguments: nil)
+    }
+    lifecycleChannel.setMethodCallHandler { call, result in
+      if call.method == "allowTerminate" {
+        (NSApp.delegate as? AppDelegate)?.allowTermination()
+        result(nil)
+      } else {
+        result(FlutterMethodNotImplemented)
+      }
+    }
+
 
  // Add FlutterMethodChannel platform code
     FlutterMethodChannel(

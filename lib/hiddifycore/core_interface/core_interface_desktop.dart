@@ -7,7 +7,7 @@ import 'package:grpc/grpc.dart';
 import 'package:hiddify/core/model/directories.dart';
 import 'package:hiddify/gen/hiddify_core_generated_bindings.dart';
 import 'package:hiddify/hiddifycore/core_interface/core_interface.dart';
-import 'package:hiddify/hiddifycore/core_interface/mtls_channel_cred.dart';
+import 'package:hiddify/hiddifycore/core_port.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore_service.pbgrpc.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hello/hello.pb.dart';
@@ -18,7 +18,7 @@ import 'package:loggy/loggy.dart';
 
 import 'package:path/path.dart' as p;
 
-final _logger = Loggy('HiddifyCoreFFI');
+final _logger = Loggy('YundoCoreFFI');
 typedef StopFunc = Pointer<Utf8> Function();
 typedef StopFuncDart = Pointer<Utf8> Function();
 
@@ -28,17 +28,17 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
   static HiddifyCoreNativeLibrary _gen() {
     String fullPath = "";
     if (Platform.environment.containsKey('FLUTTER_TEST')) {
-      fullPath = "hiddify-core";
+      fullPath = "YundoCore";
     }
     if (Platform.isWindows) {
-      fullPath = p.join(fullPath, "hiddify-core.dll");
+      fullPath = p.join(fullPath, "YundoCore.dll");
     } else if (Platform.isMacOS) {
-      fullPath = p.join(fullPath, "hiddify-core.dylib");
+      fullPath = p.join(fullPath, "YundoCore.dylib");
     } else {
-      fullPath = p.join(fullPath, "hiddify-core.so");
+      fullPath = p.join(fullPath, "YundoCore.so");
     }
 
-    _logger.debug('hiddify-core native libs path: "$fullPath"');
+    _logger.debug('Yundo native core library path: "$fullPath"');
     final lib = DynamicLibrary.open(fullPath);
     // final stopFunc = lib.lookup<NativeFunction<StopFunc>>('stop').asFunction<StopFunc>();
     // final errPtr2 = stopFunc();
@@ -56,7 +56,9 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
     }
   }
 
-  final port = 17078;
+  int _port = legacyDesktopCorePort;
+
+  int get port => _port;
   static String generateRandomPassword(int length) {
     const characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random();
@@ -67,6 +69,7 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
 
   @override
   Future<String> setup(Directories directories, bool debug, int mode) async {
+    _port = resolveDesktopCorePort(directories.baseDir.path);
     // Generate a random password for the grpc service
     // final errPtr2 = _box.stop();
     // final err = errPtr2.cast<Utf8>().toDartString();

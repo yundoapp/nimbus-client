@@ -4,6 +4,26 @@ import FlutterMacOS
 import UserNotifications
 @main
 class AppDelegate: FlutterAppDelegate {
+  private var terminationAllowed = false
+  private var terminationReplyPending = false
+
+  override func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+    if terminationAllowed {
+      return .terminateNow
+    }
+    terminationReplyPending = true
+    NotificationCenter.default.post(name: Notification.Name("YundoApplicationShouldTerminate"), object: nil)
+    return .terminateLater
+  }
+
+  func allowTermination() {
+    terminationAllowed = true
+    if terminationReplyPending {
+      terminationReplyPending = false
+      NSApp.reply(toApplicationShouldTerminate: true)
+    }
+  }
+
   override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
     // https://github.com/leanflutter/window_manager/issues/214
     return false

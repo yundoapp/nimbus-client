@@ -33,6 +33,9 @@ class HiddifyCoreService with InfraLogger {
   HiddifyCoreService(this.ref);
   final Ref ref;
 
+  @override
+  loggyl.Loggy<InfraLogger> get loggy => loggyl.Loggy<InfraLogger>('YundoCoreService');
+
   // CoreHiddifyCoreService() {}
   final core = getCoreInterface();
 
@@ -52,7 +55,7 @@ class HiddifyCoreService with InfraLogger {
           ref.read(inAppNotificationControllerProvider).showErrorToast(e);
         })
         .map((_) {
-          loggy.info("Hiddify-core setup done");
+          loggy.info("Yundo core setup done");
           ref.read(coreRestartSignalProvider.notifier).restart();
         })
         .run();

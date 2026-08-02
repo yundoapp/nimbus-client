@@ -1,9 +1,8 @@
 import 'dart:io';
-import 'dart:ui';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
-import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:screen_retriever/screen_retriever.dart';
@@ -14,12 +13,20 @@ part 'window_notifier.g.dart';
 
 const minimumWindowSize = Size(368, 568);
 const defaultWindowSize = Size(868, 668);
+const _applicationLifecycleChannel = MethodChannel('yundo.application.lifecycle');
 
 @Riverpod(keepAlive: true)
 class WindowNotifier extends _$WindowNotifier with AppLogger {
+  Future<void>? _shutdownFuture;
+
   @override
   Future<void> build() async {
     if (!PlatformUtils.isDesktop) return;
+
+    if (Platform.isMacOS) {
+      _applicationLifecycleChannel.setMethodCallHandler(_handleNativeLifecycleCall);
+      ref.onDispose(() => _applicationLifecycleChannel.setMethodCallHandler(null));
+    }
 
     // if (Platform.isWindows) {
     //   loggy.debug("ensuring single instance");
@@ -119,14 +126,41 @@ class WindowNotifier extends _$WindowNotifier with AppLogger {
   }
 
   Future<void> exit() async {
+    await _shutdown();
+    await _allowNativeTermination();
+    await windowManager.destroy();
+  }
+
+  Future<void> _shutdown() {
+    final active = _shutdownFuture;
+    if (active != null) return active;
+    final future = _shutdownInternal();
+    _shutdownFuture = future;
+    return future.whenComplete(() {
+      if (identical(_shutdownFuture, future)) _shutdownFuture = null;
+    });
+  }
+
+  Future<void> _shutdownInternal() async {
     await ref
-        .read(connectionNotifierProvider.notifier)
-        .abortConnection()
-        .timeout(const Duration(seconds: 2))
+        .read(nimbusConnectionControllerProvider.notifier)
+        .shutdown()
+        .timeout(const Duration(seconds: 5))
         .catchError((e) {
-          loggy.warning("error aborting connection on quit", e);
+          loggy.warning("error shutting down connection on quit", e);
         });
     await trayManager.destroy();
-    await windowManager.destroy();
+  }
+
+  Future<void> _handleNativeLifecycleCall(MethodCall call) async {
+    if (call.method != 'applicationShouldTerminate') return;
+    loggy.info('macOS termination requested; waiting for native connection cleanup');
+    await _shutdown();
+    await _allowNativeTermination();
+  }
+
+  Future<void> _allowNativeTermination() async {
+    if (!Platform.isMacOS) return;
+    await _applicationLifecycleChannel.invokeMethod<void>('allowTerminate');
   }
 }

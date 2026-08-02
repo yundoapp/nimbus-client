@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>app.yundo.client</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Yundo</name>
+  <summary>云渡加速客户端</summary>
+  <developer_name>Yundo contributors</developer_name>
+  <update_contact>support@yundo.app</update_contact>
+  <description>
+    <p>Yundo is a cross-platform acceleration client based on an open-source network core.</p>
+  </description>
+  <launchable type="desktop-id">yundo.desktop</launchable>
+  <icon type="stock">yundo</icon>
+  <categories>
+    <category>Network</category>
+  </categories>
+  <mime-types>
+    <mime-type>x-scheme-handler/yundo</mime-type>
+    <mime-type>x-scheme-handler/v2ray</mime-type>
+    <mime-type>x-scheme-handler/v2rayn</mime-type>
+    <mime-type>x-scheme-handler/v2rayng</mime-type>
+    <mime-type>x-scheme-handler/clash</mime-type>
+    <mime-type>x-scheme-handler/clashmeta</mime-type>
+    <mime-type>x-scheme-handler/sing-box</mime-type>
+  </mime-types>
+  <url type="homepage">https://yundo.app</url>
+  <provides>
+    <binary>yundo</binary>
+  </provides>
+</component>

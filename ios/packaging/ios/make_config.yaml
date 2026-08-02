@@ -1,9 +1,9 @@
-display_name: Hiddify
+display_name: Yundo
 
 icon: ..\..\assets\images\windows.ico
 
 keywords:
-  - Hiddify
+  - Yundo
   - Proxy
   - VPN
   - V2ray
@@ -12,7 +12,7 @@ keywords:
   - Psiphon
   - OpenVPN
 
-generic_name: Hiddify
+generic_name: Yundo
 
 actions:
   - name: Start
@@ -39,4 +39,3 @@ startup_notify: true
 # include:
 #   - libcurl.so.4
 include: []
-

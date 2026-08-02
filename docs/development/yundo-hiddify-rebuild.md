@@ -16,12 +16,12 @@
 - `lib/singbox/`：核心配置模型和协议实现
 - `macos/PrivilegedHelper/`：macOS 特权辅助进程
 - `macos/Runner/PrivilegedHelperBridge.swift`：macOS Helper 通道
-- `windows/runner/`：Windows 原生进程、服务和网络集成
+- `windows/runner/`：Windows 原生进程、服务和网络集成；仅允许独立的产品名、窗口名和图标改动
 - `ios/Runner/VPN/`：iOS Packet Tunnel 管理
 - `ios/HiddifyPacketTunnel/`：iOS 隧道扩展
 - Android 后台 VPN Service 和核心服务实现
 
-云渡只允许通过现有的 Profile、Route Rules、Config Option、Connection Repository 等应用层接口提供数据和发起连接。
+云渡只允许通过现有的 Profile、Route Rules、Config Option、Connection Repository 等应用层接口提供数据和发起连接。品牌改名可以调整最终安装包里的可见文件名、进程名、Bundle ID、通知标题和图标，但不得借此改变网络行为。
 
 ## 3. 云渡功能迁移范围
 
@@ -53,7 +53,11 @@ Hiddify Core 校验 profile 时会使用临时输入文件生成完整运行配�
 
 本机 macOS Debug 版本 `202608033` 已使用本地 API 标准 profile 完成自动连接并进入 `CONNECTED`；该结果只证明 Hiddify profile 生命周期和本地连接闭环正常，不替代真实节点、微信开发者工具和四端网络矩阵验收。
 
-macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装名 `Yundo Dev.app`，Release 使用 `app.yundo.client`；重建开发版与旧云渡开发版不共享登录态、偏好或 Hiddify Core 数据目录。构建入口 `scripts/build_install_run_macos_dev.sh` 只验证和安装 Hiddify 原生 Core，不迁移旧云渡 Helper。Core 依赖按 Hiddify Makefile 的 `core.version=4.1.0` 获取，不能把 Core 二进制误认为云渡网络实现。
+macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装名 `Yundo Dev.app`，Release 使用 `app.yundo.client`；重建开发版与旧云渡开发版不共享登录态、偏好或 Core 数据目录。当前桌面发布层使用 `YundoCore` 文件名和云渡窗口/进程名，不把旧 Helper 带入新分支；源代码目录和上游模块名暂时保留，避免为了改内部名而触碰 Core ABI。构建入口 `scripts/build_install_run_macos_dev.sh` 会拒绝把 Hiddify 名称带入最终 macOS App 包。
+
+品牌验收以最终安装包为准：进程管理器、应用包目录、系统设置里的应用名、通知服务名、快捷方式和应用图标都必须显示云渡品牌；内部源码路径、协议模块名和许可证归属不属于用户产品界面，但不得被复制成用户可见的运行时文件名。
+
+桌面 Core 进程隔离和退出清理是应用生命周期边界，不改变 DNS、TUN、路由或代理实现：正式版继续使用既有 Core 通道，macOS 开发版使用独立端口 `17179`，避免接管正式版或旧 Helper 的 Core；桌面退出无论来自窗口、托盘还是 macOS 系统菜单，都必须先调用 Hiddify 原生停止接口并清理云渡连接状态，随后才允许进程退出。macOS 原生终止通过 `yundo.application.lifecycle` 与 Flutter 握手，不能只依赖 `onWindowClose`。
 
 ## 5. 迁移顺序
 

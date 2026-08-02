@@ -116,7 +116,14 @@ class NimbusDesktopBehaviorController extends Notifier<void> with AppLogger {
       connection: connection,
       connectedReported: nimbusConnection.connectedReported,
     )) {
-      _scheduleAutoConnectRetry();
+      loggy.warning('startup found an unowned native connection; stopping it before auto connect');
+      await ref.read(connectionNotifierProvider.notifier).abortConnection();
+      final stopped = ref.read(connectionNotifierProvider).valueOrNull;
+      if (stopped is Disconnected) {
+        scheduleAutoConnect(reason: 'unowned connection stopped', resetBackoff: false);
+      } else {
+        _scheduleAutoConnectRetry();
+      }
       return;
     }
 
