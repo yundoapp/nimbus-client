@@ -307,7 +307,11 @@ windows-zip-release:
 	mkdir -p Yundo; \
 	unzip -q "$$ZIP_FILE" -d Yundo/; \
 	rm "$$ZIP_FILE"; \
-	tar -a -cf "$$FILE_NAME.zip" Yundo; \
+	if command -v powershell.exe >/dev/null 2>&1; then \
+		powershell.exe -NoProfile -NonInteractive -Command "Compress-Archive -Path 'Yundo' -DestinationPath '$$FILE_NAME.zip' -Force"; \
+	else \
+		zip -q -r "$$FILE_NAME.zip" Yundo; \
+	fi; \
 	rm -rf Yundo; \
 	$(GREEN)Successful$(DONE)
 
@@ -470,6 +474,22 @@ ios-release: #not tested
 android-libs:
 	$(MKDIR) $(ANDROID_OUT) || echo Folder already exists. Skipping...
 	curl -L $(CORE_URL)/$(CORE_NAME)-android.tar.gz | tar xz -C $(ANDROID_OUT)/
+	@AAR_PATH=$$(find "$(ANDROID_OUT)" -maxdepth 1 -name '*.aar' -print -quit); \
+	WORK_DIR=$$(mktemp -d); \
+	mkdir -p "$$WORK_DIR/aar" "$$WORK_DIR/classes"; \
+	unzip -q "$$AAR_PATH" -d "$$WORK_DIR/aar"; \
+	unzip -q "$$WORK_DIR/aar/classes.jar" -d "$$WORK_DIR/classes"; \
+	LC_ALL=C perl -pi -e 's/hiddify-core/YundoCoreLib/g' "$$WORK_DIR/classes/go/Seq.class"; \
+	(cd "$$WORK_DIR/classes" && zip -q -r "$$WORK_DIR/classes-branded.jar" .); \
+	mv "$$WORK_DIR/classes-branded.jar" "$$WORK_DIR/aar/classes.jar"; \
+	for ABI in arm64-v8a armeabi-v7a x86 x86_64; do \
+		mv "$$WORK_DIR/aar/jni/$$ABI/libhiddify-core.so" "$$WORK_DIR/aar/jni/$$ABI/libYundoCoreLib.so"; \
+	done; \
+	if unzip -p "$$WORK_DIR/aar/classes.jar" go/Seq.class | strings | grep -q 'hiddify-core'; then \
+		echo 'Android AAR loader still contains the upstream native library name' >&2; exit 1; \
+	fi; \
+	(cd "$$WORK_DIR/aar" && zip -q -r "$$AAR_PATH.branded" .); \
+	mv "$$AAR_PATH.branded" "$$AAR_PATH"
 
 android-apk-libs: android-libs
 android-aab-libs: android-libs
