@@ -488,8 +488,9 @@ android-libs:
 	if unzip -p "$$WORK_DIR/aar/classes.jar" go/Seq.class | strings | grep -q 'hiddify-core'; then \
 		echo 'Android AAR loader still contains the upstream native library name' >&2; exit 1; \
 	fi; \
-	(cd "$$WORK_DIR/aar" && zip -q -r "$$AAR_PATH.branded" .); \
-	mv "$$AAR_PATH.branded" "$$AAR_PATH"
+	BRANDED_AAR="$$WORK_DIR/$$(basename "$$AAR_PATH").branded"; \
+	(cd "$$WORK_DIR/aar" && zip -q -r "$$BRANDED_AAR" .); \
+	mv "$$BRANDED_AAR" "$$AAR_PATH"
 
 android-apk-libs: android-libs
 android-aab-libs: android-libs
