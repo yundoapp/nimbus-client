@@ -294,9 +294,14 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         return;
       }
       _validateStandardProfileContent(profileContent);
-      await _installStandardProfile(profileContent);
+      final validatedProfileContent = await _installStandardProfile(profileContent);
       final profile = await ref.read(activeProfileProvider.future);
       if (profile == null) throw const FormatException('Hiddify active profile is unavailable');
+      final profileFile = ref.read(profilePathResolverProvider).file(profile.id);
+      if (!profileFile.existsSync()) {
+        await profileFile.parent.create(recursive: true);
+        await profileFile.writeAsString(validatedProfileContent);
+      }
       final result = await ref
           .read(connectionRepositoryProvider)
           .connect(profile, ref.read(Preferences.disableMemoryLimit))
@@ -342,7 +347,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     state = const NimbusConnectionState();
   }
 
-  Future<void> _installStandardProfile(String content) async {
+  Future<String> _installStandardProfile(String content) async {
     final parser = ref.read(profileParserProvider);
     final resolver = ref.read(profilePathResolverProvider);
     final dataSource = ref.read(profileDataSourceProvider);
@@ -350,8 +355,10 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     await _removeManagedProfile();
 
     final file = resolver.file(_managedProfileId);
+    final validationFile = resolver.file('$_managedProfileId.validation');
     final tempFile = resolver.tempFile(_managedProfileId);
     await tempFile.writeAsString(content);
+    String validatedContent;
     try {
       final companion =
           (await parser
@@ -359,13 +366,22 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
                   .run())
               .getOrElse((failure) => throw failure);
       await repository
-          .validateConfig(file.path, tempFile.path, null, false)
+          .validateConfig(validationFile.path, tempFile.path, null, false)
           .run()
           .then((result) => result.getOrElse((failure) => throw failure));
+      if (!validationFile.existsSync()) {
+        throw const FormatException('Hiddify validated profile file is unavailable');
+      }
+      validatedContent = await validationFile.readAsString();
+      await validationFile.delete();
+      await file.parent.create(recursive: true);
+      await file.writeAsString(validatedContent);
       await dataSource.insert(companion);
     } finally {
       if (tempFile.existsSync()) await tempFile.delete();
+      if (validationFile.existsSync()) await validationFile.delete();
     }
+    return validatedContent;
   }
 
   Future<void> _removeManagedProfile() async {
@@ -373,11 +389,18 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     final resolver = ref.read(profilePathResolverProvider);
     final existing = await dataSource.getById(_managedProfileId);
     if (existing != null) {
-      final repository = await ref.read(profileRepositoryProvider.future);
-      await repository.deleteById(_managedProfileId, existing.active).run();
+      final file = resolver.file(_managedProfileId);
+      if (file.existsSync()) {
+        final repository = await ref.read(profileRepositoryProvider.future);
+        await repository.deleteById(_managedProfileId, existing.active).run();
+      } else {
+        await dataSource.deleteById(_managedProfileId, existing.active);
+      }
     } else {
       final file = resolver.file(_managedProfileId);
-      if (file.existsSync()) await file.delete();
+      if (file.existsSync()) {
+        await file.delete();
+      }
     }
   }
 

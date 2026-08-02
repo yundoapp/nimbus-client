@@ -45,9 +45,15 @@
 4. 如果某项云渡规则无法表达为 Hiddify 标准配置，优先调整后台配置生成或暂缓该项能力，不修改 DNS、TUN、路由、系统代理或 Helper。
 5. 不允许由云渡代码接管系统 DNS，不允许在加速前后直接修改物理网卡 DNS，不允许自行创建或清理系统路由。
 
+Hiddify Core 校验 profile 时会使用临时输入文件生成完整运行配置；在部分桌面启动时序下，Core 释放临时输入后可能异步清理校验输出路径。因此云渡适配器使用独立校验路径读取 Hiddify 生成的完整配置，先完成 Hiddify profile 入库并等待 active profile 稳定，再把完整配置写入云渡自己的最终 profile 文件，最后调用原生 `ConnectionRepository.connect`。不得把后台返回的原始 profile 直接覆盖为最终运行文件，也不得让云渡接管 Core 的 DNS、TUN 或系统代理配置。
+
 服务端可以继续返回旧 `singBoxConfigPatch` 供旧客户端兼容，但新客户端收到缺少 `profileContent` 的响应时必须失败关闭，不得回退消费旧字段。
 
 当前已完成：认证壳、首页/连接按钮、设置页、路由偏好、问题反馈、应用生命周期接入和标准 Profile 适配器；当前尚未完成四端构建、真实节点连接和安装版网络矩阵。
+
+本机 macOS Debug 版本 `202608033` 已使用本地 API 标准 profile 完成自动连接并进入 `CONNECTED`；该结果只证明 Hiddify profile 生命周期和本地连接闭环正常，不替代真实节点、微信开发者工具和四端网络矩阵验收。
+
+macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装名 `Yundo Dev.app`，Release 使用 `app.yundo.client`；重建开发版与旧云渡开发版不共享登录态、偏好或 Hiddify Core 数据目录。构建入口 `scripts/build_install_run_macos_dev.sh` 只验证和安装 Hiddify 原生 Core，不迁移旧云渡 Helper。Core 依赖按 Hiddify Makefile 的 `core.version=4.1.0` 获取，不能把 Core 二进制误认为云渡网络实现。
 
 ## 5. 迁移顺序
 

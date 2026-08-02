@@ -73,12 +73,13 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
         (state) => (isAuthenticated: state.isAuthenticated, isRestoring: state.isRestoring),
       ),
     );
-    if (authState.isRestoring) return loadingConfig;
     return RoutingConfig(
       redirect: (context, state) {
         final isAuthRoute = state.matchedLocation.startsWith('/auth/');
+        if (authState.isRestoring && !isAuthRoute) return '/auth/login';
         if (!authState.isAuthenticated && !isAuthRoute) return '/auth/login';
         if (authState.isAuthenticated && isAuthRoute) return '/home';
+        if (isAuthRoute) return null;
 
         // fix path-parameters for deep link
         String? url;
@@ -200,7 +201,7 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                     child: PopScope(
                       canPop: false,
                       onPopInvokedWithResult: (_, _) => context.goNamed('home'),
-                      child: SettingsPage(),
+                      child: const SettingsPage(),
                     ),
                   ),
                   routes: <GoRoute>[

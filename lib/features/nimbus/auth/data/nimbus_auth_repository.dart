@@ -18,17 +18,7 @@ const nimbusApiBaseUrl = String.fromEnvironment('NIMBUS_API_BASE_URL', defaultVa
 
 final nimbusAuthRepositoryProvider = Provider<NimbusAuthRepository>((ref) {
   final preferences = ref.watch(sharedPreferencesProvider).requireValue;
-  return NimbusAuthRepository(
-    preferences: preferences,
-    appInfo: ref.watch(appInfoProvider).requireValue,
-    sessionStore: !kIsWeb
-        ? switch (Platform.operatingSystem) {
-            'ios' => const IOSKeychainNimbusSessionStore(),
-            'macos' => const MacOSKeychainNimbusSessionStore(),
-            _ => null,
-          }
-        : null,
-  );
+  return NimbusAuthRepository(preferences: preferences, appInfo: ref.watch(appInfoProvider).requireValue);
 });
 
 class NimbusAuthRepository {
