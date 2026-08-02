@@ -3,7 +3,15 @@ set -euo pipefail
 
 base_ref="${1:-main}"
 
-if ! git rev-parse --verify "${base_ref}^{commit}" >/dev/null 2>&1; then
+resolved_base_ref=""
+for candidate in "${base_ref}" "refs/remotes/origin/${base_ref}" "refs/heads/${base_ref}"; do
+  if git rev-parse --verify "${candidate}^{commit}" >/dev/null 2>&1; then
+    resolved_base_ref="${candidate}"
+    break
+  fi
+done
+
+if [[ -z "${resolved_base_ref}" ]]; then
   printf '无法解析基线提交: %s\n' "$base_ref" >&2
   exit 2
 fi
@@ -38,7 +46,7 @@ allowed_boundary_files=(
 )
 
 changed_files="$({
-  git diff --name-only "${base_ref}...HEAD"
+  git diff --name-only "${resolved_base_ref}...HEAD"
   git diff --name-only
   git diff --cached --name-only
 } | sort -u)"

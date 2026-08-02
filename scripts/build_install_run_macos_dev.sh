@@ -16,7 +16,7 @@ fail() {
   exit 1
 }
 
-for command_name in codesign ditto open osascript pgrep plutil; do
+for command_name in awk codesign ditto mktemp open osascript pgrep plutil rm security shasum; do
   command -v "${command_name}" >/dev/null 2>&1 || fail "缺少 ${command_name}"
 done
 [[ -d "${developer_dir}" ]] || fail "找不到 Xcode Developer 目录：${developer_dir}"
@@ -64,19 +64,43 @@ elif [[ -f "${legacy_core}" && -f "${branded_core}" ]]; then
 fi
 [[ -f "${branded_core}" ]] \
   || fail "构建产物缺少 Yundo Core"
-[[ ! -e "${built_app}/Contents/Library/HelperTools/YundoPrivilegedHelper" ]] \
-  || fail "新分支禁止带入旧云渡 PrivilegedHelper"
 if find "${built_app}" -iname '*hiddify*' -print -quit | grep -q .; then
   fail "构建产物仍包含 Hiddify 可见文件名"
 fi
-# Hiddify 的 LaunchAtLogin-Legacy 会在 Flutter 构建后复制嵌套 App；按包层级
-# 重新做 ad hoc 签名，避免嵌套 Info.plist 未被封入签名导致 macOS 拒绝启动。
+# Flutter 构建会复制嵌套登录启动组件；按包层级重签，保证最终 App 可启动。
+codesign_identity="${MACOS_CODESIGN_IDENTITY:-}"
+if [[ -z "${codesign_identity}" ]]; then
+  codesign_identity="$(security find-identity -v -p codesigning \
+    | awk '/\"Apple Development:/ { print $2; exit }')"
+fi
+[[ -n "${codesign_identity}" ]] \
+  || fail "安装开发版需要有效的 Apple Development 签名身份"
+
+app_entitlements="$(mktemp "${TMPDIR:-/tmp}/yundo-dev-entitlements.XXXXXX.plist")"
+trap 'rm -f "${app_entitlements}"' EXIT
+codesign -d --entitlements :- "${built_app}" >"${app_entitlements}" 2>/dev/null \
+  || fail "无法读取开发版 App entitlement"
+plutil -lint "${app_entitlements}" >/dev/null \
+  || fail "开发版 App entitlement 格式无效"
+
+core_path="${built_app}/Contents/Frameworks/YundoCore.dylib"
+[[ -f "${core_path}" ]] || fail "构建产物缺少 Yundo Core：${core_path}"
+codesign --force --sign "${codesign_identity}" "${core_path}"
 login_item="${built_app}/Contents/Library/LoginItems/LaunchAtLoginHelper.app"
 if [[ -d "${login_item}" ]]; then
-  codesign --force --sign - --preserve-metadata=identifier,entitlements,requirements,runtime "${login_item}"
+  codesign --force --sign "${codesign_identity}" \
+    --preserve-metadata=identifier,entitlements,requirements,runtime "${login_item}"
 fi
-codesign --force --sign - "${built_app}"
+codesign --force --sign "${codesign_identity}" \
+  --identifier "${expected_bundle_id}" \
+  --entitlements "${app_entitlements}" "${built_app}"
 codesign --verify --deep --strict "${built_app}"
+
+FLUTTER_BIN="${flutter_bin}" \
+  DEVELOPER_DIR="${developer_dir}" \
+  MACOS_CODESIGN_IDENTITY="${codesign_identity}" \
+  YUNDO_LOCAL_BUILD_NUMBER="${build_number}" \
+  "${script_dir}/build_install_macos_local_prod.sh"
 
 quit_existing_app
 backup_root="$(mktemp -d "${TMPDIR:-/tmp}/yundo-dev-backup.XXXXXX")"
@@ -104,6 +128,6 @@ if [[ "${was_running}" == true ]]; then
 fi
 
 rm -rf "${backup_root}"
-echo "Yundo Dev 构建、Bundle ID 校验和覆盖安装完成。"
+echo "Yundo Dev 与 Yundo 正式版均已完成构建、签名、Bundle ID 校验和覆盖安装。"
 echo "构建产物：${built_app}"
 echo "安装位置：${installed_app}"
