@@ -282,7 +282,12 @@ android-aab-release:
 	  --build-dart-define=sentry_dsn=$(SENTRY_DSN) \
 	  --build-dart-define=release=google-play
 
-windows-release: windows-zip-release windows-exe-release windows-msix-release
+windows-release: windows-zip-release windows-exe-release
+
+# 重建分支只验证可安装的桌面产物，不要求正式版 MSIX 证书；正式发布仍保留 MSIX。
+ifneq ($(WINDOWS_SKIP_MSIX),true)
+windows-release: windows-msix-release
+endif
 
 windows-zip-release:
 	fastforge package \

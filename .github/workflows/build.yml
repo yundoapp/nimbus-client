@@ -255,6 +255,7 @@ jobs:
       - name: Build ${{ matrix.platform }}
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          WINDOWS_SKIP_MSIX: ${{ github.ref == 'refs/heads/codex/yundo-hiddify-rebuild' && 'true' || 'false' }}
         run: |
           make ${{ matrix.platform }}-release
 
