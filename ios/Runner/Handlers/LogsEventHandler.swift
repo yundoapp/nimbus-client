@@ -3,7 +3,7 @@ import Combine
 import HiddifyCore
 
 class LogsEventHandler: NSObject, FlutterPlugin, FlutterStreamHandler {
-    static let name = "\(Bundle.main.serviceIdentifier)/service.logs"
+    static let name = "yundo.app/service.logs"
     
     private var commandClient: CommandClient?
     private var events: FlutterEventSink?

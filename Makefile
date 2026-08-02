@@ -49,11 +49,9 @@ CORE_PRODUCT_NAME=hiddify-core
 CORE_NAME=hiddify-lib
 LIB_NAME=hiddify-core
 
-ifeq ($(CHANNEL),prod)
-	CORE_URL=https://github.com/hiddify/hiddify-core/releases/download/v$(core.version)
-else
-	CORE_URL=https://github.com/hiddify/hiddify-core/releases/download/draft
-endif
+# Keep the native core on the tested release line. The app channel controls
+# product configuration, but must not silently change the network ABI.
+CORE_URL=https://github.com/hiddify/hiddify-core/releases/download/v$(core.version)
 
 ifeq ($(CHANNEL),prod)
 	TARGET=lib/main_prod.dart
@@ -384,24 +382,24 @@ linux-appimage-release:
 	cp ../../linux/packaging/appimage/AppRun squashfs-root/AppRun; \
 	$(BLUE)Granting permissions$(DONE); \
 	chmod +x squashfs-root/AppRun; \
-	$(BLUE)Adding StartupWMClass to hiddify.desktop$(DONE); \
-	sed -i '/^\[Desktop Entry\]/a StartupWMClass=app.hiddify.com' "squashfs-root/hiddify.desktop"; \
+	$(BLUE)Adding StartupWMClass to yundo.desktop$(DONE); \
+	sed -i '/^\[Desktop Entry\]/a StartupWMClass=app.yundo.client' "squashfs-root/hiddify.desktop"; \
 	$(BLUE)Removing old AppImage$(DONE); \
 	rm *.AppImage; \
 	$(BLUE)Deleting bundled libstdc++ to fix Arch Linux compatibility...$(DONE); \
 	find squashfs-root/usr/lib -name "libstdc++.so.6" -delete; \
 	$(BLUE)Rebuilding AppImage$(DONE); \
-	ARCH=x86_64 appimagetool --no-appstream squashfs-root Hiddify.AppImage > /dev/null; \
+	ARCH=x86_64 appimagetool --no-appstream squashfs-root Yundo.AppImage > /dev/null; \
 	$(BLUE)Cleaning up squashfs$(DONE); \
 	rm -rf squashfs-root; \
 	$(YELLOW)Creating Portable Package$(DONE); \
-	PKG_DIR_NAME="hiddify-linux-appimage"; \
+	PKG_DIR_NAME="yundo-linux-appimage"; \
 	$(BLUE)Creating dir: $$PKG_DIR_NAME$(DONE); \
 	mkdir -p "$$PKG_DIR_NAME"; \
-	$(BLUE)Moving Hiddify.AppImage$(DONE); \
-	cp -p "Hiddify.AppImage" "$$PKG_DIR_NAME/Hiddify.AppImage"; \
+	$(BLUE)Moving Yundo.AppImage$(DONE); \
+	cp -p "Yundo.AppImage" "$$PKG_DIR_NAME/Yundo.AppImage"; \
 	$(BLUE)Creating Portable Home directory$(DONE); \
-	mkdir -p "$$PKG_DIR_NAME/Hiddify.AppImage.home"; \
+	mkdir -p "$$PKG_DIR_NAME/Yundo.AppImage.home"; \
 	$(BLUE)Compressing to .tar.gz$(DONE); \
 	tar -czf "$$PKG_DIR_NAME.tar.gz" -C . "$$PKG_DIR_NAME"; \
 	$(BLUE)Removing intermediate directory$(DONE); \
@@ -534,9 +532,8 @@ release: # Create a new tag for release.
 
 
 
-ios-temp-prepare: 
+ios-temp-prepare:
 	make ios-prepare
 	flutter build ios-framework
 	cd ios
 	pod install
-	

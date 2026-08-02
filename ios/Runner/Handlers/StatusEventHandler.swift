@@ -9,7 +9,7 @@ import Foundation
 import Combine
 
 public class StatusEventHandler: NSObject, FlutterPlugin, FlutterStreamHandler {
-    static let name = "\(Bundle.main.serviceIdentifier)/service.status"
+    static let name = "yundo.app/service.status"
     
     private var channel: FlutterEventChannel?
     

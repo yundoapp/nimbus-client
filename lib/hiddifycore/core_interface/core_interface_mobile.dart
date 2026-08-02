@@ -20,7 +20,7 @@ import 'package:rxdart/rxdart.dart';
 final _logger = Loggy('FFIYundoCoreService');
 
 class CoreInterfaceMobile extends CoreInterface with InfraLogger {
-  static const channelPrefix = "com.hiddify.app";
+  static const channelPrefix = "yundo.app";
   static const methodChannel = MethodChannel("$channelPrefix/method");
   static const statusChannel = EventChannel("$channelPrefix/service.status", JSONMethodCodec());
   static const alertsChannel = EventChannel("$channelPrefix/service.alerts", JSONMethodCodec());
@@ -53,7 +53,7 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
 
     _status = LastStream(ValueConnectableStream(Rx.merge([status, alerts])).autoConnect());
     try {
-      await helloClient.sayHello(HelloRequest(name: "test"));
+      await helloClient.sayHello(HelloRequest(name: "test")).timeout(const Duration(seconds: 5));
       loggy.info("core is already started!");
     } catch (e) {
       //core is not started yet
@@ -66,7 +66,7 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
         "mode": mode,
         "debug": debug,
       });
-      final res = await helloClient.sayHello(HelloRequest(name: "test"));
+      final res = await helloClient.sayHello(HelloRequest(name: "test")).timeout(const Duration(seconds: 10));
       loggy.info(res.toString());
     }
 

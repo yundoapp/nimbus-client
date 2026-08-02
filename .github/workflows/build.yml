@@ -19,18 +19,18 @@ env:
   NDK_VERSION: r28c
   UPLOAD_ARTIFACT: "${{ inputs.upload-artifact }}"
   TAG_NAME: "${{ inputs.tag-name }}"
-  TARGET_NAME_gz: "Hiddify-Linux-x64-AppImage.tar"
-  TARGET_NAME_AppImage: "Hiddify-Linux-x64-AppImage"
-  TARGET_NAME_deb: "Hiddify-Debian-x64"
-  # TARGET_NAME_rpm: "Hiddify-rpm-x64"
-  TARGET_NAME_apk: "Hiddify-Android"
-  TARGET_NAME_aab: "Hiddify-Android"
-  TARGET_NAME_exe: "Hiddify-Windows-Setup-x64"
-  TARGET_NAME_msix: "Hiddify-Windows-x64"
-  TARGET_NAME_zip: "Hiddify-Windows-Portable-x64"
-  TARGET_NAME_dmg: "Hiddify-MacOS"
-  TARGET_NAME_pkg: "Hiddify-MacOS-Installer"
-  TARGET_NAME_ipa: "Hiddify-iOS"
+  TARGET_NAME_gz: "Yundo-Linux-x64-AppImage.tar"
+  TARGET_NAME_AppImage: "Yundo-Linux-x64-AppImage"
+  TARGET_NAME_deb: "Yundo-Debian-x64"
+  # TARGET_NAME_rpm: "Yundo-rpm-x64"
+  TARGET_NAME_apk: "Yundo-Android"
+  TARGET_NAME_aab: "Yundo-Android"
+  TARGET_NAME_exe: "Yundo-Windows-Setup-x64"
+  TARGET_NAME_msix: "Yundo-Windows-x64"
+  TARGET_NAME_zip: "Yundo-Windows-Portable-x64"
+  TARGET_NAME_dmg: "Yundo-MacOS"
+  TARGET_NAME_pkg: "Yundo-MacOS-Installer"
+  TARGET_NAME_ipa: "Yundo-iOS"
   
 
 jobs:
@@ -268,7 +268,7 @@ jobs:
           folder: 'dist'
           timestamp-server: 'http://timestamp.digicert.com'
           recursive: true
-          description: 'Hiddify'
+          description: 'Yundo'
 
       - name: Copy to out Windows
         if: matrix.platform == 'windows'
@@ -320,7 +320,7 @@ jobs:
         run: |
           mkdir out
           ls -R ./build/app/outputs
-          cp ./build/app/outputs/bundle/release/app-release.aab out/hiddify-android-market.aab || echo "no aab"
+          cp ./build/app/outputs/bundle/release/app-release.aab out/yundo-android-market.aab || echo "no aab"
 
       - name: Copy to out unix
         if: startsWith(matrix.platform,'linux') || matrix.platform == 'macos' || matrix.platform == 'ios'
@@ -454,7 +454,7 @@ jobs:
           ls -R ./out
           ls -R ./.github/
           ls -R ./.git/
-          mv out/hiddify-android-market.aab  hiddify-android-market.aab
+          mv out/yundo-android-market.aab  yundo-android-market.aab
 
       - name: prepare_release_message
         run: |
@@ -479,9 +479,9 @@ jobs:
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJson: service_account.json
-          packageName: app.hiddify.com
+          packageName: app.yundo.client
           releaseName: ${{ env.TAG_NAME }}
-          releaseFiles: ./hiddify-android-market.aab
+          releaseFiles: ./yundo-android-market.aab
           track: 'beta'
 
 
@@ -506,13 +506,13 @@ jobs:
 
       - uses: Apple-Actions/download-provisioning-profiles@v1
         with:
-          bundle-id: app.hiddify.com
+          bundle-id: app.yundo.client
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
       - uses: Apple-Actions/download-provisioning-profiles@v1
         with:
-          bundle-id: app.hiddify.com.SingBoxPacketTunnel
+          bundle-id: app.yundo.client.PacketTunnel
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
@@ -527,7 +527,7 @@ jobs:
 
       - uses: Apple-Actions/upload-testflight-build@v4
         with:
-          app-path: 'out/Hiddify-iOS.ipa' 
+          app-path: 'out/Yundo-iOS.ipa'
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}

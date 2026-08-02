@@ -9,7 +9,7 @@ import Foundation
 
 public class FileMethodHandler: NSObject, FlutterPlugin {
         
-    public static let name = "\(Bundle.main.serviceIdentifier)/files.method"
+    public static let name = "yundo.app/files.method"
     
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: Self.name, binaryMessenger: registrar.messenger())

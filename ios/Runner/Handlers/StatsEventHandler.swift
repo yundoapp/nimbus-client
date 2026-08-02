@@ -5,7 +5,7 @@ import HiddifyCore
 
 public class StatsEventHandler: NSObject, FlutterPlugin, FlutterStreamHandler {
     
-    static let name = "\(Bundle.main.serviceIdentifier)/stats"
+    static let name = "yundo.app/stats"
     
     private var commandClient: CommandClient?
     private var channel: FlutterEventChannel?

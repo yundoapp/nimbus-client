@@ -13,7 +13,7 @@ public class MethodHandler: NSObject, FlutterPlugin {
     
     private var cancelBag: Set<AnyCancellable> = []
     
-    public static let name = "\(Bundle.main.serviceIdentifier)/method"
+    public static let name = "yundo.app/method"
     
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: Self.name, binaryMessenger: registrar.messenger())
@@ -95,12 +95,14 @@ public class MethodHandler: NSObject, FlutterPlugin {
                         result(FlutterError(code: String(error.code), message: error.localizedDescription, details: nil))
                         return
                     }
+#if !targetEnvironment(simulator)
                     do {
                         try await VPNManager.shared.setup()
                     } catch {
                         result(FlutterError(code: "SETUP", message: error.localizedDescription, details: nil))
                         return
                     }
+#endif
                     result(true)
                 }
         case "start":

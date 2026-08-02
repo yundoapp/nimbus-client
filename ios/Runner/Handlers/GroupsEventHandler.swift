@@ -4,7 +4,7 @@ import HiddifyCore
 
 public class GroupsEventHandler: NSObject, FlutterPlugin, FlutterStreamHandler{
     
-    static let name = "\(Bundle.main.serviceIdentifier)/groups"
+    static let name = "yundo.app/groups"
     
     private var commandClient: CommandClient?
     private var channel: FlutterEventChannel?

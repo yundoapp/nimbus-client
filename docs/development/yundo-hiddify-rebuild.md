@@ -59,6 +59,10 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 
 桌面 Core 进程隔离和退出清理是应用生命周期边界，不改变 DNS、TUN、路由或代理实现：正式版继续使用既有 Core 通道，macOS 开发版使用独立端口 `17179`，避免接管正式版或旧 Helper 的 Core；桌面退出无论来自窗口、托盘还是 macOS 系统菜单，都必须先调用 Hiddify 原生停止接口并清理云渡连接状态，随后才允许进程退出。macOS 原生终止通过 `yundo.application.lifecycle` 与 Flutter 握手，不能只依赖 `onWindowClose`。
 
+构建链固定使用 `dependencies.properties` 中声明的 Hiddify Core 发布版本。`CHANNEL=dev` 只决定应用配置和 Dart 入口，不得再切换到远程 `draft` Core；这样可以避免 Core 的 Java/Swift 接口在未变更客户端源码时漂移。升级 Core 必须同步升级客户端适配代码、四端构建和网络回归，不允许由构建环境自动吸收最新草稿包。
+
+移动端 Flutter 与原生之间的内部通道统一使用 `yundo.app/*`，不再用旧的 Hiddify 前缀，也不从 Bundle ID 动态拼接。开发版和正式版可以使用不同 Bundle ID，但必须共享同一组内部通道。移动端核心首次 gRPC 握手必须设置有限超时；Simulator 只跳过真机 VPN 配置加载，不改变真机 Network Extension 路径，底层启动失败时应用仍应进入可诊断的用户界面而不是永久停留在启动页。
+
 ## 5. 迁移顺序
 
 ### 阶段 A：基线

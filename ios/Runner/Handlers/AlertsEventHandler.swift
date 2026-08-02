@@ -9,7 +9,7 @@ import Foundation
 import Combine
 
 public class AlertsEventHandler: NSObject, FlutterPlugin, FlutterStreamHandler {
-    static let name = "\(Bundle.main.serviceIdentifier)/service.alerts"
+    static let name = "yundo.app/service.alerts"
     
     private var channel: FlutterEventChannel?
     
