@@ -1,6 +1,6 @@
 # 云渡 Hiddify 重建迁移基线
 
-最后更新：`2026-08-02`
+最后更新：`2026-08-03`
 
 ## 1. 目标
 
@@ -64,6 +64,14 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 移动端 Flutter 与原生之间的内部通道统一使用 `yundo.app/*`，不再用旧的 Hiddify 前缀，也不从 Bundle ID 动态拼接。开发版和正式版可以使用不同 Bundle ID，但必须共享同一组内部通道。移动端核心首次 gRPC 握手必须设置有限超时；Simulator 只跳过真机 VPN 配置加载，不改变真机 Network Extension 路径，底层启动失败时应用仍应进入可诊断的用户界面而不是永久停留在启动页。
 
 开发重建分支的 GitHub Actions 只验证可安装构建和产物命名：Android 使用 Gradle debug signing fallback，Windows 验证 Yundo exe 和 portable 包，暂不要求发布证书或 MSIX。正式发布分支仍必须提供 Android/Windows 签名材料并执行完整发布矩阵；不能把开发分支的 unsigned/开发签名产物当作对外发布包。
+
+### 4.1 页面、品牌和托盘走查（2026-08-03）
+
+- 静态检查已覆盖全部实际 `goNamed` 调用；发现并修复 `routeHistory` 漏注册问题，并在设置页补回日志入口。当前日志、关于、路由历史、通用设置、路由规则、按应用代理、DNS、入站、TLS、链式代理等路由均有注册路径。
+- macOS Dock 和 App 包图标使用云渡蓝底白色 `Y`；macOS 原生状态栏使用同一白色 `Y` 模板图标，并以右上角状态点表示连接状态：连接为绿色、切换中为橙色、未连接为灰色空心点。Windows 托盘也使用云渡 `Y` 图标资源，不再使用旧的图表型托盘图标。
+- 托盘初始化已移动到 `runApp` 之后异步执行，避免 macOS 状态栏响应慢时阻塞首页启动。`4.1.2+202608056` 本机安装版启动日志无 `system tray TimeoutException`，退出后系统代理恢复关闭。
+- 当前 commit `0b6d9d8` 已完成本机 macOS Debug/Release 安装版、iOS Simulator Debug、GitHub Windows/Linux/Android 构建和测试；GitHub macOS job 仍因仓库缺少 Apple 签名证书密钥而失败，不能据此判断 macOS 源码编译失败。
+- 由于本轮验收时 Mac 处于锁屏，Computer Use 无法执行逐页鼠标点击；页面的静态路由和安装版启动已验证，解锁后仍需补做一次真实页面逐项点击及托盘截图验收，完成前不宣称“所有页面已人工打开”。
 
 ## 5. 迁移顺序
 
