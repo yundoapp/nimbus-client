@@ -14,6 +14,7 @@ import 'package:hiddify/features/intro/widget/intro_page.dart';
 import 'package:hiddify/features/log/overview/logs_page.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_auth_page.dart';
+import 'package:hiddify/features/nimbus/route_history/widget/nimbus_route_history_page.dart';
 import 'package:hiddify/features/per_app_proxy/overview/per_app_proxy_page.dart';
 import 'package:hiddify/features/profile/details/profile_details_page.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
@@ -279,6 +280,13 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                       pageBuilder: (_, state) =>
                           customTransition(TransitionType.slide, state.pageKey, const InboundOptionsPage()),
                     ),
+                    if (!PlatformUtils.isWeb)
+                      GoRoute(
+                        name: 'routeHistory',
+                        path: 'route-history',
+                        pageBuilder: (_, state) =>
+                            customTransition(TransitionType.slide, state.pageKey, const NimbusRouteHistoryPage()),
+                      ),
                     GoRoute(
                       name: 'tlsTricks',
                       path: 'tls-tricks',

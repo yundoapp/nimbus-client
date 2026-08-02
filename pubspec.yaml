@@ -154,6 +154,10 @@ flutter:
     - assets/images/tray_icon_connected.png
     - assets/images/tray_icon_disconnected.ico
     - assets/images/tray_icon_disconnected.png
+    - assets/images/yundo_tray_windows.ico
+    - assets/images/yundo_tray_windows_connected.ico
+    - assets/images/yundo_tray_windows_disconnected.ico
+    - assets/images/yundo_tray_windows_transitioning.ico
     - assets/images/connect_norouz.PNG
     - assets/images/disconnect_norouz.PNG
     - assets/images/world_map.png

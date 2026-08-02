@@ -110,10 +110,6 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
     //   timeout: 1000,
     // );
 
-    if (PlatformUtils.isDesktop) {
-      await _safeInit("system tray", () => container.read(systemTrayNotifierProvider.future), timeout: 1000);
-    }
-
     if (PlatformUtils.isAndroid) {
       await _safeInit("android display mode", () async {
         await FlutterDisplayMode.setHighRefreshRate();
@@ -131,6 +127,20 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
       child: SentryUserInteractionWidget(child: const App()),
     ),
   );
+
+  // The native status item needs the Flutter run loop to be active. Starting it
+  // after runApp keeps a slow or locked macOS menu bar from delaying the UI.
+  if (PlatformUtils.isDesktop) {
+    unawaited(
+      container.read(systemTrayNotifierProvider.future).catchError((error, stackTrace) {
+        Logger.bootstrap.error(
+          "system tray initialization failed",
+          error,
+          stackTrace is StackTrace ? stackTrace : StackTrace.current,
+        );
+      }),
+    );
+  }
 
   if (!kIsWeb) {
     FlutterNativeSplash.remove();

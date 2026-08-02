@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
@@ -19,6 +20,24 @@ import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 part 'system_tray_notifier.g.dart';
+
+enum TrayConnectionIndicator { connected, disconnected, transitioning }
+
+TrayConnectionIndicator trayConnectionIndicatorFor(ConnectionStatus connection) => switch (connection) {
+  Connected() => TrayConnectionIndicator.connected,
+  Disconnected() => TrayConnectionIndicator.disconnected,
+  Connecting() || Disconnecting() => TrayConnectionIndicator.transitioning,
+};
+
+String macosTrayIndicatorName(ConnectionStatus connection) => trayConnectionIndicatorFor(connection).name;
+
+String windowsTrayIconPath(ConnectionStatus connection) => switch (trayConnectionIndicatorFor(connection)) {
+  TrayConnectionIndicator.connected => Assets.images.yundoTrayWindowsConnected,
+  TrayConnectionIndicator.disconnected => Assets.images.yundoTrayWindowsDisconnected,
+  TrayConnectionIndicator.transitioning => Assets.images.yundoTrayWindowsTransitioning,
+};
+
+const _yundoMacosStatusItemChannel = MethodChannel('yundo_macos_status_item');
 
 String trayTooltipText(
   String appDisplayName,
@@ -112,7 +131,10 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
   @override
   Future<void> build() async {
     assert(PlatformUtils.isDesktop);
-    if (!listenerAdded) {
+    if (PlatformUtils.isMacOS) {
+      _yundoMacosStatusItemChannel.setMethodCallHandler(_handleMacosStatusItemCall);
+      ref.onDispose(() => _yundoMacosStatusItemChannel.setMethodCallHandler(null));
+    } else if (!listenerAdded) {
       trayManager.addListener(this);
       listenerAdded = true;
     }
@@ -133,9 +155,13 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
         ref.watch(nimbusOwnedConnectionStatusProvider).valueOrNull ?? const ConnectionStatus.disconnected();
 
     final tooltip = _trayTooltip(appDisplayName, t, connection, urlTestDelay);
-    await _setTrayIcon(connection);
-    if (!PlatformUtils.isLinux) await _setTrayTooltip(tooltip);
-    await _setTrayMenu(t, connection, proxyMode, authState, locale.languageCode);
+    if (PlatformUtils.isMacOS) {
+      await _updateMacosStatusItem(t, connection, tooltip, proxyMode, authState, locale.languageCode);
+    } else {
+      await _setTrayIcon(connection);
+      if (!PlatformUtils.isLinux) await _setTrayTooltip(tooltip);
+      await _setTrayMenu(t, connection, proxyMode, authState, locale.languageCode);
+    }
   }
 
   Menu _trayMenu(
@@ -210,11 +236,7 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
 
   String _trayIconPath(ConnectionStatus connection) {
     if (PlatformUtils.isWindows) {
-      return switch (connection) {
-        Connected() => Assets.images.trayIconConnectedIco,
-        Connecting() || Disconnecting() => Assets.images.trayIconDisconnectedIco,
-        Disconnected() => Assets.images.trayIconIco,
-      };
+      return windowsTrayIconPath(connection);
     }
     return switch (connection) {
       Connected() => Assets.images.trayIconConnectedPng.path,
@@ -249,6 +271,62 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
     } catch (_) {
       if (_lastTrayMenuKey == menuKey) _lastTrayMenuKey = null;
       rethrow;
+    }
+  }
+
+  Future<void> _updateMacosStatusItem(
+    Translations t,
+    ConnectionStatus connection,
+    String tooltip,
+    NimbusProxyMode proxyMode,
+    NimbusAuthState authState,
+    String languageCode,
+  ) async {
+    final iconData = await rootBundle.load(Assets.images.trayIconPng.path);
+    await _yundoMacosStatusItemChannel.invokeMethod<void>('update', {
+      'iconBytes': iconData.buffer.asUint8List(iconData.offsetInBytes, iconData.lengthInBytes),
+      'indicator': macosTrayIndicatorName(connection),
+      'toolTip': tooltip,
+      'openLabel': t.nimbus.tray.openMainWindow,
+      'connectionLabel': _connectionMenuLabel(t, connection),
+      'connectionEnabled': !connection.isSwitching,
+      'modeLabel': t.nimbus.home.connectionMode,
+      'modeEnabled': !connection.isSwitching,
+      'modeItems': NimbusProxyMode.values
+          .map(
+            (mode) => {'key': trayProxyModeKey(mode), 'label': _proxyModeLabel(t, mode), 'checked': mode == proxyMode},
+          )
+          .toList(),
+      'locationLabel': t.nimbus.home.locationTitle,
+      'locationItems': _trayLocations(authState)
+          .map(
+            (location) => {
+              'key': trayLocationKey(location.code),
+              'label': _locationDisplayName(t, location, languageCode),
+              'checked': location.code == authState.selectedLocationCode,
+            },
+          )
+          .toList(),
+      'locationEnabled': _locationsReady(authState) && !connection.isSwitching,
+      'quitLabel': t.common.quit,
+    });
+  }
+
+  String _connectionMenuLabel(Translations t, ConnectionStatus connection) => switch (connection) {
+    Disconnected() => t.connection.connect,
+    Connecting() => t.connection.connecting,
+    Connected() => t.connection.disconnect,
+    Disconnecting() => t.connection.disconnecting,
+  };
+
+  Future<void> _handleMacosStatusItemCall(MethodCall call) async {
+    switch (call.method) {
+      case 'onLeftClick':
+        await ref.read(windowNotifierProvider.notifier).show();
+      case 'onMenuItemClick':
+        final arguments = call.arguments as Map<Object?, Object?>?;
+        final key = arguments?['key'] as String?;
+        if (key != null) await _handleMenuAction(key);
     }
   }
 
