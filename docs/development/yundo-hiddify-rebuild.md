@@ -63,6 +63,8 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 
 移动端 Flutter 与原生之间的内部通道统一使用 `yundo.app/*`，不再用旧的 Hiddify 前缀，也不从 Bundle ID 动态拼接。开发版和正式版可以使用不同 Bundle ID，但必须共享同一组内部通道。移动端核心首次 gRPC 握手必须设置有限超时；Simulator 只跳过真机 VPN 配置加载，不改变真机 Network Extension 路径，底层启动失败时应用仍应进入可诊断的用户界面而不是永久停留在启动页。
 
+开发重建分支的 GitHub Actions 只验证可安装构建和产物命名：Android 使用 Gradle debug signing fallback，Windows 验证 Yundo exe 和 portable 包，暂不要求发布证书或 MSIX。正式发布分支仍必须提供 Android/Windows 签名材料并执行完整发布矩阵；不能把开发分支的 unsigned/开发签名产物当作对外发布包。
+
 ## 5. 迁移顺序
 
 ### 阶段 A：基线
