@@ -39,11 +39,15 @@
 
 ## 4. 规则和连接适配原则
 
-1. 后台返回短期连接方案和规则数据。
-2. 客户端把规则和连接方案转换为 Hiddify 已支持的 Profile/Route Rules/Config Option 表达。
+1. 后台返回短期连接方案和完整 Hiddify 标准 Profile 内容。
+2. 客户端只校验并安装标准 Profile，不消费旧版 `singBoxConfigPatch`，不在本地拼装运行时配置。
 3. Hiddify 原有 `ProfileParser`、`ProfileRepository`、`ConnectionRepository` 和 Core 生命周期继续负责解析、启动和停止。
 4. 如果某项云渡规则无法表达为 Hiddify 标准配置，优先调整后台配置生成或暂缓该项能力，不修改 DNS、TUN、路由、系统代理或 Helper。
 5. 不允许由云渡代码接管系统 DNS，不允许在加速前后直接修改物理网卡 DNS，不允许自行创建或清理系统路由。
+
+服务端可以继续返回旧 `singBoxConfigPatch` 供旧客户端兼容，但新客户端收到缺少 `profileContent` 的响应时必须失败关闭，不得回退消费旧字段。
+
+当前已完成：认证壳、首页/连接按钮、设置页、路由偏好、问题反馈、应用生命周期接入和标准 Profile 适配器；当前尚未完成四端构建、真实节点连接和安装版网络矩阵。
 
 ## 5. 迁移顺序
 
@@ -80,4 +84,3 @@
 - 连接相关改动必须有 Profile/规则 fixture 和失败路径测试。
 - 影响客户端运行的改动必须基于同一 commit 完成四端构建基线。
 - 真实安装版必须验证网络可用性，不能只以编译成功作为通过。
-
