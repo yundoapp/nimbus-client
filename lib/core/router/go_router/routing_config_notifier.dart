@@ -12,6 +12,8 @@ import 'package:hiddify/features/about/widget/about_page.dart';
 import 'package:hiddify/features/home/widget/home_page.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
 import 'package:hiddify/features/log/overview/logs_page.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_auth_page.dart';
 import 'package:hiddify/features/per_app_proxy/overview/per_app_proxy_page.dart';
 import 'package:hiddify/features/profile/details/profile_details_page.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
@@ -66,8 +68,18 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
       showProfilesAction = ref.watch(hasAnyProfileProvider).value ?? false;
     }
     if (isMobileBreakpoint == null) return loadingConfig;
+    final authState = ref.watch(
+      nimbusAuthControllerProvider.select(
+        (state) => (isAuthenticated: state.isAuthenticated, isRestoring: state.isRestoring),
+      ),
+    );
+    if (authState.isRestoring) return loadingConfig;
     return RoutingConfig(
       redirect: (context, state) {
+        final isAuthRoute = state.matchedLocation.startsWith('/auth/');
+        if (!authState.isAuthenticated && !isAuthRoute) return '/auth/login';
+        if (authState.isAuthenticated && isAuthRoute) return '/home';
+
         // fix path-parameters for deep link
         String? url;
         if (LinkParser.protocols.contains(state.uri.scheme)) {
@@ -113,6 +125,16 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
         return null;
       },
       routes: <RouteBase>[
+        GoRoute(
+          name: 'nimbusLogin',
+          path: '/auth/login',
+          builder: (_, _) => const NimbusAuthPage(initialMode: NimbusAuthMode.login),
+        ),
+        GoRoute(
+          name: 'nimbusRegister',
+          path: '/auth/register',
+          builder: (_, _) => const NimbusAuthPage(initialMode: NimbusAuthMode.register),
+        ),
         StatefulShellRoute.indexedStack(
           builder: (_, _, navigationShell) => MyAdaptiveLayout(
             navigationShell: navigationShell,
