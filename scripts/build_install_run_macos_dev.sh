@@ -46,6 +46,7 @@ restore_existing_app() {
 }
 
 cd "${repo_root}"
+GO_BIN="${GO_BIN:-$(command -v go || true)}" "${script_dir}/build_yundo_macos_core.sh"
 "${flutter_bin}" build macos --debug \
   "--build-number=${build_number}" \
   "--dart-define=NIMBUS_API_BASE_URL=${api_base_url}"

@@ -28,6 +28,7 @@ flutter_bin="${FLUTTER_BIN:-$(command -v flutter || true)}"
 export DEVELOPER_DIR="${developer_dir}"
 
 cd "${repo_root}"
+GO_BIN="${GO_BIN:-$(command -v go || true)}" "${script_dir}/build_yundo_macos_core.sh"
 "${flutter_bin}" build macos --release \
   --target=lib/main_prod.dart \
   "--build-number=${build_number}" \

@@ -39,13 +39,13 @@
 
 ## 4. 规则和连接适配原则
 
-1. 后台返回短期连接方案和完整 Hiddify 标准 Profile 内容。
-2. 客户端只校验并安装标准 Profile，不消费旧版 `singBoxConfigPatch`，不在本地拼装运行时配置。
-3. Hiddify 原有 `ProfileParser`、`ProfileRepository`、`ConnectionRepository` 和 Core 生命周期继续负责解析、启动和停止。
-4. 如果某项云渡规则无法表达为 Hiddify 标准配置，优先调整后台配置生成或暂缓该项能力，不修改 DNS、TUN、路由、系统代理或 Helper。
+1. 后台返回短期连接方案、完整 Hiddify 标准 Profile 和同版本的账号规则包。
+2. 客户端只校验并安装标准 Profile，不消费旧版 `singBoxConfigPatch`；连接前按版本校验并缓存规则包，只把规则条目交给 Hiddify Config Option 的受控入口，不拼装整份运行配置。
+3. Hiddify 原有 `ProfileParser`、`ProfileRepository`、`ConnectionRepository`、配置构建器和 Core 生命周期继续负责解析、生成 DNS/inbound/最终路由、启动和停止。
+4. 受控入口只允许追加 `route.rules` 和 `route.rule_set`。如果某项云渡能力超出该边界，优先调整产品规则表达或暂缓，不扩大到 DNS、TUN、系统代理或 Helper。
 5. 不允许由云渡代码接管系统 DNS，不允许在加速前后直接修改物理网卡 DNS，不允许自行创建或清理系统路由。
 
-Hiddify Core 校验 profile 时会使用临时输入文件生成完整运行配置；在部分桌面启动时序下，Core 释放临时输入后可能异步清理校验输出路径。因此云渡适配器使用独立校验路径读取 Hiddify 生成的完整配置，先完成 Hiddify profile 入库并等待 active profile 稳定，再把完整配置写入云渡自己的最终 profile 文件，最后调用原生 `ConnectionRepository.connect`。不得把后台返回的原始 profile 直接覆盖为最终运行文件，也不得让云渡接管 Core 的 DNS、TUN 或系统代理配置。
+Hiddify Core 校验 profile 时会使用临时输入文件生成完整运行配置；在部分桌面启动时序下，Core 释放临时输入后可能异步清理校验输出路径。因此云渡适配器使用独立校验路径读取 Hiddify 生成的完整配置，先完成 Hiddify profile 入库并等待 active profile 稳定，再把完整配置写入云渡自己的最终 profile 文件，最后调用原生 `ConnectionRepository.connect`。Hiddify 标准 Profile 解析器会规范化节点内容并丢弃顶层产品路由，所以账号规则不能只写在 Profile 中；客户端必须在连接前把同版本规则包转换成受控 Config Option，由 Hiddify 在生成完整运行配置时追加。不得把后台返回的原始 profile 直接覆盖为最终运行文件，也不得让云渡接管 Core 的 DNS、TUN 或系统代理配置。
 
 服务端可以继续返回旧 `singBoxConfigPatch` 供旧客户端兼容，但新客户端收到缺少 `profileContent` 的响应时必须失败关闭，不得回退消费旧字段。
 
@@ -59,11 +59,11 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 
 桌面 Core 进程隔离和退出清理是应用生命周期边界，不改变 DNS、TUN、路由或代理实现：正式版继续使用既有 Core 通道，macOS 开发版使用独立端口 `17179`，避免接管正式版或旧 Helper 的 Core；桌面退出无论来自窗口、托盘还是 macOS 系统菜单，都必须先调用 Hiddify 原生停止接口并清理云渡连接状态，随后才允许进程退出。macOS 原生终止通过 `yundo.application.lifecycle` 与 Flutter 握手，不能只依赖 `onWindowClose`。
 
-构建链固定使用 `dependencies.properties` 中声明的 Hiddify Core 发布版本。`CHANNEL=dev` 只决定应用配置和 Dart 入口，不得再切换到远程 `draft` Core；这样可以避免 Core 的 Java/Swift 接口在未变更客户端源码时漂移。升级 Core 必须同步升级客户端适配代码、四端构建和网络回归，不允许由构建环境自动吸收最新草稿包。
+构建链固定使用 `dependencies.properties` 中声明的 Hiddify Core `v4.1.0` 和源码提交 `c9d6f0f00b2eda34e4fb71863e4e0a62b3e931a0`。四端从该源码应用 `patches/hiddify-core/0001-managed-route-options.patch` 后构建，不再混用更新的子模块源码和旧版预编译产物。`CHANNEL=dev` 只决定应用配置和 Dart 入口，不得切换到远程 `draft` Core；升级 Core 必须同步评审补丁、客户端适配、四端构建和网络回归。
 
 移动端 Flutter 与原生之间的内部通道统一使用 `yundo.app/*`，不再用旧的 Hiddify 前缀，也不从 Bundle ID 动态拼接。开发版和正式版可以使用不同 Bundle ID，但必须共享同一组内部通道。移动端核心首次 gRPC 握手必须设置有限超时；Simulator 只跳过真机 VPN 配置加载，不改变真机 Network Extension 路径，底层启动失败时应用仍应进入可诊断的用户界面而不是永久停留在启动页。
 
-开发重建分支的 GitHub Actions 只验证可安装构建和产物命名：Android 使用 Gradle debug signing fallback，Windows 验证 Yundo exe 和 portable 包，暂不要求发布证书或 MSIX。正式发布分支仍必须提供 Android/Windows 签名材料并执行完整发布矩阵；不能把开发分支的 unsigned/开发签名产物当作对外发布包。
+开发重建分支的 GitHub Actions 只构建 Windows x64 内部验收包和 Android Debug APK，并先从锁定源码生成包含受控规则入口的 Core；macOS 与 iOS Simulator 固定在本机构建。Windows 暂不要求 Authenticode 或 MSIX，Android 使用 Debug 签名。正式发布仍必须另行提供各平台签名材料；不能把日常基线产物当作对外发布包。
 
 ### 4.1 页面、品牌和托盘走查（2026-08-03）
 
@@ -139,3 +139,12 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - 设置页移除面向普通用户的“日志”入口；日志路由暂时保留给内部诊断和问题上报流程，不再作为设置菜单展示。
 - 语言选择中的两个中文选项固定显示为“简体中文”和“繁体中文”。
 - 跨平台审计：记录采集与解析位于共享 Dart 层，macOS、Windows、iOS、Android 同因受影响并使用同一修复；本轮 macOS 安装版完成真实请求验收，iOS Simulator完成构建验证，Windows/Android按当前本地优先决策等待后续构建与实体设备验收。
+
+### 4.6 自定义网站规则未进入运行配置（2026-08-03）
+
+- 现象：账号已保存 `rawya.ai -> 直连访问`，但新请求仍命中 `final` 并走加速出口。
+- 平台根因：声明 `configVersion` 的连接方案会把规则从兼容字段 `singBoxConfigPatch` 中移除，但曾错误地继续用该兼容字段生成 `profileContent`，导致标准 Profile 没有当前用户规则。平台已改为分别生成“标准 Profile 完整快照”和“旧字段兼容快照”。
+- 客户端根因：Hiddify 标准 Profile 解析器只保留节点配置，顶层 `route` 不会进入最终运行配置；旧 Flutter `route-rule` 字段在当前 Core 中也没有执行路径。因此只修平台仍不能让规则生效。
+- 修复：客户端在每次手动或自动加速前校验规则 manifest，下载并验证同版本账号规则包，按“用户自定义网站 -> 公共规则 -> 本地网络兜底”生成受控规则数据；Hiddify Core 只新增 `managed-route-rules` 和 `managed-route-rule-sets` 两个 Config Option 字段，把它们追加到原生路由表。直连规则使用 Hiddify 自带的 `direct §hide§` 出站，不新增直连出站，也不覆盖 DNS、inbound、TUN、系统代理、Helper 或最终出站。
+- 失败策略：首次没有有效缓存且规则包下载失败时不启动加速；已有已验证缓存时可继续使用旧规则，只有新包下载并校验成功后才原子替代。连接方案与规则包版本在准备期间不一致时失败关闭，避免半新半旧配置。
+- 跨平台矩阵：规则准备和 Config Option 序列化位于共享 Dart 层，macOS、Windows、iOS、Android 同因受影响并同因修复；Core 补丁由四端同一源码提交和同一补丁生成。macOS 需要安装版真实直连/加速双向请求证据；Windows、iPhone、Android 仍需实体设备补做真实分流，但不能使用旧预编译 Core 作为本轮构建证据。

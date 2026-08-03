@@ -1,0 +1,122 @@
+diff --git a/v2/config/builder.go b/v2/config/builder.go
+index d37e8b6..363c01c 100644
+--- a/v2/config/builder.go
++++ b/v2/config/builder.go
+@@ -685,6 +685,11 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
+ 		)
+ 	}
+ 
++	// Product-level policies are inserted into Hiddify's generated route table.
++	// Hiddify continues to own DNS, inbounds, TUN and the final outbound.
++	routeRules = append(routeRules, hopt.ManagedRouteRules...)
++	rulesets = append(rulesets, hopt.ManagedRouteRuleSets...)
++
+ 	// for _, rule := range opt.Rules {
+ 	// 	routeRule := rule.MakeRule()
+ 	// 	switch rule.Outbound {
+diff --git a/v2/config/hiddify_option.go b/v2/config/hiddify_option.go
+index c3fa9bf..498ce83 100644
+--- a/v2/config/hiddify_option.go
++++ b/v2/config/hiddify_option.go
+@@ -23,12 +23,14 @@ type HiddifyOptions struct {
+ 	BalancerStrategy        string `json:"balancer-strategy,omitempty" overridable:"true"`
+ 	// GeoIPPath        string      `json:"geoip-path"`
+ 	// GeoSitePath      string      `json:"geosite-path"`
+-	Rules     []Rule      `json:"rules,omitempty" overridable:"true"`
+-	Warp      WarpOptions `json:"warp,omitempty"`
+-	Warp2     WarpOptions `json:"warp2,omitempty"`
+-	Mux       MuxOptions  `json:"mux,omitempty" overridable:"true"`
+-	TLSTricks TLSTricks   `json:"tls-tricks,omitempty"`
+-	EnableNTP bool        `json:"enable-ntp,omitempty"`
++	Rules                []Rule           `json:"rules,omitempty" overridable:"true"`
++	ManagedRouteRules    []option.Rule    `json:"managed-route-rules,omitempty"`
++	ManagedRouteRuleSets []option.RuleSet `json:"managed-route-rule-sets,omitempty"`
++	Warp                 WarpOptions      `json:"warp,omitempty"`
++	Warp2                WarpOptions      `json:"warp2,omitempty"`
++	Mux                  MuxOptions       `json:"mux,omitempty" overridable:"true"`
++	TLSTricks            TLSTricks        `json:"tls-tricks,omitempty"`
++	EnableNTP            bool             `json:"enable-ntp,omitempty"`
+ 
+ 	DNSOptions
+ 	InboundOptions
+diff --git a/v2/config/managed_route_test.go b/v2/config/managed_route_test.go
+new file mode 100644
+index 0000000..d39699e
+--- /dev/null
++++ b/v2/config/managed_route_test.go
+@@ -0,0 +1,75 @@
++package config
++
++import (
++	"encoding/json"
++	"testing"
++
++	"github.com/sagernet/sing-box/option"
++)
++
++func TestManagedRoutesAreAddedWithoutReplacingHiddifyRouting(t *testing.T) {
++	settings := DefaultHiddifyOptions()
++	err := json.Unmarshal([]byte(`{
++		"managed-route-rules": [{
++			"domain_suffix": ["rawya.ai"],
++			"action": "route",
++			"outbound": "direct §hide§"
++		}],
++		"managed-route-rule-sets": [{
++			"type": "remote",
++			"tag": "geosite-test",
++			"format": "binary",
++			"url": "https://rules.example/geosite-test.srs",
++			"download_detour": "nimbus-proxy",
++			"update_interval": "24h"
++		}]
++	}`), settings)
++	if err != nil {
++		t.Fatalf("unmarshal managed routes: %v", err)
++	}
++
++	options := option.Options{DNS: &option.DNSOptions{}}
++	if err := setRoutingOptions(&options, settings); err != nil {
++		t.Fatalf("build routing options: %v", err)
++	}
++
++	routeJSON, err := json.Marshal(options.Route)
++	if err != nil {
++		t.Fatalf("marshal route options: %v", err)
++	}
++	var route map[string]any
++	if err := json.Unmarshal(routeJSON, &route); err != nil {
++		t.Fatalf("decode route options: %v", err)
++	}
++
++	rules, ok := route["rules"].([]any)
++	if !ok || len(rules) < 3 {
++		t.Fatalf("expected Hiddify setup rules and managed rule, got %v", route["rules"])
++	}
++	foundManagedRule := false
++	foundSniffRule := false
++	for _, rawRule := range rules {
++		rule, _ := rawRule.(map[string]any)
++		if rule["action"] == "sniff" {
++			foundSniffRule = true
++		}
++		if suffix, ok := rule["domain_suffix"].(string); ok && suffix == "rawya.ai" {
++			foundManagedRule = rule["outbound"] == "direct §hide§"
++		}
++	}
++	if !foundSniffRule {
++		t.Fatal("Hiddify sniff rule was replaced")
++	}
++	if !foundManagedRule {
++		t.Fatalf("managed rawya.ai direct rule was not added: %s", routeJSON)
++	}
++
++	ruleSets, ok := route["rule_set"].([]any)
++	if !ok || len(ruleSets) != 1 {
++		t.Fatalf("expected one managed rule set, got %v", route["rule_set"])
++	}
++	ruleSet, _ := ruleSets[0].(map[string]any)
++	if ruleSet["tag"] != "geosite-test" || ruleSet["download_detour"] != "nimbus-proxy" {
++		t.Fatalf("unexpected managed rule set: %v", ruleSet)
++	}
++}

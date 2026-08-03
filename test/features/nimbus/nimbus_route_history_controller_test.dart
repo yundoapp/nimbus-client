@@ -64,4 +64,17 @@ void main() {
     expect(entries.single.decision, NimbusRouteDecision.accelerated);
     expect(entries.single.isActive, isTrue);
   });
+
+  test('recognizes the Hiddify native direct outbound as direct access', () {
+    final entry = parseNimbusRouteHistoryEntry({
+      'id': 'connection-direct',
+      'metadata': {'host': 'rawya.ai', 'destinationPort': '443', 'network': 'tcp'},
+      'rule': 'DomainSuffix',
+      'rulePayload': 'rawya.ai',
+      'chains': ['direct \u00a7hide\u00a7'],
+    }, observedAt: DateTime(2026, 8, 3, 12));
+
+    expect(entry, isNotNull);
+    expect(entry!.decision, NimbusRouteDecision.direct);
+  });
 }

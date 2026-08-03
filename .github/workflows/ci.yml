@@ -1,36 +1,175 @@
 name: CI
+
 on:
   workflow_dispatch:
   pull_request:
+    branches: [develop]
     paths-ignore:
       - '**.md'
       - 'docs/**'
-      - 'test.configs/**'
-      - '.vscode/'
-      - 'appcast.xml'
   push:
-    branches:
-       - main
-       - dev
-       - android-fix-action-bug
-       - new-design-v2 
-       - codex/yundo-hiddify-rebuild
+    branches: [develop, codex/yundo-hiddify-rebuild]
     paths-ignore:
       - '**.md'
       - 'docs/**'
-      - '.vscode/'
-      - 'appcast.xml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  FLUTTER_VERSION: '3.38.5'
+  GO_VERSION: '1.25.6'
+
 jobs:
-  run:
-    uses: ./.github/workflows/build.yml
-    secrets: inherit
-    permissions: write-all
-    if: "${{!contains(github.event.head_commit.message, 'release: version')}}"
-    with:
-      upload-artifact: ${{ github.event_name != 'pull_request' }}
-      
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2.21.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: 检查云渡与 Hiddify 边界
+        run: bash scripts/check_yundo_hiddify_boundary.sh main
+      - name: 生成代码并运行共享测试
+        run: |
+          make common-prepare
+          flutter test
+
+  windows-core:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: hiddify-core/go.sum
+      - name: 安装 Windows 交叉编译工具
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64
+      - name: 从锁定源码构建 Windows Core
+        run: scripts/build_yundo_windows_core.sh
+      - uses: actions/upload-artifact@v6
+        with:
+          name: yundo-windows-core
+          path: out/yundo-windows-core
+          if-no-files-found: error
+          retention-days: 7
+
+  windows:
+    needs: [test, windows-core]
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2.21.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: 安装打包工具
+        shell: bash
+        run: |
+          dart pub global activate fastforge
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+          make common-prepare
+      - uses: actions/download-artifact@v7
+        with:
+          name: yundo-windows-core
+          path: hiddify-core/bin
+      - name: 构建 Windows x64 内部验收包
+        shell: bash
+        env:
+          CHANNEL: dev
+          WINDOWS_SKIP_MSIX: 'true'
+        run: make windows-release
+      - name: 收集 Windows 产物
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path out -Force | Out-Null
+          Get-ChildItem -Path dist -Recurse -Filter '*.exe' | Copy-Item -Destination out
+          Get-ChildItem -Path dist -Recurse -Filter '*.zip' | Copy-Item -Destination out
+          Get-FileHash out/* -Algorithm SHA256 | Format-Table -AutoSize
+      - uses: actions/upload-artifact@v6
+        with:
+          name: windows-acceptance
+          path: out
+          if-no-files-found: error
+          retention-days: 7
+
+  android-core:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: hiddify-core/go.sum
+      - uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - name: 安装 Android NDK
+        run: sdkmanager 'ndk;28.2.13676358'
+      - name: 从锁定源码构建 Android Core
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/28.2.13676358"
+          scripts/build_yundo_android_core.sh out/yundo-android-core/hiddify-core.aar
+      - uses: actions/upload-artifact@v6
+        with:
+          name: yundo-android-core
+          path: out/yundo-android-core
+          if-no-files-found: error
+          retention-days: 7
+
+  android:
+    needs: [test, android-core]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2.21.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - name: 生成共享代码
+        run: make common-prepare
+      - uses: actions/download-artifact@v7
+        with:
+          name: yundo-android-core
+          path: android/app/libs
+      - name: 构建 Android Debug APK
+        run: flutter build apk --debug --target=lib/main.dart
+      - name: 收集 Android 产物
+        run: |
+          mkdir -p out
+          cp build/app/outputs/flutter-apk/app-debug.apk out/Yundo-Android-Debug-universal.apk
+          sha256sum out/Yundo-Android-Debug-universal.apk
+      - uses: actions/upload-artifact@v6
+        with:
+          name: android-baseline
+          path: out
+          if-no-files-found: error
+          retention-days: 7

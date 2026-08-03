@@ -51,6 +51,8 @@ class SingboxConfigOption with _$SingboxConfigOption {
     required bool enableFakeDns,
     // required bool enableDnsRouting,
     required bool independentDnsCache,
+    List<Map<String, dynamic>>? managedRouteRules,
+    List<Map<String, dynamic>>? managedRouteRuleSets,
     required Map<String, dynamic> routeRule,
     // required SingboxMuxOption mux,
     required SingboxTlsTricks tlsTricks,

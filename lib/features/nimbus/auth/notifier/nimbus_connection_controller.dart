@@ -10,6 +10,7 @@ import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_rules_config.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
@@ -58,6 +59,38 @@ bool shouldReapplyNimbusConnection({
 
 bool isNimbusOwnedConnection({required ConnectionStatus? connection, required bool connectedReported}) =>
     connection is Connected && connectedReported;
+
+Future<NimbusRulesPackage> prepareNimbusRulesPackage({
+  required NimbusRulesPackage? cached,
+  required Future<NimbusRulesManifest> Function(NimbusRulesManifest? localManifest) fetchManifest,
+  required Future<NimbusRulesPackage> Function() fetchPackage,
+  required Future<void> Function(NimbusRulesPackage rulesPackage) savePackage,
+}) async {
+  NimbusRulesPackage? supportedCache = cached;
+  if (supportedCache != null) {
+    try {
+      assertSupportedNimbusRulesPackage(supportedCache);
+    } on FormatException {
+      supportedCache = null;
+    }
+  }
+
+  final manifest = await fetchManifest(supportedCache?.manifest);
+  if (supportedCache != null && !manifest.requiresUpdate && manifest.sameVersions(supportedCache.manifest)) {
+    return supportedCache;
+  }
+
+  final rulesPackage = await fetchPackage();
+  assertSupportedNimbusRulesPackage(rulesPackage);
+  await savePackage(rulesPackage);
+  return rulesPackage;
+}
+
+void assertSupportedNimbusRulesPackage(NimbusRulesPackage rulesPackage) {
+  if (rulesPackage.manifest.configVersion != nimbusRulesConfigVersion) {
+    throw FormatException('unsupported rules config version: ${rulesPackage.manifest.configVersion}');
+  }
+}
 
 AsyncValue<ConnectionStatus> presentNimbusOwnedConnectionStatus({
   required AsyncValue<ConnectionStatus> rawConnectionStatus,
@@ -289,14 +322,21 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       }
 
       final appInfo = ref.read(appInfoProvider).requireValue;
-      final localRules = _repository.readRulesPackage(session.user.id)?.manifest;
-      final rulesManifest = await _repository.fetchRulesManifest(session: session, localManifest: localRules);
+      var rulesPackage = await _prepareRulesPackage(session);
       final plan = await _repository.createConnectPlan(
         session: session,
         selectedLocation: currentAuthState.selectedLocationCode,
         appVersion: appInfo.version,
-        rulesManifest: rulesManifest,
+        rulesManifest: rulesPackage.manifest,
       );
+      if (plan.rulesManifest.requiresUpdate || !plan.rulesManifest.sameVersions(rulesPackage.manifest)) {
+        rulesPackage = await _repository.fetchRulesPackage(session);
+        assertSupportedNimbusRulesPackage(rulesPackage);
+        await _repository.saveRulesPackage(session.user.id, rulesPackage);
+      }
+      if (!plan.rulesManifest.sameVersions(rulesPackage.manifest)) {
+        throw const FormatException('rules package changed while preparing connection');
+      }
       if (_shutdownRequested) return;
       state = state.copyWith(plan: plan, traffic: plan.traffic);
 
@@ -312,6 +352,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         return;
       }
       _validateStandardProfileContent(profileContent);
+      _applyManagedRouteOptions(rulesPackage);
       final validatedProfileContent = await _installStandardProfile(profileContent);
       if (_shutdownRequested) {
         await _cleanupFailedConnectionAttempt();
@@ -357,6 +398,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
 
   Future<void> _cleanupFailedConnectionAttempt() async {
     await ref.read(connectionNotifierProvider.notifier).abortConnection();
+    _clearManagedRouteOptions();
     await _removeManagedProfile();
   }
 
@@ -365,12 +407,35 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     final session = ref.read(nimbusAuthControllerProvider).session;
     state = state.copyWith(isPreparing: false, isDisconnecting: true, connectedReported: false);
     await ref.read(connectionNotifierProvider.notifier).abortConnection();
+    _clearManagedRouteOptions();
     await ref.read(Preferences.startedByUser.notifier).update(false);
     if (reportToServer && plan != null && session != null) {
       unawaited(_safeReportDisconnect(session, plan, reason));
     }
     await _removeManagedProfile();
     state = const NimbusConnectionState();
+  }
+
+  Future<NimbusRulesPackage> _prepareRulesPackage(NimbusAuthSession session) {
+    return prepareNimbusRulesPackage(
+      cached: _repository.readRulesPackage(session.user.id),
+      fetchManifest: (localManifest) => _repository.fetchRulesManifest(session: session, localManifest: localManifest),
+      fetchPackage: () => _repository.fetchRulesPackage(session),
+      savePackage: (rulesPackage) => _repository.saveRulesPackage(session.user.id, rulesPackage),
+    );
+  }
+
+  void _applyManagedRouteOptions(NimbusRulesPackage rulesPackage) {
+    final options = buildNimbusManagedRouteOptions(
+      rulesPackage: rulesPackage,
+      isAutomaticMode: ref.read(Preferences.nimbusProxyMode) == NimbusProxyMode.auto,
+      customWebsiteAccessEnabled: ref.read(Preferences.nimbusCustomWebsiteAccessEnabled),
+    );
+    ref.read(nimbusManagedRouteOptionsProvider.notifier).state = options;
+  }
+
+  void _clearManagedRouteOptions() {
+    ref.read(nimbusManagedRouteOptionsProvider.notifier).state = const NimbusManagedRouteOptions.empty();
   }
 
   Future<String> _installStandardProfile(String content) async {

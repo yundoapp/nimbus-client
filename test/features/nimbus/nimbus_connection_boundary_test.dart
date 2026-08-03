@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_rules_config.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -83,4 +85,67 @@ void main() {
       );
     });
   });
+
+  group('Nimbus rules package preparation', () {
+    test('reuses a supported cache when manifest versions match', () async {
+      var downloads = 0;
+      var saves = 0;
+
+      final result = await prepareNimbusRulesPackage(
+        cached: _rulesPackage,
+        fetchManifest: (_) async => _manifest,
+        fetchPackage: () async {
+          downloads += 1;
+          return _rulesPackage;
+        },
+        savePackage: (_) async {
+          saves += 1;
+        },
+      );
+
+      expect(result, same(_rulesPackage));
+      expect(downloads, 0);
+      expect(saves, 0);
+    });
+
+    test('does not overwrite the cache when a replacement download fails', () async {
+      var saves = 0;
+
+      await expectLater(
+        prepareNimbusRulesPackage(
+          cached: _rulesPackage,
+          fetchManifest: (_) async => _changedManifest,
+          fetchPackage: () async => throw const FormatException('truncated response'),
+          savePackage: (_) async {
+            saves += 1;
+          },
+        ),
+        throwsA(isA<FormatException>()),
+      );
+
+      expect(saves, 0);
+    });
+  });
 }
+
+const _manifest = NimbusRulesManifest(
+  publicRulesVersion: '2026.08.03.1',
+  userRulesVersion: 'sha256:user',
+  configVersion: nimbusRulesConfigVersion,
+  requiresUpdate: false,
+  publicRulesChanged: false,
+  userRulesChanged: false,
+  configChanged: false,
+);
+
+const _changedManifest = NimbusRulesManifest(
+  publicRulesVersion: '2026.08.03.2',
+  userRulesVersion: 'sha256:user',
+  configVersion: nimbusRulesConfigVersion,
+  requiresUpdate: true,
+  publicRulesChanged: true,
+  userRulesChanged: false,
+  configChanged: false,
+);
+
+const _rulesPackage = NimbusRulesPackage(manifest: _manifest, userRules: [], publicRules: []);

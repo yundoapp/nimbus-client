@@ -1,8 +1,23 @@
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 const nimbusRulesConfigVersion = 'sing-box-rules-v3';
 const nimbusRuleSetHttpClientTag = 'nimbus-rule-download';
 const nimbusRuleSetDownloadMode = NimbusRuleSetDownloadMode.legacyDownloadDetour;
+const nimbusHiddifyDirectTag = 'direct \u00a7hide\u00a7';
+
+class NimbusManagedRouteOptions {
+  const NimbusManagedRouteOptions({required this.rules, required this.ruleSets});
+
+  const NimbusManagedRouteOptions.empty() : rules = const [], ruleSets = const [];
+
+  final List<Map<String, dynamic>> rules;
+  final List<Map<String, dynamic>> ruleSets;
+}
+
+final nimbusManagedRouteOptionsProvider = StateProvider<NimbusManagedRouteOptions>(
+  (_) => const NimbusManagedRouteOptions.empty(),
+);
 
 enum NimbusRuleSetDownloadMode { legacyDownloadDetour, httpClient }
 
@@ -40,10 +55,14 @@ List<NimbusRulePackageItem> selectActiveNimbusUserRules({
   return userRules;
 }
 
-List<Map<String, dynamic>> buildNimbusRouteRules(List<NimbusRulePackageItem> rules, String proxyTag) {
+List<Map<String, dynamic>> buildNimbusRouteRules(
+  List<NimbusRulePackageItem> rules,
+  String proxyTag, {
+  String directTag = 'nimbus-direct',
+}) {
   final normalized = <Map<String, dynamic>>[];
   for (final rule in rules) {
-    final outbound = rule.action == 'direct' ? 'nimbus-direct' : proxyTag;
+    final outbound = rule.action == 'direct' ? directTag : proxyTag;
     if (rule.pattern.isEmpty) continue;
     final match = switch (rule.patternType) {
       'domain' => <String, dynamic>{
@@ -114,8 +133,32 @@ List<Map<String, dynamic>> buildNimbusRuleSets(
   return definitions.values.toList(growable: false);
 }
 
-Map<String, dynamic> nimbusFallbackRouteRule() => {
+Map<String, dynamic> nimbusFallbackRouteRule({String directTag = 'nimbus-direct'}) => {
   'ip_is_private': true,
   'action': 'route',
-  'outbound': 'nimbus-direct',
+  'outbound': directTag,
 };
+
+NimbusManagedRouteOptions buildNimbusManagedRouteOptions({
+  required NimbusRulesPackage rulesPackage,
+  required bool isAutomaticMode,
+  required bool customWebsiteAccessEnabled,
+  String proxyTag = 'nimbus-proxy',
+  String directTag = nimbusHiddifyDirectTag,
+}) {
+  if (!isAutomaticMode) return const NimbusManagedRouteOptions.empty();
+
+  final activeUserRules = selectActiveNimbusUserRules(
+    isAutomaticMode: isAutomaticMode,
+    customWebsiteAccessEnabled: customWebsiteAccessEnabled,
+    userRules: rulesPackage.userRules,
+  );
+  final activeRules = [...activeUserRules, ...rulesPackage.publicRules];
+  return NimbusManagedRouteOptions(
+    rules: [
+      ...buildNimbusRouteRules(activeRules, proxyTag, directTag: directTag),
+      nimbusFallbackRouteRule(directTag: directTag),
+    ],
+    ruleSets: buildNimbusRuleSets(activeRules, proxyTag),
+  );
+}

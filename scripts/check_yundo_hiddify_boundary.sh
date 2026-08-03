@@ -27,15 +27,14 @@ protected_prefixes=(
   'android/app/src/main/kotlin/com/hiddify/hiddify/bg/'
 )
 
-# These files are inside inherited platform folders but only change product
-# identity, native library loading names, or app lifecycle isolation. They
-# must not alter networking behavior, so the boundary check permits them
-# explicitly.
+# 这些文件位于上游保护目录，但只承载品牌、生命周期隔离或受控的产品规则入口。
+# 规则入口只能传入 route.rules/rule_set，不能接管 DNS、TUN、系统代理和最终路由。
 allowed_boundary_files=(
   'lib/hiddifycore/core_port.dart'
   'lib/hiddifycore/core_interface/core_interface_desktop.dart'
   'lib/hiddifycore/core_interface/core_interface_mobile.dart'
   'lib/hiddifycore/hiddify_core_service.dart'
+  'lib/singbox/model/singbox_config_option.dart'
   'windows/runner/main.cpp'
   'windows/runner/Runner.rc'
   'windows/runner/resources/app_icon.ico'

@@ -12,6 +12,9 @@ String oppositeNimbusRoutePreferenceType(NimbusRouteDecision decision) =>
 String formatNimbusRouteTextForDisplay(String value) =>
     value.replaceAll('nimbus-proxy', 'yundo-proxy').replaceAll('nimbus-direct', 'yundo-direct');
 
+bool isNimbusDirectRouteChain(Iterable<String> chains) =>
+    chains.any((tag) => tag == 'nimbus-direct' || tag == 'direct \u00a7hide\u00a7' || tag == 'bypass \u00a7hide\u00a7');
+
 class NimbusRouteHistoryEntry {
   const NimbusRouteHistoryEntry({
     required this.id,
@@ -104,7 +107,7 @@ NimbusRouteHistoryEntry? parseNimbusRouteHistoryEntry(Map<String, dynamic> conne
     rule: _stringValue(connection['rule']),
     rulePayload: _stringValue(connection['rulePayload']),
     chains: List.unmodifiable(chains),
-    decision: chains.contains('nimbus-direct') ? NimbusRouteDecision.direct : NimbusRouteDecision.accelerated,
+    decision: isNimbusDirectRouteChain(chains) ? NimbusRouteDecision.direct : NimbusRouteDecision.accelerated,
     startedAt: parsedStart ?? observedAt,
   );
 }
