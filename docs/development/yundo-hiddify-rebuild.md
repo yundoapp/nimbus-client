@@ -157,7 +157,7 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 
 - iOS 工程统一使用 Apple Team `W684N2R45F`；正式版主 App 和 Packet Tunnel 分别为 `app.yundo.client`、`app.yundo.client.PacketTunnel`，开发版分别追加 `.rebuild.dev`。工程中已清理旧 Hiddify Team、旧 Bundle ID 和旧 profile 名称。
 - `scripts/build_macos_remote.sh` 负责远程 macOS Debug/Release 构建、Yundo Core 替换、重签、签名校验和 ZIP 产出，不覆盖 `/Applications`；本地 `scripts/build_install_run_macos_dev.sh` 继续负责快速构建、双版本覆盖安装和启动验收。
-- `scripts/build_ios_remote.sh` 负责 Flutter 框架准备、Xcode 设备归档、App Store Connect API Key 自动 profile 管理、IPA 导出和主 App/Packet Tunnel Bundle ID 校验。`.github/workflows/apple-build.yml` 通过手动触发同时产出 macOS 开发版、macOS 正式版和 iOS 正式版 artifact。
+- `scripts/build_ios_remote.sh` 负责 Flutter 框架准备、Xcode 设备归档、App Store Connect API Key 自动 profile 管理、IPA 导出和主 App/Packet Tunnel Bundle ID 校验；归档阶段显式使用 `Apple Distribution`，不依赖注册测试设备。`.github/workflows/apple-build.yml` 通过手动触发同时产出 macOS 开发版、macOS 正式版和 iOS 正式版 artifact。
 - Apple Developer 计划开通不等于远端已经具备签名材料；首次远程构建前必须按 `docs/development/apple-signing-setup.md` 配置 App ID 能力、证书、`.p12`、App Store Connect API Key 和 GitHub Secrets。未配置时只允许报告“源码构建可验证”，不能报告“远程签名构建完成”。
 
 ### 4.8 规则可视化与四端统一主导航（2026-08-03）

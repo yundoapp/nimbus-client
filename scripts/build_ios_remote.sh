@@ -10,6 +10,7 @@ developer_dir="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 flutter_bin="${FLUTTER_BIN:-$(command -v flutter || true)}"
 team_id="${APPLE_TEAM_ID:-W684N2R45F}"
 bundle_id="${IOS_BUNDLE_IDENTIFIER:-app.yundo.client}"
+signing_identity="${IOS_CODESIGN_IDENTITY:-Apple Distribution}"
 auth_key_path="${APPSTORE_AUTH_KEY_PATH:-}"
 auth_key_id="${APPSTORE_API_KEY_ID:-}"
 auth_issuer_id="${APPSTORE_ISSUER_ID:-}"
@@ -50,6 +51,7 @@ xcodebuild \
   BASE_BUNDLE_IDENTIFIER="${bundle_id}" \
   DEVELOPMENT_TEAM="${team_id}" \
   CODE_SIGN_STYLE=Automatic \
+  CODE_SIGN_IDENTITY="${signing_identity}" \
   FLUTTER_BUILD_NUMBER="${build_number}" \
   -allowProvisioningUpdates \
   -authenticationKeyPath "${auth_key_path}" \
