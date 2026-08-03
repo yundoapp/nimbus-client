@@ -121,4 +121,5 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - 加速按钮不再调用通用 Hiddify 实验功能确认弹窗。该弹窗在根导航上下文尚未就绪时会静默返回拒绝结果，导致用户点击后既没有连接请求也没有错误提示；云渡按钮现在直接调用云渡连接控制器，并以可等待的异步回调启动、停止或重连。
 - `MaterialApp` 和桌面窗口标题统一使用现有多语言 `common.devAppTitle`/`common.appTitle`：中文显示“云渡开发版”/“云渡”，其他语言显示“Yundo Dev”/“Yundo”。切换语言时同步更新 macOS 标题栏。
 - 桌面主导航固定为“主页、设置、记录”。“记录”直接进入云渡加速记录页；配置文件、通用日志和关于页面仍保留路由及设置页入口，但不再占用主导航位置，避免再次出现 shell 分支与导航目的地数量不一致。
+- macOS 本机构建脚本在覆盖 `/Applications/Yundo Dev.app` 和 `/Applications/Yundo.app` 后始终启动并验证开发版；正式版只覆盖安装、不启动，避免两个版本同时接管网络。
 - 本轮按项目负责人要求优先执行本地 macOS Debug/Release 和 iOS Simulator 构建；Apple 证书准备完成前不以 GitHub 远端 macOS 构建作为验收门槛。

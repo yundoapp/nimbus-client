@@ -25,10 +25,8 @@ flutter_bin="${FLUTTER_BIN:-$(command -v flutter || true)}"
 [[ -x "${flutter_bin}" ]] || fail "找不到 Flutter；请设置 FLUTTER_BIN"
 export DEVELOPER_DIR="${developer_dir}"
 
-was_running=false
 quit_existing_app() {
   pgrep -f "${expected_executable}" >/dev/null 2>&1 || return 0
-  was_running=true
   osascript -e "tell application id \"${expected_bundle_id}\" to quit" >/dev/null 2>&1 || true
   for _ in {1..80}; do
     pgrep -f "${expected_executable}" >/dev/null 2>&1 || return 0
@@ -117,17 +115,16 @@ fi
 installed_bundle_id="$(plutil -extract CFBundleIdentifier raw -o - "${installed_app}/Contents/Info.plist")"
 [[ "${installed_bundle_id}" == "${expected_bundle_id}" ]] || fail "安装后的 Bundle ID 不正确：${installed_bundle_id}"
 
-if [[ "${was_running}" == true ]]; then
-  open "${installed_app}"
-  for _ in {1..40}; do
-    pgrep -f "${expected_executable}" >/dev/null 2>&1 && break
-    sleep 0.25
-  done
-  pgrep -f "${expected_executable}" >/dev/null 2>&1 \
-    || fail "Yundo Dev 原先正在运行，但覆盖安装后未能恢复启动"
-fi
+open "${installed_app}"
+for _ in {1..40}; do
+  pgrep -f "${expected_executable}" >/dev/null 2>&1 && break
+  sleep 0.25
+done
+pgrep -f "${expected_executable}" >/dev/null 2>&1 \
+  || fail "Yundo Dev 构建完成后未能启动"
 
 rm -rf "${backup_root}"
 echo "Yundo Dev 与 Yundo 正式版均已完成构建、签名、Bundle ID 校验和覆盖安装。"
 echo "构建产物：${built_app}"
-echo "安装位置：${installed_app}"
+echo "Yundo Dev 已启动：${installed_app}"
+echo "正式版保持未启动，避免两个版本同时接管网络。"
