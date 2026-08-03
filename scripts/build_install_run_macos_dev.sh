@@ -8,7 +8,8 @@ installed_app="/Applications/Yundo Dev.app"
 expected_bundle_id="app.yundo.client.rebuild.dev"
 expected_executable="${installed_app}/Contents/MacOS/Yundo Dev"
 api_base_url="${NIMBUS_API_BASE_URL:-http://127.0.0.1:4000/api/v1}"
-build_number="${YUNDO_LOCAL_BUILD_NUMBER:-$(date +%Y%m%d%H%M%S)}"
+pubspec_build_number="$(awk -F+ '/^version: / { print $2; exit }' "${repo_root}/pubspec.yaml")"
+build_number="${YUNDO_LOCAL_BUILD_NUMBER:-${pubspec_build_number}}"
 developer_dir="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 lsregister_path="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
@@ -20,6 +21,7 @@ fail() {
 for command_name in awk codesign ditto grep mktemp open osascript pgrep plutil rm security shasum strings touch; do
   command -v "${command_name}" >/dev/null 2>&1 || fail "缺少 ${command_name}"
 done
+[[ "${build_number}" =~ ^[0-9]+$ ]] || fail "构建号必须是纯数字：${build_number}"
 [[ -d "${developer_dir}" ]] || fail "找不到 Xcode Developer 目录：${developer_dir}"
 [[ -x "${lsregister_path}" ]] || fail "找不到 LaunchServices 注册工具：${lsregister_path}"
 
@@ -135,5 +137,6 @@ pgrep -f "${expected_executable}" >/dev/null 2>&1 \
 rm -rf "${backup_root}"
 echo "Yundo Dev 与 Yundo 正式版均已完成构建、签名、Bundle ID 校验和覆盖安装。"
 echo "构建产物：${built_app}"
+echo "本机构建号：${build_number}"
 echo "Yundo Dev 已启动：${installed_app}"
 echo "正式版保持未启动，避免两个版本同时接管网络。"

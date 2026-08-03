@@ -17,5 +17,7 @@ class RemoteVersionEntity with _$RemoteVersionEntity {
     required Environment flavor,
   }) = _RemoteVersionEntity;
 
-  String get presentVersion => flavor == Environment.prod ? version : "$version ${flavor.name}";
+  String get versionWithBuild => buildNumber.isEmpty ? version : "$version+$buildNumber";
+
+  String get presentVersion => flavor == Environment.prod ? versionWithBuild : "$versionWithBuild ${flavor.name}";
 }
