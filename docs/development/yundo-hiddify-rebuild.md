@@ -146,5 +146,7 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - 平台根因：声明 `configVersion` 的连接方案会把规则从兼容字段 `singBoxConfigPatch` 中移除，但曾错误地继续用该兼容字段生成 `profileContent`，导致标准 Profile 没有当前用户规则。平台已改为分别生成“标准 Profile 完整快照”和“旧字段兼容快照”。
 - 客户端根因：Hiddify 标准 Profile 解析器只保留节点配置，顶层 `route` 不会进入最终运行配置；旧 Flutter `route-rule` 字段在当前 Core 中也没有执行路径。因此只修平台仍不能让规则生效。
 - 修复：客户端在每次手动或自动加速前校验规则 manifest，下载并验证同版本账号规则包，按“用户自定义网站 -> 公共规则 -> 本地网络兜底”生成受控规则数据；Hiddify Core 只新增 `managed-route-rules` 和 `managed-route-rule-sets` 两个 Config Option 字段，把它们追加到原生路由表。直连规则使用 Hiddify 自带的 `direct §hide§` 出站，不新增直连出站，也不覆盖 DNS、inbound、TUN、系统代理、Helper 或最终出站。
+- 规则合并：用户自定义规则放在 Hiddify 地区默认规则之前，保证 `rawya.ai -> 直连访问` 这类明确选择不会被更宽泛规则先命中；规则集在 Hiddify 完成内置地区规则集后按 tag 去重，`geoip-cn`、`geosite-cn` 等重名项直接复用 Hiddify 内置版本，避免 sing-box 因重复 tag 拒绝整份配置。
+- macOS 打包：Xcode 的 Core Copy Files 阶段必须在所有构建动作执行；双版本安装脚本每次都删除 App 内旧 Core、复制本轮源码构建的 `YundoCore.dylib`，并在签名前检查 `managed-route-rules` 标记。禁止以“目标文件已存在”为理由复用上轮 Core，否则 Dart 规则已经生成也不会进入实际运行核心。
 - 失败策略：首次没有有效缓存且规则包下载失败时不启动加速；已有已验证缓存时可继续使用旧规则，只有新包下载并校验成功后才原子替代。连接方案与规则包版本在准备期间不一致时失败关闭，避免半新半旧配置。
 - 跨平台矩阵：规则准备和 Config Option 序列化位于共享 Dart 层，macOS、Windows、iOS、Android 同因受影响并同因修复；Core 补丁由四端同一源码提交和同一补丁生成。macOS 需要安装版真实直连/加速双向请求证据；Windows、iPhone、Android 仍需实体设备补做真实分流，但不能使用旧预编译 Core 作为本轮构建证据。
