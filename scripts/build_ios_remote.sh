@@ -48,13 +48,9 @@ xcodebuild \
   -destination generic/platform=iOS \
   -archivePath "${archive_path}" \
   BASE_BUNDLE_IDENTIFIER="${bundle_id}" \
-  DEVELOPMENT_TEAM="${team_id}" \
-  CODE_SIGN_STYLE=Automatic \
+  CODE_SIGNING_ALLOWED=NO \
+  CODE_SIGNING_REQUIRED=NO \
   FLUTTER_BUILD_NUMBER="${build_number}" \
-  -allowProvisioningUpdates \
-  -authenticationKeyPath "${auth_key_path}" \
-  -authenticationKeyID "${auth_key_id}" \
-  -authenticationKeyIssuerID "${auth_issuer_id}" \
   archive
 
 xcodebuild \
