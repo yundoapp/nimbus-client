@@ -44,11 +44,35 @@ jobs:
           channel: stable
           cache: true
 
-      - name: 导入 Apple 签名证书
-        uses: apple-actions/import-codesign-certs@v6
-        with:
-          p12-file-base64: ${{ secrets.APPLE_MACOS_CERTIFICATE_P12 }}
-          p12-password: ${{ secrets.APPLE_MACOS_CERTIFICATE_P12_PASSWORD }}
+      - name: 解码并导入 macOS 签名证书
+        shell: bash
+        env:
+          P12_FILE_BASE64: ${{ secrets.APPLE_MACOS_CERTIFICATE_P12 }}
+          P12_PASSWORD: ${{ secrets.APPLE_MACOS_CERTIFICATE_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          p12_path="$RUNNER_TEMP/yundo-macos-signing.p12"
+          keychain_path="$RUNNER_TEMP/yundo-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 32)"
+
+          printf '%s' "$P12_FILE_BASE64" | openssl base64 -d -A -out "$p12_path"
+          [[ -s "$p12_path" ]] || { echo "macOS P12 解码后为空" >&2; exit 1; }
+          openssl pkcs12 -in "$p12_path" -passin env:P12_PASSWORD -noout
+
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$p12_path" -k "$keychain_path" -P "$P12_PASSWORD" -f pkcs12 \
+            -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/pkgbuild \
+            -T /usr/bin/productbuild -T /usr/bin/productsign
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$keychain_password" "$keychain_path"
+          security list-keychains -d user -s "$keychain_path"
+          security default-keychain -s "$keychain_path"
+          {
+            printf 'SIGNING_KEYCHAIN_PATH=%s\n' "$keychain_path"
+            printf 'SIGNING_KEYCHAIN_PASSWORD=%s\n' "$keychain_password"
+          } >> "$GITHUB_ENV"
 
       - name: 检查签名身份
         shell: bash
@@ -74,6 +98,14 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: 清理临时签名钥匙串
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${SIGNING_KEYCHAIN_PATH:-}" && -e "$SIGNING_KEYCHAIN_PATH" ]]; then
+            security delete-keychain "$SIGNING_KEYCHAIN_PATH" || true
+          fi
+
   ios:
     name: iOS signed IPA
     runs-on: macos-15
@@ -88,11 +120,35 @@ jobs:
           channel: stable
           cache: true
 
-      - name: 导入 Apple 签名证书
-        uses: apple-actions/import-codesign-certs@v6
-        with:
-          p12-file-base64: ${{ secrets.APPLE_IOS_CERTIFICATE_P12 }}
-          p12-password: ${{ secrets.APPLE_IOS_CERTIFICATE_P12_PASSWORD }}
+      - name: 解码并导入 iOS 签名证书
+        shell: bash
+        env:
+          P12_FILE_BASE64: ${{ secrets.APPLE_IOS_CERTIFICATE_P12 }}
+          P12_PASSWORD: ${{ secrets.APPLE_IOS_CERTIFICATE_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          p12_path="$RUNNER_TEMP/yundo-ios-signing.p12"
+          keychain_path="$RUNNER_TEMP/yundo-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 32)"
+
+          printf '%s' "$P12_FILE_BASE64" | openssl base64 -d -A -out "$p12_path"
+          [[ -s "$p12_path" ]] || { echo "iOS P12 解码后为空" >&2; exit 1; }
+          openssl pkcs12 -in "$p12_path" -passin env:P12_PASSWORD -noout
+
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$p12_path" -k "$keychain_path" -P "$P12_PASSWORD" -f pkcs12 \
+            -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/pkgbuild \
+            -T /usr/bin/productbuild -T /usr/bin/productsign
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$keychain_password" "$keychain_path"
+          security list-keychains -d user -s "$keychain_path"
+          security default-keychain -s "$keychain_path"
+          {
+            printf 'SIGNING_KEYCHAIN_PATH=%s\n' "$keychain_path"
+            printf 'SIGNING_KEYCHAIN_PASSWORD=%s\n' "$keychain_password"
+          } >> "$GITHUB_ENV"
 
       - name: 准备 App Store Connect API Key
         shell: bash
@@ -120,3 +176,11 @@ jobs:
           path: out/ios/*.ipa
           if-no-files-found: error
           retention-days: 14
+
+      - name: 清理临时签名钥匙串
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${SIGNING_KEYCHAIN_PATH:-}" && -e "$SIGNING_KEYCHAIN_PATH" ]]; then
+            security delete-keychain "$SIGNING_KEYCHAIN_PATH" || true
+          fi
