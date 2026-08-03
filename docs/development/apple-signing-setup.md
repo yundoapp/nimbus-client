@@ -36,7 +36,7 @@
 | `APPSTORE_API_KEY_ID` | App Store Connect API Key 的 Key ID |
 | `APPSTORE_API_PRIVATE_KEY` | `.p8` 文件的完整文本，不要 Base64 编码 |
 
-远程工作流使用“管理员”职能的 API Key，以便 Xcode 在没有预置 profile 时管理 App ID 与分发 profile。证书、`.p12` 密码和 `.p8` 私钥只放 GitHub Secrets，不提交到仓库。
+远程工作流使用“管理员”职能的 API Key，以便 Xcode 在没有预置 profile 时管理 App ID 与分发 profile。iOS Release 的分发身份只配置在 Yundo 主 App 与 Packet Tunnel target 上，Pods 继续使用自己的自动签名配置。证书、`.p12` 密码和 `.p8` 私钥只放 GitHub Secrets，不提交到仓库。
 
 ## 使用方式
 
