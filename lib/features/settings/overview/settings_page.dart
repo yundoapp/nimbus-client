@@ -49,7 +49,7 @@ class SettingsPage extends HookConsumerWidget {
                         ),
                         if (!PlatformUtils.isWeb)
                           ListTile(
-                            title: Text(t.nimbus.routeHistory.title),
+                            title: Text(t.nimbus.routeHistory.menuTitle),
                             leading: const Icon(Icons.manage_search_rounded),
                             trailing: const Icon(Icons.chevron_right_rounded),
                             onTap: () => context.goNamed('routeHistory'),
