@@ -6,8 +6,8 @@ void main() {
   final translations = Translations();
 
   test('desktop navigation destinations match every desktop shell branch', () {
-    expect(shellRouteActions(translations, false, false), hasLength(4));
-    expect(shellRouteActions(translations, true, false), hasLength(5));
+    expect(shellRouteActions(translations, false, false), hasLength(3));
+    expect(shellRouteActions(translations, true, false), hasLength(3));
   });
 
   test('mobile navigation keeps only home and settings destinations', () {

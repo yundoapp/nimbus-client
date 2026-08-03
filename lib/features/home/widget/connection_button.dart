@@ -1,9 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:gap/gap.dart';
 import 'package:hiddify/core/localization/translations.dart';
-import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/core/widget/animated_text.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
@@ -106,18 +107,12 @@ class ConnectionButton extends HookConsumerWidget {
           return await ref.read(nimbusConnectionControllerProvider.notifier).reconnect();
         },
         AsyncData(value: Disconnected()) || AsyncError() => () async {
-          if (await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
-            return await ref.read(nimbusConnectionControllerProvider.notifier).connect(userInitiated: true);
-          }
+          return await ref.read(nimbusConnectionControllerProvider.notifier).connect(userInitiated: true);
         },
         AsyncData(value: Connected()) => () async {
-          if (requiresReconnect == true &&
-              await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
-            return await ref.read(nimbusConnectionControllerProvider.notifier).reconnect();
-          }
           return await ref.read(nimbusConnectionControllerProvider.notifier).disconnect(userInitiated: true);
         },
-        _ => () {},
+        _ => () async {},
       },
       enabled: switch (connectionStatus) {
         AsyncData(value: Connected()) || AsyncData(value: Disconnected()) || AsyncError() => true,
@@ -152,7 +147,7 @@ class _ConnectionButton extends StatelessWidget {
     required this.secureLabel,
   });
 
-  final VoidCallback onTap;
+  final Future<void> Function() onTap;
   final bool enabled;
   final String label;
   final String semanticsLabel;
@@ -260,7 +255,7 @@ class _ConnectionButton extends StatelessWidget {
                       focusColor: Colors.white.withValues(alpha: 0.16),
                       hoverColor: Colors.white.withValues(alpha: 0.08),
                       splashColor: Colors.white.withValues(alpha: 0.18),
-                      onTap: enabled ? onTap : null,
+                      onTap: enabled ? () => unawaited(onTap()) : null,
                       child: Center(child: connectionIcon),
                     ),
                   ),

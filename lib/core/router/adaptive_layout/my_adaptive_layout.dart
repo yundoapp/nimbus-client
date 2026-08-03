@@ -11,16 +11,10 @@ import 'package:hiddify/features/stats/widget/side_bar_stats_overview.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class MyAdaptiveLayout extends HookConsumerWidget {
-  const MyAdaptiveLayout({
-    super.key,
-    required this.navigationShell,
-    required this.isMobileBreakpoint,
-    required this.showProfilesAction,
-  });
+  const MyAdaptiveLayout({super.key, required this.navigationShell, required this.isMobileBreakpoint});
   // managed by go router(Shell Route)
   final StatefulNavigationShell navigationShell;
   final bool isMobileBreakpoint;
-  final bool showProfilesAction;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -40,8 +34,7 @@ class MyAdaptiveLayout extends HookConsumerWidget {
             if (branchesScope.values.any((node) => node.hasFocus)) {
               navScopeNode.requestFocus();
             } else if (navScopeNode.hasFocus) {
-              branchesScope[getNameOfBranch(isMobileBreakpoint, showProfilesAction, navigationShell.currentIndex)]
-                  ?.requestFocus();
+              branchesScope[getNameOfBranch(isMobileBreakpoint, false, navigationShell.currentIndex)]?.requestFocus();
             }
           }
         }
@@ -52,7 +45,7 @@ class MyAdaptiveLayout extends HookConsumerWidget {
       return () {
         HardwareKeyboard.instance.removeHandler(handler);
       };
-    }, [isMobileBreakpoint, showProfilesAction, navigationShell.currentIndex]);
+    }, [isMobileBreakpoint, navigationShell.currentIndex]);
     return Material(
       child: Scaffold(
         body: isMobileBreakpoint
@@ -63,7 +56,7 @@ class MyAdaptiveLayout extends HookConsumerWidget {
                     node: navScopeNode,
                     child: NavigationRail(
                       extended: Breakpoint(context).isDesktop(),
-                      destinations: _navRailDests(shellRouteActions(t, showProfilesAction, isMobileBreakpoint)),
+                      destinations: _navRailDests(shellRouteActions(t, false, isMobileBreakpoint)),
                       selectedIndex: navigationShell.currentIndex,
                       onDestinationSelected: (index) => _onTap(context, index),
                       trailing: Breakpoint(context).isDesktop()
@@ -84,7 +77,7 @@ class MyAdaptiveLayout extends HookConsumerWidget {
                 node: navScopeNode,
                 child: NavigationBar(
                   selectedIndex: navigationShell.currentIndex <= 1 ? navigationShell.currentIndex : 0,
-                  destinations: _navDests(shellRouteActions(t, showProfilesAction, isMobileBreakpoint)),
+                  destinations: _navDests(shellRouteActions(t, false, isMobileBreakpoint)),
                   onDestinationSelected: (index) => _onTap(context, index),
                 ),
               )
@@ -104,12 +97,8 @@ class MyAdaptiveLayout extends HookConsumerWidget {
       actions.map((e) => NavigationRailDestination(icon: Icon(e.icon), label: Text(e.title))).toList();
 }
 
-List<ShellRouteAction> shellRouteActions(Translations t, bool showProfilesAction, bool isMobileBreakpoint) => [
+List<ShellRouteAction> shellRouteActions(Translations t, bool _, bool isMobileBreakpoint) => [
   ShellRouteAction(Icons.home_rounded, t.pages.home.title),
-  if (showProfilesAction && !isMobileBreakpoint) ShellRouteAction(Icons.view_list_rounded, t.pages.profiles.title),
   ShellRouteAction(Icons.settings_rounded, t.pages.settings.title),
-  if (!isMobileBreakpoint) ...[
-    ShellRouteAction(Icons.receipt_long_rounded, t.pages.logs.title),
-    ShellRouteAction(Icons.info_outline_rounded, t.pages.about.title),
-  ],
+  if (!isMobileBreakpoint) ...[ShellRouteAction(Icons.manage_search_rounded, t.nimbus.routeHistory.title)],
 ];

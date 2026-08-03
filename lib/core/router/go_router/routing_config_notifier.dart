@@ -40,8 +40,7 @@ final branchesScope = <String, FocusScopeNode>{
   'home': FocusScopeNode(),
   'profiles': FocusScopeNode(),
   'settings': FocusScopeNode(),
-  'logs': FocusScopeNode(),
-  'about': FocusScopeNode(),
+  'routeHistory': FocusScopeNode(),
 };
 
 // when the routing config is not yet initialized, this config is used
@@ -49,25 +48,17 @@ final loadingConfig = RoutingConfig(
   routes: <RouteBase>[GoRoute(path: '/home', builder: (context, state) => const Material())],
 );
 
-String getNameOfBranch(bool isMobileBreakpoint, bool showProfilesAction, int index) => isMobileBreakpoint
-    ? ['home', 'settings'][index]
-    : ['home', if (showProfilesAction) 'profiles', 'settings', 'logs', 'about'][index];
+String getNameOfBranch(bool isMobileBreakpoint, bool _, int index) =>
+    isMobileBreakpoint ? ['home', 'settings'][index] : ['home', 'settings', 'routeHistory'][index];
 
-int getIndexOfBranch(bool isMobileBreakpoint, bool showProfilesAction, String name) => isMobileBreakpoint
-    ? ['home', 'settings'].indexOf(name)
-    : ['home', if (showProfilesAction) 'profiles', 'settings', 'logs', 'about'].indexOf(name);
+int getIndexOfBranch(bool isMobileBreakpoint, bool _, String name) =>
+    isMobileBreakpoint ? ['home', 'settings'].indexOf(name) : ['home', 'settings', 'routeHistory'].indexOf(name);
 
 @Riverpod(keepAlive: true)
 class RoutingConfigNotifier extends _$RoutingConfigNotifier {
   @override
   RoutingConfig build() {
     final isMobileBreakpoint = ref.watch(isMobileBreakpointProvider);
-    final bool showProfilesAction;
-    if (isMobileBreakpoint == true) {
-      showProfilesAction = false;
-    } else {
-      showProfilesAction = ref.watch(hasAnyProfileProvider).value ?? false;
-    }
     if (isMobileBreakpoint == null) return loadingConfig;
     final authState = ref.watch(
       nimbusAuthControllerProvider.select(
@@ -138,11 +129,8 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
           builder: (_, _) => const NimbusAuthPage(initialMode: NimbusAuthMode.register),
         ),
         StatefulShellRoute.indexedStack(
-          builder: (_, _, navigationShell) => MyAdaptiveLayout(
-            navigationShell: navigationShell,
-            isMobileBreakpoint: isMobileBreakpoint,
-            showProfilesAction: showProfilesAction,
-          ),
+          builder: (_, _, navigationShell) =>
+              MyAdaptiveLayout(navigationShell: navigationShell, isMobileBreakpoint: isMobileBreakpoint),
           branches: <StatefulShellBranch>[
             StatefulShellBranch(
               routes: <GoRoute>[
@@ -171,27 +159,6 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                 ),
               ],
             ),
-            if (showProfilesAction)
-              StatefulShellBranch(
-                routes: <GoRoute>[
-                  GoRoute(
-                    name: 'profiles',
-                    path: '/profiles',
-                    builder: (_, _) => FocusScope(node: branchesScope['profiles'], child: const ProfilesPage()),
-                    routes: <GoRoute>[
-                      GoRoute(
-                        name: 'profileDetails',
-                        path: 'profile-details/:id',
-                        pageBuilder: (_, state) => customTransition(
-                          TransitionType.fade,
-                          state.pageKey,
-                          ProfileDetailsPage(id: state.pathParameters['id']!),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
             StatefulShellBranch(
               routes: <GoRoute>[
                 GoRoute(
@@ -280,7 +247,7 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                       pageBuilder: (_, state) =>
                           customTransition(TransitionType.slide, state.pageKey, const InboundOptionsPage()),
                     ),
-                    if (!PlatformUtils.isWeb)
+                    if (isMobileBreakpoint && !PlatformUtils.isWeb)
                       GoRoute(
                         name: 'routeHistory',
                         path: 'route-history',
@@ -317,28 +284,39 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                 ),
               ],
             ),
-            if (!isMobileBreakpoint) ...[
+            if (!isMobileBreakpoint && !PlatformUtils.isWeb)
               StatefulShellBranch(
                 routes: <GoRoute>[
                   GoRoute(
-                    name: 'logs',
-                    path: '/logs',
-                    builder: (_, _) => FocusScope(node: branchesScope['logs'], child: const LogsPage()),
+                    name: 'routeHistory',
+                    path: '/route-history',
+                    builder: (_, _) =>
+                        FocusScope(node: branchesScope['routeHistory'], child: const NimbusRouteHistoryPage()),
                   ),
                 ],
               ),
-              StatefulShellBranch(
-                routes: <GoRoute>[
-                  GoRoute(
-                    name: 'about',
-                    path: '/about',
-                    builder: (_, _) => FocusScope(node: branchesScope['about'], child: const AboutPage()),
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
+        if (!isMobileBreakpoint) ...[
+          GoRoute(
+            name: 'profiles',
+            path: '/profiles',
+            builder: (_, _) => FocusScope(node: branchesScope['profiles'], child: const ProfilesPage()),
+            routes: <GoRoute>[
+              GoRoute(
+                name: 'profileDetails',
+                path: 'profile-details/:id',
+                pageBuilder: (_, state) => customTransition(
+                  TransitionType.fade,
+                  state.pageKey,
+                  ProfileDetailsPage(id: state.pathParameters['id']!),
+                ),
+              ),
+            ],
+          ),
+          GoRoute(name: 'logs', path: '/logs', builder: (_, _) => const LogsPage()),
+          GoRoute(name: 'about', path: '/about', builder: (_, _) => const AboutPage()),
+        ],
         GoRoute(name: 'intro', path: '/intro', builder: (_, _) => const IntroPage()),
       ],
     );

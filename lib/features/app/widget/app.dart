@@ -5,10 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/locale_extensions.dart';
 import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
-import 'package:hiddify/core/model/constants.dart';
+import 'package:hiddify/core/model/environment.dart';
 import 'package:hiddify/core/router/go_router/go_router_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/theme/app_theme.dart';
@@ -28,6 +29,7 @@ import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:toastification/toastification.dart';
 import 'package:upgrader/upgrader.dart';
+import 'package:window_manager/window_manager.dart';
 
 bool _debugAccessibility = false;
 bool isOnPauseCalled = false;
@@ -63,10 +65,20 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
     setupStateListener(ref);
     final router = ref.watch(goRouterNotiferProvider);
     final locale = ref.watch(localePreferencesProvider);
+    final translations = ref.watch(translationsProvider).requireValue;
+    final environment = ref.watch(environmentProvider);
     final themeMode = ref.watch(themePreferencesProvider);
     final theme = AppTheme(themeMode, locale.preferredFontFamily);
     final upgrader = ref.watch(upgraderProvider);
     final activeBreakpoint = Breakpoint(context).activeBreakpoint;
+    final appTitle = environment == Environment.dev ? translations.common.devAppTitle : translations.common.appTitle;
+
+    useEffect(() {
+      if (PlatformUtils.isDesktop) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => windowManager.setTitle(appTitle));
+      }
+      return null;
+    }, [appTitle]);
 
     ref.listen(foregroundProfilesUpdateNotifierProvider, (_, _) {});
     if (PlatformUtils.isAndroid) ref.listen(perAppProxyServiceProvider, (_, _) {});
@@ -96,7 +108,7 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
                   themeMode: themeMode.flutterThemeMode,
                   theme: theme.lightTheme(lightColorScheme),
                   darkTheme: theme.darkTheme(darkColorScheme),
-                  title: Constants.appName,
+                  title: appTitle,
                   builder: (context, child) {
                     final theme = Theme.of(context);
                     child = UpgradeAlert(
