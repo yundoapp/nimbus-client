@@ -73,6 +73,13 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - 当前 commit `0b6d9d8` 已完成本机 macOS Debug/Release 安装版、iOS Simulator Debug、GitHub Windows/Linux/Android 构建和测试；GitHub macOS job 仍因仓库缺少 Apple 签名证书密钥而失败，不能据此判断 macOS 源码编译失败。
 - 由于本轮验收时 Mac 处于锁屏，Computer Use 无法执行逐页鼠标点击；页面的静态路由和安装版启动已验证，解锁后仍需补做一次真实页面逐项点击及托盘截图验收，完成前不宣称“所有页面已人工打开”。
 
+### 4.2 macOS NavigationRail 红屏修复（2026-08-03）
+
+- 根因：桌面 `StatefulShellRoute` 有首页、可选配置、设置、日志、关于 4/5 个分支，但 `NavigationRail` 只生成首页、可选配置、设置 2/3 个目的地；进入日志或关于时 `currentIndex` 超出 `destinations` 范围，触发 Flutter `selectedIndex` 断言并显示红屏。
+- 修复：桌面导航目的地改为复用与 shell 分支完全相同的顺序，移动端继续只保留首页和设置；新增导航数量测试覆盖有无配置两种桌面状态和移动端状态。
+- commit `63bf5e5` 已完成完整 Flutter 测试（37 项）、本机 macOS 双版本构建安装、iOS Simulator Debug 构建，以及 GitHub Windows/Linux/Android 构建。安装版启动进程保持存活，系统日志未再出现 `NavigationRail`/`selectedIndex` 断言。
+- 本轮仍未完成人工逐页截图：Computer Use 对系统中遗留的旧同名 Bundle 映射错误，无法读取当前 `app.yundo.client.rebuild.dev` 窗口；这属于验收工具阻塞，不作为页面已人工验收的证据。
+
 ## 5. 迁移顺序
 
 ### 阶段 A：基线
