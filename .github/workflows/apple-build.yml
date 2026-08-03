@@ -160,6 +160,7 @@ jobs:
           key_path="$RUNNER_TEMP/AuthKey_${APPSTORE_API_KEY_ID}.p8"
           printf '%s' "$APPSTORE_API_PRIVATE_KEY" > "$key_path"
           chmod 600 "$key_path"
+          openssl pkey -in "$key_path" -noout
           echo "APPSTORE_AUTH_KEY_PATH=$key_path" >> "$GITHUB_ENV"
 
       - name: 构建并签名 iOS IPA
