@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:math';
-
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 
 const nimbusRulesConfigVersion = 'sing-box-rules-v3';
@@ -8,20 +5,6 @@ const nimbusRuleSetHttpClientTag = 'nimbus-rule-download';
 const nimbusRuleSetDownloadMode = NimbusRuleSetDownloadMode.legacyDownloadDetour;
 
 enum NimbusRuleSetDownloadMode { legacyDownloadDetour, httpClient }
-
-const nimbusRouteDiagnosticsController = '127.0.0.1:19090';
-final nimbusRouteDiagnosticsSecret = _createNimbusRouteDiagnosticsSecret();
-
-String _createNimbusRouteDiagnosticsSecret() {
-  final random = Random.secure();
-  return base64UrlEncode(List<int>.generate(32, (_) => random.nextInt(256)));
-}
-
-Map<String, dynamic> buildNimbusExperimentalConfig({required bool isDebugBuild, bool enableRouteHistory = false}) => {
-  'cache_file': {'enabled': true},
-  if (isDebugBuild || enableRouteHistory)
-    'clash_api': {'external_controller': nimbusRouteDiagnosticsController, 'secret': nimbusRouteDiagnosticsSecret},
-};
 
 List<Map<String, dynamic>> buildNimbusManagedInbounds({required bool isMacOS}) => [
   {

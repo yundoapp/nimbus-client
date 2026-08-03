@@ -159,6 +159,17 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                 ),
               ],
             ),
+            if (!isMobileBreakpoint && !PlatformUtils.isWeb)
+              StatefulShellBranch(
+                routes: <GoRoute>[
+                  GoRoute(
+                    name: 'routeHistory',
+                    path: '/route-history',
+                    builder: (_, _) =>
+                        FocusScope(node: branchesScope['routeHistory'], child: const NimbusRouteHistoryPage()),
+                  ),
+                ],
+              ),
             StatefulShellBranch(
               routes: <GoRoute>[
                 GoRoute(
@@ -284,17 +295,6 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                 ),
               ],
             ),
-            if (!isMobileBreakpoint && !PlatformUtils.isWeb)
-              StatefulShellBranch(
-                routes: <GoRoute>[
-                  GoRoute(
-                    name: 'routeHistory',
-                    path: '/route-history',
-                    builder: (_, _) =>
-                        FocusScope(node: branchesScope['routeHistory'], child: const NimbusRouteHistoryPage()),
-                  ),
-                ],
-              ),
           ],
         ),
         if (!isMobileBreakpoint) ...[

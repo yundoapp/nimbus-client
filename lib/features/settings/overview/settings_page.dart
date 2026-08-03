@@ -54,13 +54,6 @@ class SettingsPage extends HookConsumerWidget {
                             trailing: const Icon(Icons.chevron_right_rounded),
                             onTap: () => context.goNamed('routeHistory'),
                           ),
-                        if (!PlatformUtils.isWeb)
-                          ListTile(
-                            title: Text(t.pages.logs.title),
-                            leading: const Icon(Icons.article_outlined),
-                            trailing: const Icon(Icons.chevron_right_rounded),
-                            onTap: () => context.goNamed('logs'),
-                          ),
                       ],
                     ),
                     _SettingsGroup(

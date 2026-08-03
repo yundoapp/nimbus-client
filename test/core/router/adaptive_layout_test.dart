@@ -10,7 +10,11 @@ void main() {
   test('desktop navigation destinations match every desktop shell branch', () {
     final actions = shellRouteActions(translations, false, false);
     expect(actions, hasLength(3));
-    expect(actions.last.title, translations.nimbus.routeHistory.menuTitle);
+    expect(actions.map((action) => action.title), [
+      translations.pages.home.title,
+      translations.nimbus.routeHistory.menuTitle,
+      translations.pages.settings.title,
+    ]);
     expect(shellRouteActions(translations, true, false), hasLength(3));
   });
 
@@ -24,5 +28,17 @@ void main() {
 
     expect(settingsPage, contains('title: Text(t.nimbus.routeHistory.menuTitle)'));
     expect(settingsPage, isNot(contains('title: Text(t.nimbus.routeHistory.title)')));
+    expect(settingsPage, isNot(contains('title: Text(t.pages.logs.title)')));
+  });
+
+  test('desktop shell branches follow home history settings order', () {
+    final routingConfig = File('lib/core/router/go_router/routing_config_notifier.dart').readAsStringSync();
+    final homeIndex = routingConfig.indexOf("name: 'home'");
+    final historyIndex = routingConfig.indexOf("name: 'routeHistory'");
+    final settingsIndex = routingConfig.indexOf("name: 'settings'");
+
+    expect(homeIndex, greaterThanOrEqualTo(0));
+    expect(historyIndex, greaterThan(homeIndex));
+    expect(settingsIndex, greaterThan(historyIndex));
   });
 }

@@ -18,8 +18,8 @@ extension AppLocaleX on AppLocale {
     "pt_BR" => "Portuguese (Brazil)",
     "ru" => "Русский",
     "tr" => "Türkçe",
-    "zh" || "zh_CN" => "中文 (中国)",
-    "zh_TW" => "中文 (台湾)",
+    "zh" || "zh_CN" => "简体中文",
+    "zh_TW" => "繁体中文",
     _ => "Unknown",
   };
 }

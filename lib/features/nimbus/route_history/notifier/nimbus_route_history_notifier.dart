@@ -3,12 +3,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:hiddify/core/directories/directories_provider.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
-import 'package:hiddify/features/nimbus/auth/model/nimbus_rules_config.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/route_history/model/nimbus_route_history.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 final nimbusRouteHistoryProvider = NotifierProvider<NimbusRouteHistoryNotifier, NimbusRouteHistoryState>(
   NimbusRouteHistoryNotifier.new,
@@ -27,6 +28,52 @@ class NimbusRouteHistoryState {
   }
 }
 
+class NimbusRouteHistoryControllerConfig {
+  const NimbusRouteHistoryControllerConfig({required this.webSocketUri, required this.secret});
+
+  final Uri webSocketUri;
+  final String secret;
+
+  Map<String, dynamic>? get headers => secret.isEmpty ? null : {'Authorization': 'Bearer $secret'};
+}
+
+@visibleForTesting
+NimbusRouteHistoryControllerConfig? parseNimbusRouteHistoryControllerConfig(String content) {
+  try {
+    final decoded = jsonDecode(content);
+    if (decoded is! Map) return null;
+    final experimental = decoded['experimental'];
+    if (experimental is! Map) return null;
+    final clashApi = experimental['clash_api'];
+    if (clashApi is! Map) return null;
+    final controller = clashApi['external_controller']?.toString().trim() ?? '';
+    if (controller.isEmpty) return null;
+
+    final sourceUri = Uri.tryParse(controller.contains('://') ? controller : 'http://$controller');
+    if (sourceUri == null || !sourceUri.hasPort) return null;
+    final host = sourceUri.host.toLowerCase();
+    if (host != '127.0.0.1' && host != 'localhost' && host != '::1') return null;
+    if (sourceUri.scheme != 'http' && sourceUri.scheme != 'https') return null;
+
+    return NimbusRouteHistoryControllerConfig(
+      webSocketUri: Uri(
+        scheme: sourceUri.scheme == 'https' ? 'wss' : 'ws',
+        host: sourceUri.host,
+        port: sourceUri.port,
+        path: '/connections',
+      ),
+      secret: clashApi['secret']?.toString() ?? '',
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<NimbusRouteHistoryControllerConfig?> loadNimbusRouteHistoryControllerConfig(File file) async {
+  if (!await file.exists()) return null;
+  return parseNimbusRouteHistoryControllerConfig(await file.readAsString());
+}
+
 class NimbusRouteHistoryNotifier extends Notifier<NimbusRouteHistoryState> {
   static const _retryDelay = Duration(seconds: 1);
 
@@ -36,9 +83,12 @@ class NimbusRouteHistoryNotifier extends Notifier<NimbusRouteHistoryState> {
   bool _enabled = false;
   bool _connected = false;
   bool _recordingEnabled = false;
+  late final File _controllerConfigFile;
 
   @override
   NimbusRouteHistoryState build() {
+    final workingDirectory = ref.watch(appDirectoriesProvider).requireValue.workingDir;
+    _controllerConfigFile = File(p.join(workingDirectory.path, 'data', 'current-config.json'));
     ref.listen(nimbusOwnedConnectionStatusProvider, (_, next) {
       _connected = next.valueOrNull is Connected;
       _syncMonitoring();
@@ -78,10 +128,9 @@ class NimbusRouteHistoryNotifier extends Notifier<NimbusRouteHistoryState> {
     _started = true;
     while (!_disposed && _enabled) {
       try {
-        final socket = await WebSocket.connect(
-          'ws://$nimbusRouteDiagnosticsController/connections',
-          headers: {'Authorization': 'Bearer $nimbusRouteDiagnosticsSecret'},
-        );
+        final controller = await loadNimbusRouteHistoryControllerConfig(_controllerConfigFile);
+        if (controller == null) throw const FormatException('local route history controller is unavailable');
+        final socket = await WebSocket.connect(controller.webSocketUri.toString(), headers: controller.headers);
         if (_disposed) {
           await socket.close();
           return;
