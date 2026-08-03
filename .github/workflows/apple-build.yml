@@ -8,6 +8,9 @@ on:
         required: false
         type: string
         default: ""
+  push:
+    branches:
+      - codex/yundo-hiddify-rebuild
 
 permissions:
   contents: read
