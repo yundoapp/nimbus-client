@@ -837,6 +837,7 @@
     },
     "devices": {
       "title": "Device management",
+      "loading": "Loading devices...",
       "count": "${used}/${limit} devices",
       "empty": "No devices yet",
       "unknownDevice": "Unknown device",

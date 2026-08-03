@@ -837,6 +837,7 @@
     },
     "devices": {
       "title": "设备管理",
+      "loading": "正在加载设备...",
       "count": "${used}/${limit} 台设备",
       "empty": "暂无设备",
       "unknownDevice": "未知设备",

@@ -837,6 +837,7 @@
     },
     "devices": {
       "title": "裝置管理",
+      "loading": "正在載入裝置...",
       "count": "${used}/${limit} 台裝置",
       "empty": "暫無裝置",
       "unknownDevice": "未知裝置",

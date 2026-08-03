@@ -19,11 +19,12 @@ class NimbusDevicesDialog extends HookConsumerWidget {
     final t = ref.watch(translationsProvider).requireValue;
 
     useEffect(() {
+      if (!authState.isAuthenticated || authState.session == null) return null;
       Future.microtask(() => ref.read(nimbusAuthControllerProvider.notifier).loadDevices());
       return null;
-    }, const []);
+    }, [authState.isAuthenticated, authState.session?.accessToken]);
 
-    if (!authState.isAuthenticated) {
+    if (!authState.isAuthenticated && !authState.isRestoring) {
       Future.microtask(() {
         if (context.mounted) {
           Navigator.of(context).pop();
@@ -32,9 +33,18 @@ class NimbusDevicesDialog extends HookConsumerWidget {
       });
     }
 
-    final content = devices == null && authState.isLoading
-        ? const SizedBox(height: 160, child: Center(child: CircularProgressIndicator()))
-        : _DevicesContent(devices: devices, isLoading: authState.isLoading);
+    final showInitialLoading = shouldShowNimbusDevicesInitialLoading(
+      isAuthenticated: authState.isAuthenticated,
+      isRestoring: authState.isRestoring,
+      isLoading: authState.isLoading,
+      hasDevices: devices != null,
+      hasError: authState.errorMessage != null,
+    );
+    final content = _DevicesContent(
+      devices: devices,
+      isLoading: authState.isLoading || authState.isRestoring,
+      showInitialLoading: showInitialLoading,
+    );
 
     if (asPage) {
       return Scaffold(
@@ -69,10 +79,11 @@ class NimbusDevicesPage extends StatelessWidget {
 }
 
 class _DevicesContent extends ConsumerWidget {
-  const _DevicesContent({required this.devices, required this.isLoading});
+  const _DevicesContent({required this.devices, required this.isLoading, required this.showInitialLoading});
 
   final NimbusDevicesList? devices;
   final bool isLoading;
+  final bool showInitialLoading;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -86,15 +97,45 @@ class _DevicesContent extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(t.nimbus.devices.count(used: items.length, limit: limit == 0 ? '--' : limit)),
+        if (isLoading && devices != null) ...[
+          const Gap(8),
+          const LinearProgressIndicator(minHeight: 2),
+        ],
         if (errorMessage != null) ...[
           const Gap(8),
           Text(
             errorMessage,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error),
           ),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton.icon(
+              onPressed: isLoading
+                  ? null
+                  : () => ref.read(nimbusAuthControllerProvider.notifier).loadDevices(),
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(t.nimbus.home.retry),
+            ),
+          ),
         ],
         const Gap(12),
-        if (items.isEmpty)
+        if (showInitialLoading)
+          SizedBox(
+            height: 160,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const Gap(12),
+                  Text(t.nimbus.devices.loading),
+                ],
+              ),
+            ),
+          )
+        else if (errorMessage != null)
+          const SizedBox(height: 12)
+        else if (items.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 32),
             child: Center(child: Text(t.nimbus.devices.empty)),
@@ -107,6 +148,17 @@ class _DevicesContent extends ConsumerWidget {
       ],
     );
   }
+}
+
+@visibleForTesting
+bool shouldShowNimbusDevicesInitialLoading({
+  required bool isAuthenticated,
+  required bool isRestoring,
+  required bool isLoading,
+  required bool hasDevices,
+  required bool hasError,
+}) {
+  return !hasDevices && (isRestoring || isLoading || (isAuthenticated && !hasError));
 }
 
 class _DeviceTile extends ConsumerWidget {

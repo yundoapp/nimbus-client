@@ -169,3 +169,9 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - 设置页删除整块“加速与访问”分组；自定义网站管理继续从首页“加速模式”入口进入。记录不再作为设置页重复入口，统一使用主导航进入。
 - 该导航和规则页面位于共享 Flutter/Dart 路径，macOS、Windows、iOS、Android 必须同步保留实现和翻译。当前验收优先本机 macOS 双版本与 iOS Simulator；Windows/Android 继续由远程四端构建同步覆盖，实体设备验收另列清单。
 - 本轮构建策略：本机只优先构建和覆盖安装 macOS、iOS Simulator；远端提交后保持 Windows x64、Android Debug 与 Apple 远程入口可构建。不能因为本轮暂不验收 Windows/Android 而删除或平台化遗漏共享功能。
+
+### 4.9 设备管理首次打开加载状态（2026-08-03）
+
+- 设备管理弹窗或页面首次打开时，账号恢复可能尚未完成；不能把尚未请求设备列表误显示为“暂无设备”。认证恢复中、设备请求中和已有错误必须分别呈现加载、进度或重试状态。
+- 设备列表请求绑定到认证 session 就绪事件；首次打开期间即使 session 尚未恢复，恢复完成后也会自动请求，不要求用户关闭窗口再重开。
+- 设备接口和设备生命周期未改变；该修复位于共享 Flutter/Dart 展示与请求触发层，macOS、Windows、iOS、Android 使用同一行为。
