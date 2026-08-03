@@ -17,7 +17,7 @@ fail() {
   exit 1
 }
 
-for command_name in awk codesign ditto mktemp open osascript pgrep plutil rm security shasum touch; do
+for command_name in awk codesign ditto grep mktemp open osascript pgrep plutil rm security shasum strings touch; do
   command -v "${command_name}" >/dev/null 2>&1 || fail "缺少 ${command_name}"
 done
 [[ -d "${developer_dir}" ]] || fail "找不到 Xcode Developer 目录：${developer_dir}"
@@ -45,15 +45,17 @@ localized_name="$(plutil -extract CFBundleDisplayName raw -o - "${built_app}/Con
 [[ "${localized_name}" == "云渡" ]] || fail "正式版简体中文系统名称不正确：${localized_name}"
 [[ -f "${built_app}/Contents/Resources/AppIcon.icns" ]] || fail "正式版缺少 macOS AppIcon"
 
-# Core 的源文件仍沿用上游文件名以保持 ABI 和构建链稳定；最终 App 包不暴露该名称。
+# 无论 Xcode 是否命中增量复制，都用本轮刚构建的 Core 覆盖 App 包，避免
+# 旧构建目录残留的 dylib 与当前 Dart 代码混用。
+source_core="${repo_root}/hiddify-core/bin/hiddify-core.dylib"
 legacy_core="${built_app}/Contents/Frameworks/hiddify-core.dylib"
 branded_core="${built_app}/Contents/Frameworks/YundoCore.dylib"
-if [[ -f "${legacy_core}" && ! -e "${branded_core}" ]]; then
-  mv "${legacy_core}" "${branded_core}"
-elif [[ -f "${legacy_core}" && -f "${branded_core}" ]]; then
-  rm -f "${legacy_core}"
-fi
+[[ -f "${source_core}" ]] || fail "本轮构建的 Yundo Core 不存在：${source_core}"
+rm -f "${legacy_core}" "${branded_core}"
+ditto "${source_core}" "${branded_core}"
 [[ -f "${branded_core}" ]] || fail "构建产物缺少 Yundo Core"
+strings "${branded_core}" | grep -F 'managed-route-rules' >/dev/null \
+  || fail "App 包内 Yundo Core 缺少托管路由能力"
 if find "${built_app}" -iname '*hiddify*' -print -quit | grep -q .; then
   fail "正式版构建产物仍包含 Hiddify 可见文件名"
 fi

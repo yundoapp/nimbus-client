@@ -54,7 +54,7 @@
 /* Begin PBXCopyFilesBuildPhase section */
 		33CC110E2044A8840003C045 /* Bundle Framework */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 12;
+			buildActionMask = 2147483647;
 			dstPath = Contents/Frameworks;
 			dstSubfolderSpec = 1;
 			files = (
