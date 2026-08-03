@@ -97,8 +97,14 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path out -Force | Out-Null
-          Get-ChildItem -Path dist -Recurse -Filter '*.exe' | Copy-Item -Destination out
-          Get-ChildItem -Path dist -Recurse -Filter '*.zip' | Copy-Item -Destination out
+          $versionLine = Select-String -Path pubspec.yaml -Pattern '^version:\s*([^+]+)\+(\d+)$'
+          if (-not $versionLine) { throw 'Cannot read version from pubspec.yaml' }
+          $version = $versionLine.Matches[0].Groups[1].Value
+          $build = $versionLine.Matches[0].Groups[2].Value
+          $setup = Get-ChildItem -Path dist -Recurse -Filter '*.exe' | Select-Object -First 1
+          $portable = Get-ChildItem -Path dist -Recurse -Filter '*.zip' | Select-Object -First 1
+          Copy-Item $setup.FullName "out/Yundo-Windows-$version-build$build-x64-setup-unsigned.exe"
+          Copy-Item $portable.FullName "out/Yundo-Windows-$version-build$build-x64-portable.zip"
           Get-FileHash out/* -Algorithm SHA256 | Format-Table -AutoSize
       - uses: actions/upload-artifact@v6
         with:
@@ -165,8 +171,11 @@ jobs:
       - name: 收集 Android 产物
         run: |
           mkdir -p out
-          cp build/app/outputs/flutter-apk/app-debug.apk out/Yundo-Android-Debug-universal.apk
-          sha256sum out/Yundo-Android-Debug-universal.apk
+          app_version="$(sed -n 's/^version: \([^+]*\)+.*/\1/p' pubspec.yaml)"
+          build_number="$(sed -n 's/^version: [^+]*+\([0-9]*\).*/\1/p' pubspec.yaml)"
+          artifact="out/Yundo-Android-${app_version}-build${build_number}-universal-debug.apk"
+          cp build/app/outputs/flutter-apk/app-debug.apk "$artifact"
+          sha256sum "$artifact"
       - uses: actions/upload-artifact@v6
         with:
           name: android-baseline
