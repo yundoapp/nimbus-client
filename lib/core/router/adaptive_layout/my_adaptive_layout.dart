@@ -63,7 +63,7 @@ class MyAdaptiveLayout extends HookConsumerWidget {
                     node: navScopeNode,
                     child: NavigationRail(
                       extended: Breakpoint(context).isDesktop(),
-                      destinations: _navRailDests(_actions(t, showProfilesAction, isMobileBreakpoint)),
+                      destinations: _navRailDests(shellRouteActions(t, showProfilesAction, isMobileBreakpoint)),
                       selectedIndex: navigationShell.currentIndex,
                       onDestinationSelected: (index) => _onTap(context, index),
                       trailing: Breakpoint(context).isDesktop()
@@ -84,7 +84,7 @@ class MyAdaptiveLayout extends HookConsumerWidget {
                 node: navScopeNode,
                 child: NavigationBar(
                   selectedIndex: navigationShell.currentIndex <= 1 ? navigationShell.currentIndex : 0,
-                  destinations: _navDests(_actions(t, showProfilesAction, isMobileBreakpoint)),
+                  destinations: _navDests(shellRouteActions(t, showProfilesAction, isMobileBreakpoint)),
                   onDestinationSelected: (index) => _onTap(context, index),
                 ),
               )
@@ -98,14 +98,18 @@ class MyAdaptiveLayout extends HookConsumerWidget {
     navigationShell.goBranch(index, initialLocation: index == navigationShell.currentIndex);
   }
 
-  List<ShellRouteAction> _actions(Translations t, bool showProfilesAction, bool isMobileBreakpoint) => [
-    ShellRouteAction(Icons.home_rounded, t.pages.home.title),
-    if (showProfilesAction && !isMobileBreakpoint) ShellRouteAction(Icons.view_list_rounded, t.pages.profiles.title),
-    ShellRouteAction(Icons.settings_rounded, t.pages.settings.title),
-  ];
-
   List<NavigationDestination> _navDests(List<ShellRouteAction> actions) =>
       actions.map((e) => NavigationDestination(icon: Icon(e.icon), label: e.title)).toList();
   List<NavigationRailDestination> _navRailDests(List<ShellRouteAction> actions) =>
       actions.map((e) => NavigationRailDestination(icon: Icon(e.icon), label: Text(e.title))).toList();
 }
+
+List<ShellRouteAction> shellRouteActions(Translations t, bool showProfilesAction, bool isMobileBreakpoint) => [
+  ShellRouteAction(Icons.home_rounded, t.pages.home.title),
+  if (showProfilesAction && !isMobileBreakpoint) ShellRouteAction(Icons.view_list_rounded, t.pages.profiles.title),
+  ShellRouteAction(Icons.settings_rounded, t.pages.settings.title),
+  if (!isMobileBreakpoint) ...[
+    ShellRouteAction(Icons.receipt_long_rounded, t.pages.logs.title),
+    ShellRouteAction(Icons.info_outline_rounded, t.pages.about.title),
+  ],
+];
