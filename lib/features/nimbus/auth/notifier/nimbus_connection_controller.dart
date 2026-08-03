@@ -13,6 +13,7 @@ import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_rules_config.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/features/nimbus/rules/notifier/nimbus_rules_state.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/utils/utils.dart';
@@ -333,6 +334,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         rulesPackage = await _repository.fetchRulesPackage(session);
         assertSupportedNimbusRulesPackage(rulesPackage);
         await _repository.saveRulesPackage(session.user.id, rulesPackage);
+        ref.invalidate(nimbusCachedRulesPackageProvider);
       }
       if (!plan.rulesManifest.sameVersions(rulesPackage.manifest)) {
         throw const FormatException('rules package changed while preparing connection');
@@ -422,7 +424,10 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       cached: _repository.readRulesPackage(session.user.id),
       fetchManifest: (localManifest) => _repository.fetchRulesManifest(session: session, localManifest: localManifest),
       fetchPackage: () => _repository.fetchRulesPackage(session),
-      savePackage: (rulesPackage) => _repository.saveRulesPackage(session.user.id, rulesPackage),
+      savePackage: (rulesPackage) async {
+        await _repository.saveRulesPackage(session.user.id, rulesPackage);
+        ref.invalidate(nimbusCachedRulesPackageProvider);
+      },
     );
   }
 

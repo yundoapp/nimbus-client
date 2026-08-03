@@ -9,36 +9,45 @@ void main() {
 
   test('desktop navigation destinations match every desktop shell branch', () {
     final actions = shellRouteActions(translations, false, false);
-    expect(actions, hasLength(3));
+    expect(actions, hasLength(4));
     expect(actions.map((action) => action.title), [
       translations.pages.home.title,
       translations.nimbus.routeHistory.menuTitle,
+      translations.nimbus.rules.menuTitle,
       translations.pages.settings.title,
     ]);
-    expect(shellRouteActions(translations, true, false), hasLength(3));
+    expect(shellRouteActions(translations, true, false), hasLength(4));
   });
 
-  test('mobile navigation keeps only home and settings destinations', () {
-    expect(shellRouteActions(translations, false, true), hasLength(2));
-    expect(shellRouteActions(translations, true, true), hasLength(2));
+  test('mobile navigation has the same four destinations as desktop', () {
+    expect(shellRouteActions(translations, false, true), hasLength(4));
+    expect(shellRouteActions(translations, true, true), hasLength(4));
   });
 
-  test('route history entry uses the short menu title in settings', () {
+  test('route history is no longer duplicated inside settings', () {
     final settingsPage = File('lib/features/settings/overview/settings_page.dart').readAsStringSync();
 
-    expect(settingsPage, contains('title: Text(t.nimbus.routeHistory.menuTitle)'));
-    expect(settingsPage, isNot(contains('title: Text(t.nimbus.routeHistory.title)')));
+    expect(settingsPage, isNot(contains('routeHistory')));
     expect(settingsPage, isNot(contains('title: Text(t.pages.logs.title)')));
   });
 
-  test('desktop shell branches follow home history settings order', () {
+  test('shell branches follow home history rules settings order', () {
     final routingConfig = File('lib/core/router/go_router/routing_config_notifier.dart').readAsStringSync();
     final homeIndex = routingConfig.indexOf("name: 'home'");
     final historyIndex = routingConfig.indexOf("name: 'routeHistory'");
+    final rulesIndex = routingConfig.indexOf("name: 'rules'");
     final settingsIndex = routingConfig.indexOf("name: 'settings'");
 
     expect(homeIndex, greaterThanOrEqualTo(0));
     expect(historyIndex, greaterThan(homeIndex));
-    expect(settingsIndex, greaterThan(historyIndex));
+    expect(rulesIndex, greaterThan(historyIndex));
+    expect(settingsIndex, greaterThan(rulesIndex));
+  });
+
+  test('settings no longer exposes the acceleration and access group', () {
+    final settingsPage = File('lib/features/settings/overview/settings_page.dart').readAsStringSync();
+
+    expect(settingsPage, isNot(contains('accessSection')));
+    expect(settingsPage, isNot(contains('NimbusRoutePreferencesDialog')));
   });
 }

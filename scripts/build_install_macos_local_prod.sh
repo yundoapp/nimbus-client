@@ -18,7 +18,7 @@ fail() {
   exit 1
 }
 
-for command_name in awk codesign ditto grep mktemp open osascript pgrep plutil rm security shasum strings touch; do
+for command_name in awk codesign defaults ditto grep mktemp open osascript pgrep plutil rm security shasum strings touch; do
   command -v "${command_name}" >/dev/null 2>&1 || fail "缺少 ${command_name}"
 done
 [[ "${build_number}" =~ ^[0-9]+$ ]] || fail "构建号必须是纯数字：${build_number}"
@@ -28,6 +28,15 @@ done
 flutter_bin="${FLUTTER_BIN:-$(command -v flutter || true)}"
 [[ -x "${flutter_bin}" ]] || fail "找不到 Flutter；请设置 FLUTTER_BIN"
 export DEVELOPER_DIR="${developer_dir}"
+
+was_running=false
+was_accelerated=false
+if pgrep -f "${expected_executable}" >/dev/null 2>&1; then
+  was_running=true
+  if defaults read "${expected_bundle_id}" flutter.started_by_user 2>/dev/null | grep -Eq '(^|[[:space:]])(1|true)([[:space:]]|$)'; then
+    was_accelerated=true
+  fi
+fi
 
 cd "${repo_root}"
 GO_BIN="${GO_BIN:-$(command -v go || true)}" "${script_dir}/build_yundo_macos_core.sh"
@@ -74,7 +83,6 @@ app_entitlements="$(mktemp "${TMPDIR:-/tmp}/yundo-prod-entitlements.XXXXXX.plist
 backup_root=""
 backup_app=""
 replacement_started=false
-was_running=false
 cleanup() {
   local status=$?
   trap - EXIT
@@ -115,8 +123,7 @@ codesign --force --sign "${codesign_identity}" \
   --entitlements "${app_entitlements}" "${built_app}"
 codesign --verify --deep --strict "${built_app}"
 
-if pgrep -f "${expected_executable}" >/dev/null 2>&1; then
-  was_running=true
+if [[ "${was_running}" == true ]]; then
   osascript -e "tell application id \"${expected_bundle_id}\" to quit" >/dev/null 2>&1 || true
   for _ in {1..80}; do
     pgrep -f "${expected_executable}" >/dev/null 2>&1 || break
@@ -150,14 +157,36 @@ built_hash="$(shasum -a 256 "${built_app}/Contents/MacOS/${executable_name}" | a
 installed_hash="$(shasum -a 256 "${expected_executable}" | awk '{print $1}')"
 [[ "${built_hash}" == "${installed_hash}" ]] \
   || fail "安装后的正式版 App 与构建产物不一致"
-pgrep -f "${expected_executable}" >/dev/null 2>&1 \
-  && fail "正式版覆盖安装后意外启动"
+
+if [[ "${was_running}" == true ]]; then
+  open "${installed_app}"
+  for _ in {1..40}; do
+    pgrep -f "${expected_executable}" >/dev/null 2>&1 && break
+    sleep 0.25
+  done
+  pgrep -f "${expected_executable}" >/dev/null 2>&1 \
+    || fail "正式版覆盖安装后未能启动"
+  if [[ "${was_accelerated}" == true ]]; then
+    for _ in {1..120}; do
+      if defaults read "${expected_bundle_id}" flutter.started_by_user 2>/dev/null \
+        | grep -Eq '(^|[[:space:]])(1|true)([[:space:]]|$)'; then
+        break
+      fi
+      sleep 0.5
+    done
+    defaults read "${expected_bundle_id}" flutter.started_by_user 2>/dev/null \
+      | grep -Eq '(^|[[:space:]])(1|true)([[:space:]]|$)' \
+      || fail "正式版覆盖安装后未恢复原有加速状态"
+  fi
+fi
 
 rm -rf "${backup_root}"
 backup_root=""
-echo "Yundo 正式版已完成构建、签名、备份式覆盖安装和校验，保持未运行。"
+echo "Yundo 正式版已完成构建、签名、备份式覆盖安装和校验。"
 echo "构建产物：${built_app}"
 echo "安装位置：${installed_app}"
 echo "Bundle ID：${installed_bundle_id}"
 echo "本机构建号：${build_number}"
 echo "可执行文件 SHA-256：${installed_hash}"
+echo "覆盖前运行状态：${was_running}，加速状态：${was_accelerated}"
+echo "覆盖后按原状态恢复正式版运行。"

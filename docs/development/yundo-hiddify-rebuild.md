@@ -159,3 +159,13 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - `scripts/build_macos_remote.sh` 负责远程 macOS Debug/Release 构建、Yundo Core 替换、重签、签名校验和 ZIP 产出，不覆盖 `/Applications`；本地 `scripts/build_install_run_macos_dev.sh` 继续负责快速构建、双版本覆盖安装和启动验收。
 - `scripts/build_ios_remote.sh` 负责 Flutter 框架准备、Xcode 设备归档、App Store Connect API Key 自动 profile 管理、IPA 导出和主 App/Packet Tunnel Bundle ID 校验。`.github/workflows/apple-build.yml` 通过手动触发同时产出 macOS 开发版、macOS 正式版和 iOS 正式版 artifact。
 - Apple Developer 计划开通不等于远端已经具备签名材料；首次远程构建前必须按 `docs/development/apple-signing-setup.md` 配置 App ID 能力、证书、`.p12`、App Store Connect API Key 和 GitHub Secrets。未配置时只允许报告“源码构建可验证”，不能报告“远程签名构建完成”。
+
+### 4.8 规则可视化与四端统一主导航（2026-08-03）
+
+- 桌面端和移动端共享同一组四个主菜单，顺序固定为“主页、记录、规则、设置”；路由分支、NavigationRail、NavigationBar 和多语言菜单标题必须保持一一对应，避免再次出现 `selectedIndex` 越界红屏。
+- “规则”页面是面向排障和规则核对的明确诊断入口，展示当前加速会话已经加载的编译路由规则、规则库，以及下次加速将使用的已验证缓存规则包、自定义网站规则、公共规则和本地 Hiddify 路由规则。每一项都支持查看原始 JSON 配置，并显示公共规则版本、用户规则版本和规则配置版本。
+- 未连接时页面必须明确标记“当前未加载，以下展示的是下次加速将使用的已保存规则包”；连接准备中、停止中或已连接时才标记当前运行规则已加载，不能把缓存内容冒充运行时配置。
+- 规则页面只读取现有规则包缓存、`nimbusManagedRouteOptionsProvider` 和 Hiddify 原生 `rulesNotifierProvider`，不新增网络请求，不修改 DNS、路由、TUN、系统代理、Helper 或 Core 生命周期。
+- 设置页删除整块“加速与访问”分组；自定义网站管理继续从首页“加速模式”入口进入。记录不再作为设置页重复入口，统一使用主导航进入。
+- 该导航和规则页面位于共享 Flutter/Dart 路径，macOS、Windows、iOS、Android 必须同步保留实现和翻译。当前验收优先本机 macOS 双版本与 iOS Simulator；Windows/Android 继续由远程四端构建同步覆盖，实体设备验收另列清单。
+- 本轮构建策略：本机只优先构建和覆盖安装 macOS、iOS Simulator；远端提交后保持 Windows x64、Android Debug 与 Apple 远程入口可构建。不能因为本轮暂不验收 Windows/Android 而删除或平台化遗漏共享功能。

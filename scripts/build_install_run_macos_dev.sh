@@ -18,7 +18,7 @@ fail() {
   exit 1
 }
 
-for command_name in awk codesign ditto grep mktemp open osascript pgrep plutil rm security shasum strings touch; do
+for command_name in awk codesign defaults ditto grep mktemp open osascript pgrep plutil rm security shasum strings touch; do
   command -v "${command_name}" >/dev/null 2>&1 || fail "缺少 ${command_name}"
 done
 [[ "${build_number}" =~ ^[0-9]+$ ]] || fail "构建号必须是纯数字：${build_number}"
@@ -28,6 +28,15 @@ done
 flutter_bin="${FLUTTER_BIN:-$(command -v flutter || true)}"
 [[ -x "${flutter_bin}" ]] || fail "找不到 Flutter；请设置 FLUTTER_BIN"
 export DEVELOPER_DIR="${developer_dir}"
+
+was_running=false
+was_accelerated=false
+if pgrep -f "${expected_executable}" >/dev/null 2>&1; then
+  was_running=true
+  if defaults read "${expected_bundle_id}" flutter.started_by_user 2>/dev/null | grep -Eq '(^|[[:space:]])(1|true)([[:space:]]|$)'; then
+    was_accelerated=true
+  fi
+fi
 
 quit_existing_app() {
   pgrep -f "${expected_executable}" >/dev/null 2>&1 || return 0
@@ -126,17 +135,31 @@ installed_bundle_id="$(plutil -extract CFBundleIdentifier raw -o - "${installed_
 "${lsregister_path}" -f "${installed_app}"
 touch "${installed_app}"
 
-open "${installed_app}"
-for _ in {1..40}; do
-  pgrep -f "${expected_executable}" >/dev/null 2>&1 && break
-  sleep 0.25
-done
-pgrep -f "${expected_executable}" >/dev/null 2>&1 \
-  || fail "Yundo Dev 构建完成后未能启动"
+if [[ "${was_running}" == true ]]; then
+  open "${installed_app}"
+  for _ in {1..40}; do
+    pgrep -f "${expected_executable}" >/dev/null 2>&1 && break
+    sleep 0.25
+  done
+  pgrep -f "${expected_executable}" >/dev/null 2>&1 \
+    || fail "Yundo Dev 覆盖安装后未能启动"
+  if [[ "${was_accelerated}" == true ]]; then
+    for _ in {1..120}; do
+      if defaults read "${expected_bundle_id}" flutter.started_by_user 2>/dev/null \
+        | grep -Eq '(^|[[:space:]])(1|true)([[:space:]]|$)'; then
+        break
+      fi
+      sleep 0.5
+    done
+    defaults read "${expected_bundle_id}" flutter.started_by_user 2>/dev/null \
+      | grep -Eq '(^|[[:space:]])(1|true)([[:space:]]|$)' \
+      || fail "Yundo Dev 覆盖安装后未恢复原有加速状态"
+  fi
+fi
 
 rm -rf "${backup_root}"
 echo "Yundo Dev 与 Yundo 正式版均已完成构建、签名、Bundle ID 校验和覆盖安装。"
 echo "构建产物：${built_app}"
 echo "本机构建号：${build_number}"
-echo "Yundo Dev 已启动：${installed_app}"
-echo "正式版保持未启动，避免两个版本同时接管网络。"
+echo "开发版覆盖前运行状态：${was_running}，加速状态：${was_accelerated}"
+echo "正式版由子脚本按覆盖前运行状态恢复；开发版同样按覆盖前运行状态恢复。"

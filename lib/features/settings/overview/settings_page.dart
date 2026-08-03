@@ -5,7 +5,6 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dar
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_change_password_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_devices_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.dart';
-import 'package:hiddify/features/nimbus/auth/widget/nimbus_route_preferences_dialog.dart';
 import 'package:hiddify/features/settings/notifier/reset_tunnel/reset_tunnel_notifier.dart';
 import 'package:hiddify/features/settings/overview/sections/general_page.dart';
 import 'package:hiddify/utils/utils.dart';
@@ -33,28 +32,6 @@ class SettingsPage extends HookConsumerWidget {
                     _SettingsGroup(
                       title: t.nimbus.settings.generalSection,
                       children: const [GeneralSettingsTiles(showDividers: true)],
-                    ),
-                    _SettingsGroup(
-                      title: t.nimbus.settings.accessSection,
-                      children: [
-                        ListTile(
-                          title: Text(t.nimbus.routePreferences.title),
-                          leading: const Icon(Icons.public_rounded),
-                          trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
-                          onTap: () => _openAdaptiveSettingsMenu(
-                            context,
-                            dialog: const NimbusRoutePreferencesDialog(),
-                            page: const NimbusRoutePreferencesPage(),
-                          ),
-                        ),
-                        if (!PlatformUtils.isWeb)
-                          ListTile(
-                            title: Text(t.nimbus.routeHistory.menuTitle),
-                            leading: const Icon(Icons.manage_search_rounded),
-                            trailing: const Icon(Icons.chevron_right_rounded),
-                            onTap: () => context.goNamed('routeHistory'),
-                          ),
-                      ],
                     ),
                     _SettingsGroup(
                       title: t.nimbus.settings.accountSection,

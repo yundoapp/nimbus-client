@@ -15,6 +15,7 @@ import 'package:hiddify/features/log/overview/logs_page.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_auth_page.dart';
 import 'package:hiddify/features/nimbus/route_history/widget/nimbus_route_history_page.dart';
+import 'package:hiddify/features/nimbus/rules/widget/nimbus_rules_overview_page.dart';
 import 'package:hiddify/features/per_app_proxy/overview/per_app_proxy_page.dart';
 import 'package:hiddify/features/profile/details/profile_details_page.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
@@ -39,8 +40,9 @@ part 'routing_config_notifier.g.dart';
 final branchesScope = <String, FocusScopeNode>{
   'home': FocusScopeNode(),
   'profiles': FocusScopeNode(),
-  'settings': FocusScopeNode(),
   'routeHistory': FocusScopeNode(),
+  'rules': FocusScopeNode(),
+  'settings': FocusScopeNode(),
 };
 
 // when the routing config is not yet initialized, this config is used
@@ -49,10 +51,10 @@ final loadingConfig = RoutingConfig(
 );
 
 String getNameOfBranch(bool isMobileBreakpoint, bool _, int index) =>
-    isMobileBreakpoint ? ['home', 'settings'][index] : ['home', 'settings', 'routeHistory'][index];
+    ['home', 'routeHistory', 'rules', 'settings'][index];
 
 int getIndexOfBranch(bool isMobileBreakpoint, bool _, String name) =>
-    isMobileBreakpoint ? ['home', 'settings'].indexOf(name) : ['home', 'settings', 'routeHistory'].indexOf(name);
+    ['home', 'routeHistory', 'rules', 'settings'].indexOf(name);
 
 @Riverpod(keepAlive: true)
 class RoutingConfigNotifier extends _$RoutingConfigNotifier {
@@ -159,17 +161,25 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                 ),
               ],
             ),
-            if (!isMobileBreakpoint && !PlatformUtils.isWeb)
-              StatefulShellBranch(
-                routes: <GoRoute>[
-                  GoRoute(
-                    name: 'routeHistory',
-                    path: '/route-history',
-                    builder: (_, _) =>
-                        FocusScope(node: branchesScope['routeHistory'], child: const NimbusRouteHistoryPage()),
-                  ),
-                ],
-              ),
+            StatefulShellBranch(
+              routes: <GoRoute>[
+                GoRoute(
+                  name: 'routeHistory',
+                  path: '/route-history',
+                  builder: (_, _) =>
+                      FocusScope(node: branchesScope['routeHistory'], child: const NimbusRouteHistoryPage()),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: <GoRoute>[
+                GoRoute(
+                  name: 'rules',
+                  path: '/rules',
+                  builder: (_, _) => FocusScope(node: branchesScope['rules'], child: const NimbusRulesOverviewPage()),
+                ),
+              ],
+            ),
             StatefulShellBranch(
               routes: <GoRoute>[
                 GoRoute(
@@ -258,13 +268,6 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                       pageBuilder: (_, state) =>
                           customTransition(TransitionType.slide, state.pageKey, const InboundOptionsPage()),
                     ),
-                    if (isMobileBreakpoint && !PlatformUtils.isWeb)
-                      GoRoute(
-                        name: 'routeHistory',
-                        path: 'route-history',
-                        pageBuilder: (_, state) =>
-                            customTransition(TransitionType.slide, state.pageKey, const NimbusRouteHistoryPage()),
-                      ),
                     GoRoute(
                       name: 'tlsTricks',
                       path: 'tls-tricks',
