@@ -99,7 +99,7 @@ class MyAdaptiveLayout extends HookConsumerWidget {
 
 List<ShellRouteAction> shellRouteActions(Translations t, bool _, bool isMobileBreakpoint) => [
   ShellRouteAction(Icons.home_rounded, t.pages.home.title),
-  ShellRouteAction(Icons.manage_search_rounded, t.nimbus.routeHistory.menuTitle),
+  ShellRouteAction(Icons.rocket_launch_rounded, t.nimbus.routeHistory.menuTitle),
   ShellRouteAction(Icons.rule_rounded, t.nimbus.rules.menuTitle),
   ShellRouteAction(Icons.settings_rounded, t.pages.settings.title),
 ];

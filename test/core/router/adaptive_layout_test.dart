@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiddify/core/router/adaptive_layout/my_adaptive_layout.dart';
 import 'package:hiddify/gen/translations.g.dart';
@@ -16,6 +17,7 @@ void main() {
       translations.nimbus.rules.menuTitle,
       translations.pages.settings.title,
     ]);
+    expect(actions[1].icon, Icons.rocket_launch_rounded);
     expect(shellRouteActions(translations, true, false), hasLength(4));
   });
 
