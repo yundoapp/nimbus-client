@@ -50,7 +50,6 @@ xcodebuild \
   BASE_BUNDLE_IDENTIFIER="${bundle_id}" \
   DEVELOPMENT_TEAM="${team_id}" \
   CODE_SIGN_STYLE=Automatic \
-  CODE_SIGN_IDENTITY="Apple Distribution" \
   FLUTTER_BUILD_NUMBER="${build_number}" \
   -allowProvisioningUpdates \
   -authenticationKeyPath "${auth_key_path}" \
