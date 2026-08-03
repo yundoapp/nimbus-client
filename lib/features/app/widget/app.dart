@@ -33,6 +33,7 @@ import 'package:window_manager/window_manager.dart';
 
 bool _debugAccessibility = false;
 bool isOnPauseCalled = false;
+const _macosBrandingChannel = MethodChannel('yundo_macos_branding');
 
 class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
   const App({super.key});
@@ -72,13 +73,22 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
     final upgrader = ref.watch(upgraderProvider);
     final activeBreakpoint = Breakpoint(context).activeBreakpoint;
     final appTitle = environment == Environment.dev ? translations.common.devAppTitle : translations.common.appTitle;
+    final localeIdentifier = locale.flutterLocale.toLanguageTag();
 
     useEffect(() {
       if (PlatformUtils.isDesktop) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => windowManager.setTitle(appTitle));
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          await windowManager.setTitle(appTitle);
+          if (PlatformUtils.isMacOS) {
+            await _macosBrandingChannel.invokeMethod<void>('setApplicationBranding', {
+              'displayName': appTitle,
+              'localeIdentifier': localeIdentifier,
+            });
+          }
+        });
       }
       return null;
-    }, [appTitle]);
+    }, [appTitle, localeIdentifier]);
 
     ref.listen(foregroundProfilesUpdateNotifierProvider, (_, _) {});
     if (PlatformUtils.isAndroid) ref.listen(perAppProxyServiceProvider, (_, _) {});

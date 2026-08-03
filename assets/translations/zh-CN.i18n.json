@@ -686,10 +686,10 @@
   "connection": {
     "tapToConnect": "点击开始加速",
     "connect": "开始加速",
-    "connecting": "加速中...",
+    "connecting": "正在加速中",
     "connected": "加速已开启",
     "disconnect": "停止加速",
-    "disconnecting": "正在停止加速...",
+    "disconnecting": "正在停止加速",
     "reconnect": "重新加速",
     "reconnectMsg": "正在重新加速以应用更改..."
   },
@@ -888,6 +888,7 @@
       "deleteConfirm": "确定删除“${value}”吗？"
     },
     "routeHistory": {
+      "menuTitle": "记录",
       "title": "加速记录",
       "settingsSubtitle": "本次启动以来的访问记录 · 最多 ${limit} 条",
       "count": "${count}/${limit} 条",

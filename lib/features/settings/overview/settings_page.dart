@@ -122,7 +122,7 @@ class SettingsPage extends HookConsumerWidget {
                           title: Text(t.pages.about.title),
                           leading: const Icon(Icons.info_rounded),
                           trailing: const Icon(Icons.chevron_right_rounded),
-                          onTap: () => context.goNamed('about'),
+                          onTap: () => context.pushNamed('about'),
                         ),
                       ],
                     ),

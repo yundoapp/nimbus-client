@@ -888,6 +888,7 @@
       "deleteConfirm": "Hapus \"${value}\"?"
     },
     "routeHistory": {
+      "menuTitle": "Riwayat",
       "title": "Riwayat akselerasi",
       "settingsSubtitle": "Catatan sejak aplikasi dibuka · maksimal ${limit}",
       "count": "${count} dari ${limit}",

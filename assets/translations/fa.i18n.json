@@ -888,6 +888,7 @@
       "deleteConfirm": "«${value}» حذف شود؟"
     },
     "routeHistory": {
+      "menuTitle": "سابقه",
       "title": "سابقه شتاب‌دهی",
       "settingsSubtitle": "رکوردهای این اجرای برنامه · حداکثر ${limit}",
       "count": "${count} از ${limit}",

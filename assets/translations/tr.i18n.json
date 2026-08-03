@@ -888,6 +888,7 @@
       "deleteConfirm": "\"${value}\" silinsin mi?"
     },
     "routeHistory": {
+      "menuTitle": "Geçmiş",
       "title": "Hızlandırma geçmişi",
       "settingsSubtitle": "Uygulama açıldığından beri kayıtlar · en fazla ${limit}",
       "count": "${count} / ${limit}",

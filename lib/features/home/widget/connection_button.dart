@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:gap/gap.dart';
 import 'package:hiddify/core/localization/translations.dart';
@@ -12,6 +13,7 @@ import 'package:hiddify/features/settings/notifier/config_option/config_option_n
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 const _yundoLogoColor = Color(0xFF4F67AA);
+const _minimumConnectionTransitionDuration = Duration(seconds: 1);
 
 // TODO: rewrite
 class ConnectionButton extends HookConsumerWidget {
@@ -22,6 +24,21 @@ class ConnectionButton extends HookConsumerWidget {
     final t = ref.watch(translationsProvider).requireValue;
     final connectionStatus = ref.watch(nimbusOwnedConnectionStatusProvider);
     final requiresReconnect = ref.watch(configOptionNotifierProvider).valueOrNull;
+    final pendingStatus = useState<ConnectionStatus?>(null);
+
+    Future<void> runWithTransition(ConnectionStatus transition, Future<void> Function() action) async {
+      final startedAt = DateTime.now();
+      pendingStatus.value = transition;
+      try {
+        await action();
+      } finally {
+        final remaining = _minimumConnectionTransitionDuration - DateTime.now().difference(startedAt);
+        if (remaining > Duration.zero) await Future<void>.delayed(remaining);
+        if (context.mounted) pendingStatus.value = null;
+      }
+    }
+
+    final displayedStatus = pendingStatus.value ?? connectionStatus.valueOrNull;
     // final animationController = useAnimationController(
     //   duration: const Duration(seconds: 1),
     // )..repeat(reverse: true); // Ensure the animation loops indefinitely
@@ -104,33 +121,45 @@ class ConnectionButton extends HookConsumerWidget {
     return _ConnectionButton(
       onTap: switch (connectionStatus) {
         AsyncData(value: Connected()) when requiresReconnect == true => () async {
-          return await ref.read(nimbusConnectionControllerProvider.notifier).reconnect();
+          await runWithTransition(const Connecting(), ref.read(nimbusConnectionControllerProvider.notifier).reconnect);
         },
         AsyncData(value: Disconnected()) || AsyncError() => () async {
-          return await ref.read(nimbusConnectionControllerProvider.notifier).connect(userInitiated: true);
+          await runWithTransition(
+            const Connecting(),
+            () => ref.read(nimbusConnectionControllerProvider.notifier).connect(userInitiated: true),
+          );
         },
         AsyncData(value: Connected()) => () async {
-          return await ref.read(nimbusConnectionControllerProvider.notifier).disconnect(userInitiated: true);
+          await runWithTransition(
+            const Disconnecting(),
+            () => ref.read(nimbusConnectionControllerProvider.notifier).disconnect(userInitiated: true),
+          );
         },
         _ => () async {},
       },
-      enabled: switch (connectionStatus) {
-        AsyncData(value: Connected()) || AsyncData(value: Disconnected()) || AsyncError() => true,
-        _ => false,
+      enabled:
+          pendingStatus.value == null &&
+          switch (connectionStatus) {
+            AsyncData(value: Connected()) || AsyncData(value: Disconnected()) || AsyncError() => true,
+            _ => false,
+          },
+      label: switch (pendingStatus.value) {
+        Connecting() => t.connection.connecting,
+        Disconnecting() => t.connection.disconnecting,
+        _ => switch (connectionStatus) {
+          AsyncData(value: Connected()) when requiresReconnect == true => t.connection.reconnect,
+          AsyncData(value: final status) => status.present(t),
+          _ => "",
+        },
       },
-      label: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => t.connection.reconnect,
-        AsyncData(value: final status) => status.present(t),
-        _ => "",
-      },
-      semanticsLabel: switch (connectionStatus.valueOrNull) {
+      semanticsLabel: switch (displayedStatus) {
         Connected() => t.connection.disconnect,
         Connecting() => t.connection.connecting,
         Disconnecting() => t.connection.disconnecting,
         _ => t.connection.connect,
       },
       buttonColor: _yundoLogoColor,
-      status: connectionStatus.valueOrNull,
+      status: displayedStatus,
       secureLabel: secureLabel,
     );
   }

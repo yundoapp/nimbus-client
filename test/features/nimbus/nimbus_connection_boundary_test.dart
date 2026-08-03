@@ -25,6 +25,15 @@ void main() {
       expect(status.valueOrNull, isA<Connected>());
       expect(isNimbusOwnedConnection(connection: const Connected(), connectedReported: true), isTrue);
     });
+
+    test('presents preparation as connecting before Nimbus ownership is reported', () {
+      final status = presentNimbusOwnedConnectionStatus(
+        rawConnectionStatus: const AsyncData(Disconnected()),
+        nimbusConnection: const NimbusConnectionState(isPreparing: true),
+      );
+
+      expect(status.valueOrNull, isA<Connecting>());
+    });
   });
 
   group('Nimbus reapply boundary', () {

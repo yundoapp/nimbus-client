@@ -880,6 +880,7 @@
       "deleteConfirm": "Supprimer « ${value} » ?"
     },
     "routeHistory": {
+      "menuTitle": "Historique",
       "title": "Historique d’accélération",
       "settingsSubtitle": "Requêtes depuis l’ouverture de l’app · maximum ${limit}",
       "count": "${count} sur ${limit}",

@@ -2,10 +2,12 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/directories/directories_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/constants.dart';
+import 'package:hiddify/core/model/environment.dart';
 import 'package:hiddify/core/model/failures.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/core/widget/adaptive_icon.dart';
@@ -23,6 +25,8 @@ class AboutPage extends HookConsumerWidget {
     final t = ref.watch(translationsProvider).requireValue;
     final appInfo = ref.watch(appInfoProvider).requireValue;
     final appUpdate = ref.watch(appUpdateNotifierProvider);
+    final environment = ref.watch(environmentProvider);
+    final appTitle = environment == Environment.dev ? t.common.devAppTitle : t.common.appTitle;
 
     ref.listen(appUpdateNotifierProvider, (_, next) async {
       if (!context.mounted) return;
@@ -63,6 +67,15 @@ class AboutPage extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: BackButton(
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.goNamed('settings');
+            }
+          },
+        ),
         title: Text(t.pages.about.title),
         actions: [
           PopupMenuButton(
@@ -94,7 +107,7 @@ class AboutPage extends HookConsumerWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(t.common.appTitle, style: Theme.of(context).textTheme.titleLarge),
+                      Text(appTitle, style: Theme.of(context).textTheme.titleLarge),
                       const Gap(4),
                       Text("${t.common.version} ${appInfo.presentVersion}"),
                     ],

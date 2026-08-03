@@ -5,6 +5,7 @@ import LaunchAtLogin
 
 class MainFlutterWindow: NSWindow {
   private var statusItemBridge: YundoStatusItemBridge?
+  private var brandingChannel: FlutterMethodChannel?
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
@@ -29,6 +30,32 @@ class MainFlutterWindow: NSWindow {
         result(nil)
       } else {
         result(FlutterMethodNotImplemented)
+      }
+    }
+
+    brandingChannel = FlutterMethodChannel(
+      name: "yundo_macos_branding",
+      binaryMessenger: flutterViewController.engine.binaryMessenger
+    )
+    brandingChannel?.setMethodCallHandler { call, result in
+      guard
+        call.method == "setApplicationBranding",
+        let arguments = call.arguments as? [String: Any],
+        let displayName = arguments["displayName"] as? String,
+        let localeIdentifier = arguments["localeIdentifier"] as? String
+      else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+
+      DispatchQueue.main.async {
+        let appleLanguage = localeIdentifier.hasPrefix("zh-TW") ? "zh-Hant" :
+          (localeIdentifier.hasPrefix("zh") ? "zh-Hans" : "en")
+        UserDefaults.standard.set([appleLanguage], forKey: "AppleLanguages")
+        ProcessInfo.processInfo.processName = displayName
+        NSApp.mainMenu?.items.first?.title = displayName
+        NSApp.mainMenu?.items.first?.submenu?.title = displayName
+        result(nil)
       }
     }
 

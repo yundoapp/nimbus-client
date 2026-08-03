@@ -892,6 +892,7 @@
       "deleteConfirm": "Удалить «${value}»?"
     },
     "routeHistory": {
+      "menuTitle": "История",
       "title": "История ускорения",
       "settingsSubtitle": "Записи с момента запуска приложения · до ${limit}",
       "count": "${count} из ${limit}",

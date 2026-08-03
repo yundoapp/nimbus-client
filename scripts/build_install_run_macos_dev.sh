@@ -10,16 +10,18 @@ expected_executable="${installed_app}/Contents/MacOS/Yundo Dev"
 api_base_url="${NIMBUS_API_BASE_URL:-http://127.0.0.1:4000/api/v1}"
 build_number="${YUNDO_LOCAL_BUILD_NUMBER:-$(date +%Y%m%d%H%M%S)}"
 developer_dir="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+lsregister_path="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
 fail() {
   echo "错误：$*" >&2
   exit 1
 }
 
-for command_name in awk codesign ditto mktemp open osascript pgrep plutil rm security shasum; do
+for command_name in awk codesign ditto mktemp open osascript pgrep plutil rm security shasum touch; do
   command -v "${command_name}" >/dev/null 2>&1 || fail "缺少 ${command_name}"
 done
 [[ -d "${developer_dir}" ]] || fail "找不到 Xcode Developer 目录：${developer_dir}"
+[[ -x "${lsregister_path}" ]] || fail "找不到 LaunchServices 注册工具：${lsregister_path}"
 
 flutter_bin="${FLUTTER_BIN:-$(command -v flutter || true)}"
 [[ -x "${flutter_bin}" ]] || fail "找不到 Flutter；请设置 FLUTTER_BIN"
@@ -51,6 +53,9 @@ cd "${repo_root}"
 [[ -d "${built_app}" ]] || fail "找不到 macOS Debug 产物：${built_app}"
 bundle_id="$(plutil -extract CFBundleIdentifier raw -o - "${built_app}/Contents/Info.plist")"
 [[ "${bundle_id}" == "${expected_bundle_id}" ]] || fail "Bundle ID 不正确：${bundle_id}"
+localized_name="$(plutil -extract CFBundleDisplayName raw -o - "${built_app}/Contents/Resources/zh-Hans.lproj/InfoPlist.strings")"
+[[ "${localized_name}" == "云渡开发版" ]] || fail "开发版简体中文系统名称不正确：${localized_name}"
+[[ -f "${built_app}/Contents/Resources/AppIcon.icns" ]] || fail "开发版缺少 macOS AppIcon"
 # Xcode 的 Copy Files 阶段按上游 Core 源文件 basename 输出；在最终 App
 # 包边界重命名，避免用户在进程/文件管理器里看到上游产品名。
 legacy_core="${built_app}/Contents/Frameworks/hiddify-core.dylib"
@@ -114,6 +119,8 @@ fi
 
 installed_bundle_id="$(plutil -extract CFBundleIdentifier raw -o - "${installed_app}/Contents/Info.plist")"
 [[ "${installed_bundle_id}" == "${expected_bundle_id}" ]] || fail "安装后的 Bundle ID 不正确：${installed_bundle_id}"
+"${lsregister_path}" -f "${installed_app}"
+touch "${installed_app}"
 
 open "${installed_app}"
 for _ in {1..40}; do

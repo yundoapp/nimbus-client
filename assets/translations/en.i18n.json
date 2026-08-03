@@ -888,6 +888,7 @@
       "deleteConfirm": "Delete \"${value}\"?"
     },
     "routeHistory": {
+      "menuTitle": "History",
       "title": "Acceleration history",
       "settingsSubtitle": "Records since the app opened · up to ${limit}",
       "count": "${count} of ${limit}",

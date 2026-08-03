@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/core/model/environment.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
@@ -30,6 +31,9 @@ TrayConnectionIndicator trayConnectionIndicatorFor(ConnectionStatus connection) 
 };
 
 String macosTrayIndicatorName(ConnectionStatus connection) => trayConnectionIndicatorFor(connection).name;
+
+String trayAppDisplayName(Translations translations, Environment environment) =>
+    environment == Environment.dev ? translations.common.devAppTitle : translations.common.appTitle;
 
 String windowsTrayIconPath(ConnectionStatus connection) => switch (trayConnectionIndicatorFor(connection)) {
   TrayConnectionIndicator.connected => Assets.images.yundoTrayWindowsConnected,
@@ -143,7 +147,8 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
 
   Future<void> _initializeTray() async {
     final t = await ref.watch(translationsProvider.future);
-    final appDisplayName = ref.watch(appInfoProvider).requireValue.name;
+    final environment = ref.watch(environmentProvider);
+    final appDisplayName = trayAppDisplayName(t, environment);
     final locale = ref.watch(localePreferencesProvider);
     final proxyMode = ref.watch(Preferences.nimbusProxyMode);
     final authState = ref.watch(nimbusAuthControllerProvider);

@@ -64,6 +64,9 @@ AsyncValue<ConnectionStatus> presentNimbusOwnedConnectionStatus({
   required NimbusConnectionState nimbusConnection,
 }) {
   if (nimbusConnection.isDisconnecting) return const AsyncData(Disconnecting());
+  if (nimbusConnection.isPreparing && !nimbusConnection.connectedReported) {
+    return const AsyncData(Connecting());
+  }
   final connection = rawConnectionStatus.valueOrNull;
   if (!nimbusConnection.connectedReported && (connection is Connected || connection is Connecting)) {
     return const AsyncData(Disconnected());

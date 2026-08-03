@@ -10,16 +10,18 @@ expected_executable="${installed_app}/Contents/MacOS/Yundo"
 api_base_url="${NIMBUS_PROD_API_BASE_URL:-https://api.yundo.app/api/v1}"
 build_number="${YUNDO_LOCAL_BUILD_NUMBER:-$(date +%Y%m%d%H%M%S)}"
 developer_dir="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+lsregister_path="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
 fail() {
   echo "错误：$*" >&2
   exit 1
 }
 
-for command_name in awk codesign ditto mktemp open osascript pgrep plutil rm security shasum; do
+for command_name in awk codesign ditto mktemp open osascript pgrep plutil rm security shasum touch; do
   command -v "${command_name}" >/dev/null 2>&1 || fail "缺少 ${command_name}"
 done
 [[ -d "${developer_dir}" ]] || fail "找不到 Xcode Developer 目录：${developer_dir}"
+[[ -x "${lsregister_path}" ]] || fail "找不到 LaunchServices 注册工具：${lsregister_path}"
 
 flutter_bin="${FLUTTER_BIN:-$(command -v flutter || true)}"
 [[ -x "${flutter_bin}" ]] || fail "找不到 Flutter；请设置 FLUTTER_BIN"
@@ -38,6 +40,9 @@ executable_name="$(plutil -extract CFBundleExecutable raw -o - "${built_app}/Con
   || fail "正式版 Bundle ID 不正确：${bundle_id}"
 [[ "${executable_name}" == "Yundo" ]] \
   || fail "正式版可执行文件名称不正确：${executable_name}"
+localized_name="$(plutil -extract CFBundleDisplayName raw -o - "${built_app}/Contents/Resources/zh-Hans.lproj/InfoPlist.strings")"
+[[ "${localized_name}" == "云渡" ]] || fail "正式版简体中文系统名称不正确：${localized_name}"
+[[ -f "${built_app}/Contents/Resources/AppIcon.icns" ]] || fail "正式版缺少 macOS AppIcon"
 
 # Core 的源文件仍沿用上游文件名以保持 ABI 和构建链稳定；最终 App 包不暴露该名称。
 legacy_core="${built_app}/Contents/Frameworks/hiddify-core.dylib"
@@ -133,6 +138,8 @@ installed_bundle_id="$(plutil -extract CFBundleIdentifier raw -o - "${installed_
 [[ "${installed_bundle_id}" == "${expected_bundle_id}" ]] \
   || fail "安装后的正式版 Bundle ID 不正确：${installed_bundle_id}"
 codesign --verify --deep --strict "${installed_app}"
+"${lsregister_path}" -f "${installed_app}"
+touch "${installed_app}"
 
 built_hash="$(shasum -a 256 "${built_app}/Contents/MacOS/${executable_name}" | awk '{print $1}')"
 installed_hash="$(shasum -a 256 "${expected_executable}" | awk '{print $1}')"

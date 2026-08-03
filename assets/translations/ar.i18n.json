@@ -894,6 +894,7 @@
       "deleteConfirm": "هل تريد حذف \"${value}\"؟"
     },
     "routeHistory": {
+      "menuTitle": "السجل",
       "title": "سجل التسريع",
       "settingsSubtitle": "السجلات منذ فتح التطبيق · بحد أقصى ${limit}",
       "count": "${count} من ${limit}",

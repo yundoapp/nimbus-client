@@ -6,7 +6,9 @@ void main() {
   final translations = Translations();
 
   test('desktop navigation destinations match every desktop shell branch', () {
-    expect(shellRouteActions(translations, false, false), hasLength(3));
+    final actions = shellRouteActions(translations, false, false);
+    expect(actions, hasLength(3));
+    expect(actions.last.title, translations.nimbus.routeHistory.menuTitle);
     expect(shellRouteActions(translations, true, false), hasLength(3));
   });
 
