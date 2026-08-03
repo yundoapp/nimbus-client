@@ -201,7 +201,8 @@ class NimbusAuthRepository {
   }
 
   Future<void> saveRulesPackage(String userId, NimbusRulesPackage rulesPackage) async {
-    await _preferences.setString('$_rulesPackageKeyPrefix$userId', rulesPackage.encode());
+    final cachedPackage = rulesPackage.copyWith(cachedAt: DateTime.now().toUtc());
+    await _preferences.setString('$_rulesPackageKeyPrefix$userId', cachedPackage.encode());
   }
 
   Future<NimbusRulesManifest> fetchRulesManifest({

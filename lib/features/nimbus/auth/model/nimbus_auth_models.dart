@@ -550,24 +550,34 @@ class NimbusRulePackageItem {
 }
 
 class NimbusRulesPackage {
-  const NimbusRulesPackage({required this.manifest, required this.userRules, required this.publicRules});
+  const NimbusRulesPackage({required this.manifest, required this.userRules, required this.publicRules, this.cachedAt});
 
   factory NimbusRulesPackage.fromJson(Map<String, dynamic> json) {
     return NimbusRulesPackage(
       manifest: NimbusRulesManifest.fromJson(Map<String, dynamic>.from(json['manifest'] as Map? ?? const {})),
       userRules: _ruleItems(json['userRules']),
       publicRules: _ruleItems(json['publicRules']),
+      cachedAt: _dateTime(json['cachedAt']),
     );
   }
 
   final NimbusRulesManifest manifest;
   final List<NimbusRulePackageItem> userRules;
   final List<NimbusRulePackageItem> publicRules;
+  final DateTime? cachedAt;
+
+  NimbusRulesPackage copyWith({DateTime? cachedAt}) => NimbusRulesPackage(
+    manifest: manifest,
+    userRules: userRules,
+    publicRules: publicRules,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
 
   Map<String, dynamic> toJson() => {
     'manifest': manifest.toJson(),
     'userRules': userRules.map((item) => item.toJson()).toList(),
     'publicRules': publicRules.map((item) => item.toJson()).toList(),
+    'cachedAt': cachedAt?.toUtc().toIso8601String(),
   };
 
   String encode() => jsonEncode(toJson());

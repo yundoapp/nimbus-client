@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_rules_config.dart';
@@ -44,6 +46,19 @@ void main() {
 
       expect(options.rules, isEmpty);
       expect(options.ruleSets, isEmpty);
+    });
+
+    test('persists the local rules package cache time', () {
+      final cachedAt = DateTime.utc(2026, 8, 4, 12, 30);
+      final encoded = _rulesPackage.copyWith(cachedAt: cachedAt).encode();
+      final decoded = NimbusRulesPackage.fromJson(jsonDecode(encoded) as Map<String, dynamic>);
+
+      expect(decoded.cachedAt?.toUtc(), cachedAt);
+      expect(decoded.manifest.sameVersions(_rulesPackage.manifest), isTrue);
+      expect(decoded.userRules.single.pattern, _rulesPackage.userRules.single.pattern);
+      expect(decoded.userRules.single.action, _rulesPackage.userRules.single.action);
+      expect(decoded.publicRules.single.pattern, _rulesPackage.publicRules.single.pattern);
+      expect(decoded.publicRules.single.action, _rulesPackage.publicRules.single.action);
     });
   });
 }
