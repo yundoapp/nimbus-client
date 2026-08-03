@@ -36,7 +36,7 @@
 | `APPSTORE_API_KEY_ID` | App Store Connect API Key 的 Key ID |
 | `APPSTORE_API_PRIVATE_KEY` | `.p8` 文件的完整文本，不要 Base64 编码 |
 
-远程工作流使用“管理员”职能的 API Key，以便 Xcode 在没有预置 profile 时管理 App ID 与分发 profile。iOS Release 的分发身份只配置在 Yundo 主 App 与 Packet Tunnel target 上，Pods 继续使用自己的自动签名配置。证书、`.p12` 密码和 `.p8` 私钥只放 GitHub Secrets，不提交到仓库。
+远程工作流使用“管理员”职能的 API Key，以便 Xcode 在没有预置 profile 时管理 App ID 与分发 profile。iOS 设备归档阶段保持无签名，最后由 `xcodebuild -exportArchive` 选择 `Apple Distribution` 并完成主 App 与 Packet Tunnel 的分发签名；因此不会把分发身份强行传给 CocoaPods target。证书、`.p12` 密码和 `.p8` 私钥只放 GitHub Secrets，不提交到仓库。
 
 ## 使用方式
 
@@ -55,8 +55,10 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   scripts/build_install_run_macos_dev.sh
 ```
 
-iOS Simulator 可以使用 Xcode 登录的本机账号直接构建；真机/IPA 则需要本机已有相应 profile，或改用上面的远程签名流程。远程流程通过 `-allowProvisioningUpdates` 绑定 API Key，profile 不需要进入仓库。
+iOS Simulator 可以使用 Xcode 登录的本机账号直接构建；真机/IPA 则需要本机已有相应 profile，或改用上面的远程签名流程。远程流程在无签名归档后，通过 `-allowProvisioningUpdates` 绑定 API Key 完成导出签名，profile 不需要进入仓库。
 
 ## 验证边界
 
 Apple Developer 计划开通后，仍需要在第一次远程构建前完成 App ID、能力、证书、API Key 和 GitHub Secrets 配置。没有这些 Secrets 时，工作流应明确失败，不能把“源码编译成功”误报为“签名构建完成”。
+
+2026-08-03 已在 commit `c1506ee` 完成远程验证：GitHub Actions run `30824938269` 的 iOS IPA、macOS 开发版 ZIP 和 macOS 正式版 ZIP 均成功产出。该验证覆盖证书导入、App Store Connect API Key、自动 profile 管理、导出签名和产物校验。
