@@ -60,7 +60,20 @@ export GOPROXY="${GOPROXY:-https://goproxy.cn,direct}"
 export GOSUMDB="${GOSUMDB:-sum.golang.google.cn}"
 export PATH="$(${go_bin} env GOPATH)/bin:${PATH}"
 
-make -C "${core_dir}" LIBNAME=YundoCore CLINAME=YundoCore windows-amd64
+# 上游 CRONET_GO_VERSION 保存裸 commit；模块代理可稳定解析 go.mod 中锁定的
+# 完整伪版本，但在无法直接拉取仓库时可能拒绝等价的裸 commit。
+cronet_go_version="$(
+  cd "${core_dir}"
+  "${go_bin}" list -m -f '{{.Version}}' github.com/sagernet/cronet-go
+)"
+[[ "${cronet_go_version}" == v0.0.0-* ]] \
+  || fail "无法从 go.mod 解析锁定的 Cronet 版本"
+
+make -C "${core_dir}" \
+  LIBNAME=YundoCore \
+  CLINAME=YundoCore \
+  CRONET_GO_VERSION="${cronet_go_version}" \
+  windows-amd64
 
 core_dll="${core_dir}/bin/YundoCore.dll"
 core_exe="${core_dir}/bin/YundoCore.exe"
