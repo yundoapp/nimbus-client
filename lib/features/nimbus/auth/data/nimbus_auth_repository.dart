@@ -449,6 +449,9 @@ class NimbusAuthRepository {
       if (data is Map) {
         final mappedMessage = _describeApiCode(data['code'], t);
         if (mappedMessage != null) return mappedMessage;
+        if (error.response?.statusCode != null && error.response!.statusCode! >= 500) {
+          return t.nimbus.common.serverUnavailable;
+        }
         return t.nimbus.common.operationFailed;
       }
       if (error.type == DioExceptionType.connectionError) return t.nimbus.common.serverUnavailable;
@@ -494,6 +497,11 @@ class NimbusAuthRepository {
       'SUBSCRIPTION_EXPIRED' => t.nimbus.apiError.subscriptionExpired,
       'TRAFFIC_EXCEEDED' => t.nimbus.errors.trafficExceeded,
       'NO_AVAILABLE_NODE' => t.nimbus.apiError.noAvailableLocation,
+      'REMNAWAVE_DEVICE_USER_SYNC_FAILED' => t.nimbus.common.serverUnavailable,
+      'NODE_CONFIG_MISSING' ||
+      'NODE_CONFIG_INVALID' ||
+      'NODE_CONFIG_IDENTITY_PLACEHOLDER_MISSING' ||
+      'REMNAWAVE_VLESS_IDENTITY_INVALID' => t.nimbus.errors.configurationUnavailable,
       'CONNECT_PLAN_EXPIRED' || 'CONNECT_SESSION_CLOSED' => t.nimbus.errors.sessionEnded,
       'ROUTE_PREFERENCE_LIMIT_REACHED' => t.nimbus.routePreferences.limitReached,
       'ROUTE_PREFERENCE_ALREADY_ACCELERATED' => t.nimbus.routePreferences.alreadyInCategory(

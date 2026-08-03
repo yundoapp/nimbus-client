@@ -386,11 +386,12 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       );
     } catch (error, stackTrace) {
       loggy.warning('failed to prepare standard Hiddify profile', error, stackTrace);
+      final apiErrorCode = _repository.apiErrorCode(error);
       await _cleanupFailedConnectionAttempt();
       _fail(
-        _t.nimbus.errors.configurationUnavailable,
-        code: 'Y-CONFIG-002',
-        failureCode: 'PROFILE_INVALID',
+        _repository.describeError(error, _t),
+        code: apiErrorCode == null ? 'Y-CONFIG-002' : 'Y-CONNECTION-003',
+        failureCode: apiErrorCode ?? 'PROFILE_INVALID',
         stage: 'prepare',
       );
     }
