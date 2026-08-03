@@ -63,7 +63,7 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 
 移动端 Flutter 与原生之间的内部通道统一使用 `yundo.app/*`，不再用旧的 Hiddify 前缀，也不从 Bundle ID 动态拼接。开发版和正式版可以使用不同 Bundle ID，但必须共享同一组内部通道。移动端核心首次 gRPC 握手必须设置有限超时；Simulator 只跳过真机 VPN 配置加载，不改变真机 Network Extension 路径，底层启动失败时应用仍应进入可诊断的用户界面而不是永久停留在启动页。
 
-开发重建分支的 GitHub Actions 只构建 Windows x64 内部验收包和 Android Debug APK，并先从锁定源码生成包含受控规则入口的 Core；macOS 与 iOS Simulator 固定在本机构建。Windows 暂不要求 Authenticode 或 MSIX，Android 使用 Debug 签名。正式发布仍必须另行提供各平台签名材料；不能把日常基线产物当作对外发布包。
+开发重建分支的 GitHub Actions 持续构建 Windows x64 内部验收包和 Android Debug APK，并先从锁定源码生成包含受控规则入口的 Core；Apple 平台同时保留本地快速构建和远程签名构建入口。Windows 暂不要求 Authenticode 或 MSIX，Android 使用 Debug 签名。正式发布仍必须另行提供各平台签名材料；不能把日常基线产物当作对外发布包。
 
 ### 4.1 页面、品牌和托盘走查（2026-08-03）
 
@@ -122,7 +122,7 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - `MaterialApp` 和桌面窗口标题统一使用现有多语言 `common.devAppTitle`/`common.appTitle`：中文显示“云渡开发版”/“云渡”，其他语言显示“Yundo Dev”/“Yundo”。切换语言时同步更新 macOS 标题栏。
 - 桌面主导航固定为“主页、记录、设置”。“记录”直接进入云渡加速记录页；配置文件、通用日志和关于页面不占用主导航位置，避免再次出现 shell 分支与导航目的地数量不一致。
 - macOS 本机构建脚本在覆盖 `/Applications/Yundo Dev.app` 和 `/Applications/Yundo.app` 后始终启动并验证开发版；正式版只覆盖安装、不启动，避免两个版本同时接管网络。
-- 本轮按项目负责人要求优先执行本地 macOS Debug/Release 和 iOS Simulator 构建；Apple 证书准备完成前不以 GitHub 远端 macOS 构建作为验收门槛。
+- 本轮按项目负责人要求优先执行本地 macOS Debug/Release 和 iOS Simulator 构建；Apple 远程签名入口已加入 `.github/workflows/apple-build.yml`，待 GitHub Secrets 配置后执行签名验收。
 
 ### 4.4 macOS 品牌与桌面交互回归（2026-08-03）
 
@@ -152,3 +152,10 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - Windows Core 构建从锁定的 `hiddify-core/go.mod` 解析 Cronet 完整伪版本并传给上游 Makefile；不直接使用上游版本文件中的裸 commit hash，避免 Go 模块代理无法解析时漏生成 `libcronet.dll`。该处理只修复依赖寻址，不升级或替换锁定的 Core 依赖。
 - 失败策略：首次没有有效缓存且规则包下载失败时不启动加速；已有已验证缓存时可继续使用旧规则，只有新包下载并校验成功后才原子替代。连接方案与规则包版本在准备期间不一致时失败关闭，避免半新半旧配置。
 - 跨平台矩阵：规则准备和 Config Option 序列化位于共享 Dart 层，macOS、Windows、iOS、Android 同因受影响并同因修复；Core 补丁由四端同一源码提交和同一补丁生成。macOS 需要安装版真实直连/加速双向请求证据；Windows、iPhone、Android 仍需实体设备补做真实分流，但不能使用旧预编译 Core 作为本轮构建证据。
+
+### 4.7 Apple 签名与远程构建（2026-08-03）
+
+- iOS 工程统一使用 Apple Team `W684N2R45F`；正式版主 App 和 Packet Tunnel 分别为 `app.yundo.client`、`app.yundo.client.PacketTunnel`，开发版分别追加 `.rebuild.dev`。工程中已清理旧 Hiddify Team、旧 Bundle ID 和旧 profile 名称。
+- `scripts/build_macos_remote.sh` 负责远程 macOS Debug/Release 构建、Yundo Core 替换、重签、签名校验和 ZIP 产出，不覆盖 `/Applications`；本地 `scripts/build_install_run_macos_dev.sh` 继续负责快速构建、双版本覆盖安装和启动验收。
+- `scripts/build_ios_remote.sh` 负责 Flutter 框架准备、Xcode 设备归档、App Store Connect API Key 自动 profile 管理、IPA 导出和主 App/Packet Tunnel Bundle ID 校验。`.github/workflows/apple-build.yml` 通过手动触发同时产出 macOS 开发版、macOS 正式版和 iOS 正式版 artifact。
+- Apple Developer 计划开通不等于远端已经具备签名材料；首次远程构建前必须按 `docs/development/apple-signing-setup.md` 配置 App ID 能力、证书、`.p12`、App Store Connect API Key 和 GitHub Secrets。未配置时只允许报告“源码构建可验证”，不能报告“远程签名构建完成”。

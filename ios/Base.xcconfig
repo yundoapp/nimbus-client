@@ -8,4 +8,6 @@
 BASE_BUNDLE_IDENTIFIER=app.yundo.client
 SERVICE_IDENTIFIER=app.yundo.client.service
 APP_DISPLAY_NAME=Yundo
-DEVELOPMENT_TEAM=3JFTY5BP58
+// Yundo Apple Developer team. Keep this in the shared config so the app and
+// Packet Tunnel extension cannot silently fall back to the old Hiddify team.
+DEVELOPMENT_TEAM=W684N2R45F

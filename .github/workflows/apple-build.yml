@@ -1,0 +1,119 @@
+name: Apple Signed Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: "可选；留空时使用 pubspec.yaml 中的构建号"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: "3.38.5"
+  GO_VERSION: "1.25.6"
+  APPLE_TEAM_ID: "W684N2R45F"
+
+jobs:
+  macos:
+    name: macOS ${{ matrix.channel }} signed build
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [dev, prod]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: hiddify-core/go.sum
+
+      - uses: subosito/flutter-action@v2.21.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: 导入 Apple 签名证书
+        uses: apple-actions/import-codesign-certs@v6
+        with:
+          p12-file-base64: ${{ secrets.APPLE_MACOS_CERTIFICATE_P12 }}
+          p12-password: ${{ secrets.APPLE_MACOS_CERTIFICATE_P12_PASSWORD }}
+
+      - name: 检查签名身份
+        shell: bash
+        run: |
+          identity="$(security find-identity -v -p codesigning | awk '/Developer ID Application/ { print $2; exit }')"
+          [[ -n "$identity" ]] || { echo "未找到可用的 macOS 签名身份" >&2; exit 1; }
+          echo "MACOS_CODESIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+
+      - name: 生成共享代码
+        run: make common-prepare
+
+      - name: 构建并签名 macOS
+        env:
+          YUNDO_CHANNEL: ${{ matrix.channel }}
+          YUNDO_BUILD_NUMBER: ${{ inputs.build_number }}
+          YUNDO_OUTPUT_DIR: out/${{ matrix.channel }}
+        run: scripts/build_macos_remote.sh
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: yundo-macos-${{ matrix.channel }}-signed
+          path: out/${{ matrix.channel }}/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  ios:
+    name: iOS signed IPA
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - uses: subosito/flutter-action@v2.21.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: 导入 Apple 签名证书
+        uses: apple-actions/import-codesign-certs@v6
+        with:
+          p12-file-base64: ${{ secrets.APPLE_IOS_CERTIFICATE_P12 }}
+          p12-password: ${{ secrets.APPLE_IOS_CERTIFICATE_P12_PASSWORD }}
+
+      - name: 准备 App Store Connect API Key
+        shell: bash
+        env:
+          APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+          APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+        run: |
+          [[ -n "$APPSTORE_API_PRIVATE_KEY" ]] || { echo "缺少 APPSTORE_API_PRIVATE_KEY" >&2; exit 1; }
+          key_path="$RUNNER_TEMP/AuthKey_${APPSTORE_API_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_API_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          echo "APPSTORE_AUTH_KEY_PATH=$key_path" >> "$GITHUB_ENV"
+
+      - name: 构建并签名 iOS IPA
+        env:
+          YUNDO_BUILD_NUMBER: ${{ inputs.build_number }}
+          YUNDO_OUTPUT_DIR: out/ios
+          APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: scripts/build_ios_remote.sh
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: yundo-ios-signed
+          path: out/ios/*.ipa
+          if-no-files-found: error
+          retention-days: 14
