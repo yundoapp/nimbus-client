@@ -905,7 +905,7 @@
       "rulesVersion": "規則版本",
       "customRulesVersion": "自訂規則版本",
       "lastUpdated": "本機更新",
-      "notUpdated": "暫無記錄",
+      "notUpdated": "-",
       "custom": "自訂",
       "public": "公共",
       "local": "本機",

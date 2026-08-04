@@ -905,7 +905,7 @@
       "rulesVersion": "Rules version",
       "customRulesVersion": "Custom rules version",
       "lastUpdated": "Updated on this device",
-      "notUpdated": "No record",
+      "notUpdated": "-",
       "custom": "Custom",
       "public": "Public",
       "local": "On this device",
