@@ -29,6 +29,7 @@
 		33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F42044A3C60003C045 /* MainMenu.xib */; };
 		D1E5A7C00123456789ABCDEF /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D1E5A7C10123456789ABCDEF /* InfoPlist.strings */; };
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
+		A10000010000000000000001 /* PrivilegedHelperBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000000000002 /* PrivilegedHelperBridge.swift */; };
 		414949DC2CCE3D370069D5BA /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 414949DB2CCE3D370069D5BA /* LaunchAtLogin */; };
 		C2CEC907B854CCA50E3CB29E /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7774D5331C4F7054E7047DF2 /* Pods_RunnerTests.framework */; };
 		FEE8413B259D2FDED8BE933A /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A1027315C9B3E3F83410A09 /* Pods_Runner.framework */; };
@@ -85,6 +86,7 @@
 		D1E5A7C60123456789ABCDEF /* zh_CN */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = zh_CN; path = zh_CN.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		D1E5A7C70123456789ABCDEF /* zh_TW */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = zh_TW; path = zh_TW.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		33CC11122044BFA00003C045 /* MainFlutterWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlutterWindow.swift; sourceTree = "<group>"; };
+		A10000020000000000000002 /* PrivilegedHelperBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivilegedHelperBridge.swift; sourceTree = "<group>"; };
 		33CEB47222A05771004F2AC0 /* Flutter-Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Debug.xcconfig"; sourceTree = "<group>"; };
 		33CEB47422A05771004F2AC0 /* Flutter-Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Release.xcconfig"; sourceTree = "<group>"; };
 		33CEB47722A0578A004F2AC0 /* Flutter-Generated.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = "Flutter-Generated.xcconfig"; path = "ephemeral/Flutter-Generated.xcconfig"; sourceTree = "<group>"; };
@@ -204,6 +206,7 @@
 			children = (
 				33CC10F02044A3C60003C045 /* AppDelegate.swift */,
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
+				A10000020000000000000002 /* PrivilegedHelperBridge.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -255,6 +258,7 @@
 				33CC110E2044A8840003C045 /* Bundle Framework */,
 				3399D490228B24CF009A79C7 /* ShellScript */,
 				DDB714AFDEF721265C0C3AF7 /* [CP] Embed Pods Frameworks */,
+				A10000030000000000000003 /* Build Privileged Helper */,
 				414949D92CCE3C2C0069D5BA /* ShellScript */,
 			);
 			buildRules = (
@@ -369,6 +373,31 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
 			shellScript = "\"${SRCROOT}/../scripts/localize_macos_dev_display_name.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		A10000030000000000000003 /* Build Privileged Helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/PrivilegedHelper/YundoPrivilegedHelper.swift",
+				"$(SRCROOT)/PrivilegedHelper/PrivilegedHelper.plist",
+				"$(SRCROOT)/../scripts/build_macos_privileged_helper.sh",
+			);
+			name = "Build Privileged Helper";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Library/HelperTools/YundoPrivilegedHelper",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Library/LaunchDaemons/$(YUNDO_PRIVILEGED_HELPER_SERVICE).plist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"${SRCROOT}/../scripts/build_macos_privileged_helper.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		3399D490228B24CF009A79C7 /* ShellScript */ = {
@@ -503,6 +532,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000010000000000000001 /* PrivilegedHelperBridge.swift in Sources */,
 				33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
@@ -662,6 +692,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
+				YUNDO_PRIVILEGED_HELPER_SERVICE = app.yundo.client.rebuild.dev.privileged-helper;
 			};
 			name = Profile;
 		};
@@ -793,6 +824,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
+				YUNDO_PRIVILEGED_HELPER_SERVICE = app.yundo.client.rebuild.dev.privileged-helper;
 			};
 			name = Debug;
 		};
@@ -816,6 +848,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
+				YUNDO_PRIVILEGED_HELPER_SERVICE = app.yundo.client.privileged-helper;
 			};
 			name = Release;
 		};

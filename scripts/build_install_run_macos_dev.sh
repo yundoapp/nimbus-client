@@ -102,6 +102,11 @@ plutil -lint "${app_entitlements}" >/dev/null \
 core_path="${built_app}/Contents/Frameworks/YundoCore.dylib"
 [[ -f "${core_path}" ]] || fail "构建产物缺少 Yundo Core：${core_path}"
 codesign --force --sign "${codesign_identity}" "${core_path}"
+helper_path="${built_app}/Contents/Library/HelperTools/YundoPrivilegedHelper"
+[[ -x "${helper_path}" ]] || fail "构建产物缺少特权辅助进程：${helper_path}"
+codesign --force --sign "${codesign_identity}" \
+  --identifier "${expected_bundle_id}.privileged-helper" \
+  "${helper_path}"
 login_item="${built_app}/Contents/Library/LoginItems/LaunchAtLoginHelper.app"
 if [[ -d "${login_item}" ]]; then
   codesign --force --sign "${codesign_identity}" \

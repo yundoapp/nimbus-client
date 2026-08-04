@@ -139,12 +139,19 @@ class HiddifyCoreService with InfraLogger {
     });
   }
 
-  TaskEither<ConnectionFailure, Unit> start(String path, String name, bool disableMemoryLimit) {
+  TaskEither<ConnectionFailure, Unit> start(
+    String path,
+    String name,
+    bool disableMemoryLimit, {
+    bool enableRawConfig = false,
+  }) {
     return TaskEither(() async {
       statusController.add(currentState = const CoreStatus.starting());
       loggy.debug("starting");
       final background = await core.setupBackground(path, name);
+      loggy.info('core background preparation response: $background');
       if (background != const CoreStatus.started()) {
+        loggy.warning('core background preparation failed: $background');
         statusController.add(currentState = const CoreStatus.stopped());
         return left(background.getCoreAlert() ?? const ConnectionFailure.unexpected("failed to start core"));
       }
@@ -152,27 +159,22 @@ class HiddifyCoreService with InfraLogger {
         await startListeningLogs("bg", core.bgClient);
         await startListeningStatus("bg", core.bgClient);
       }
-      // if (latestOptions != null) {
-      //   await core.bgClient.changeHiddifySettings(
-      //     ChangeHiddifySettingsRequest(
-      //       hiddifySettingsJson: jsonEncode(latestOptions!.toJson()),
-      //     ),
-      //   );
-      // }
-      // final content = await File(path).readAsString();
-      // loggy.debug("starting with content: $content");
+      final backgroundConfigPath = core.backgroundConfigPath(path);
+      final useRawConfig = enableRawConfig || backgroundConfigPath != path;
+      loggy.info('core start prepared (raw=$useRawConfig, macosPathRewritten=${backgroundConfigPath != path})');
       try {
         final res = await core.bgClient.start(
           StartRequest(
-            configPath: path,
+            configPath: backgroundConfigPath,
             configName: name,
-            // configContent: content,
             disableMemoryLimit: disableMemoryLimit,
+            enableRawConfig: useRawConfig,
           ),
         );
+        loggy.info('core start response: state=${res.coreState}, type=${res.messageType}, message=${res.message}');
         ref.read(coreRestartSignalProvider.notifier).restart();
         if (res.messageType != MessageType.ALREADY_STARTED && res.messageType != MessageType.EMPTY) {
-          final alert = res.message.contains("denied") ? CoreAlert.requestVPNPermission : CoreAlert.startFailed;
+          final alert = _isSystemPermissionError(res.message) ? CoreAlert.requestVPNPermission : CoreAlert.startFailed;
           currentState = CoreStatus.stopped(
             alert: alert,
             message: "failed to start core ${res.messageType} ${res.message}",
@@ -180,28 +182,86 @@ class HiddifyCoreService with InfraLogger {
 
           statusController.add(currentState);
 
+          await core.stop();
+
           return left(
             currentState.getCoreAlert() ??
                 ConnectionFailure.unexpected("failed to start core ${res.messageType} ${res.message}"),
           );
         }
+
+        final networkPreparationError = await _prepareTunnelNetworkMode(
+          name: name,
+          disableMemoryLimit: disableMemoryLimit,
+          enableRawConfig: useRawConfig,
+        );
+        if (networkPreparationError != null) {
+          loggy.warning('macOS tunnel network preparation failed: $networkPreparationError');
+          await core.bgClient.stop(Empty());
+          await core.stop();
+          statusController.add(currentState = const CoreStatus.stopped());
+          return left(ConnectionFailure.unexpected(networkPreparationError));
+        }
+
+        final tunnel = await core.activateTunnel();
+        loggy.info('macOS tunnel activation response: $tunnel');
+        if (tunnel != const CoreStatus.started()) {
+          await core.bgClient.stop(Empty());
+          await core.stop();
+          statusController.add(currentState = const CoreStatus.stopped());
+          return left(tunnel.getCoreAlert() ?? const ConnectionFailure.unexpected('failed to start tunnel'));
+        }
       } on GrpcError catch (e) {
         loggy.error("failed to start bg core: $e");
         ref.read(coreRestartSignalProvider.notifier).restart();
         if (e.code == StatusCode.unavailable) {
+          await core.stop();
           return left(const ConnectionFailure.unexpected("background core is not started yet!"));
         }
-        // throw InvalidConfig(e.message);
-        // throw DioException.connectionError(requestOptions: RequestOptions(), reason: e.codeName, error: e);
-
-        // throw DioException(requestOptions: RequestOptions(), error: e);
+        if (_isSystemPermissionError(e.message)) {
+          await core.stop();
+          return left(const ConnectionFailure.missingVpnPermission());
+        }
         return left(const ConnectionFailure.unexpected("failed to start background core"));
+      } finally {
+        await core.discardPreparedConfig();
       }
 
       // if (res.messageType != MessageType.EMPTY) return left(res);
 
       return right(unit);
     });
+  }
+
+  bool _isSystemPermissionError(String? message) {
+    final normalized = message?.toLowerCase() ?? '';
+    return normalized.contains('permission denied') ||
+        normalized.contains('operation not permitted') ||
+        normalized.contains('access denied');
+  }
+
+  Future<String?> _prepareTunnelNetworkMode({
+    required String name,
+    required bool disableMemoryLimit,
+    required bool enableRawConfig,
+  }) async {
+    final preparation = await core.prepareTunnelActivation();
+    if (preparation.errorMessage case final error?) return error;
+    if (preparation.fallbackConfigPath case final fallbackPath?) {
+      loggy.info('restarting macOS user core with the IPv4 fallback config');
+      final response = await core.bgClient.restart(
+        StartRequest(
+          configPath: fallbackPath,
+          configName: name,
+          disableMemoryLimit: disableMemoryLimit,
+          enableRawConfig: enableRawConfig,
+        ),
+      );
+      if (response.messageType != MessageType.EMPTY && response.messageType != MessageType.ALREADY_STARTED) {
+        return 'failed to apply macOS IPv4 fallback: ${response.messageType} ${response.message}';
+      }
+    }
+    return null;
   }
 
   TaskEither<String, Unit> stop() {
@@ -227,20 +287,55 @@ class HiddifyCoreService with InfraLogger {
     });
   }
 
-  TaskEither<String, Unit> restart(String path, String name, bool disableMemoryLimit) {
+  TaskEither<String, Unit> restart(String path, String name, bool disableMemoryLimit, {bool enableRawConfig = false}) {
     return TaskEither(() async {
       loggy.debug("restarting");
       // if (!await core.restart(path, name)) {
       try {
+        final prepared = await core.prepareRestart(path, name);
+        loggy.info('core restart preparation response: $prepared');
+        if (prepared != const CoreStatus.started()) {
+          loggy.warning('core restart preparation failed: $prepared');
+          return left(prepared.getCoreAlert()?.toString() ?? 'failed to prepare tunnel restart');
+        }
+        final backgroundConfigPath = core.backgroundConfigPath(path);
+        final useRawConfig = enableRawConfig || backgroundConfigPath != path;
+        loggy.info('core restart prepared (raw=$useRawConfig, macosPathRewritten=${backgroundConfigPath != path})');
         final res = await core.bgClient.restart(
-          StartRequest(configPath: path, configName: name, disableMemoryLimit: disableMemoryLimit, delayStart: true),
+          StartRequest(
+            configPath: backgroundConfigPath,
+            configName: name,
+            disableMemoryLimit: disableMemoryLimit,
+            delayStart: true,
+            enableRawConfig: useRawConfig,
+          ),
         );
+        loggy.info('core restart response: state=${res.coreState}, type=${res.messageType}, message=${res.message}');
         if (res.messageType != MessageType.EMPTY) return left("${res.messageType} ${res.message}");
+        final networkPreparationError = await _prepareTunnelNetworkMode(
+          name: name,
+          disableMemoryLimit: disableMemoryLimit,
+          enableRawConfig: useRawConfig,
+        );
+        if (networkPreparationError != null) {
+          await core.bgClient.stop(Empty());
+          await core.stop();
+          return left(networkPreparationError);
+        }
+        final tunnel = await core.activateTunnel();
+        loggy.info('macOS tunnel activation response: $tunnel');
+        if (tunnel != const CoreStatus.started()) {
+          await core.bgClient.stop(Empty());
+          await core.stop();
+          return left(tunnel.getCoreAlert()?.toString() ?? 'failed to restart tunnel');
+        }
       } on GrpcError catch (e) {
         loggy.error("failed to restart bg core: $e");
         if (e.code == StatusCode.unknown && !(e.message?.contains("HTTP/2 error") ?? false)) {
           return left("${e.message}");
         }
+      } finally {
+        await core.discardPreparedConfig();
       }
 
       return right(unit);

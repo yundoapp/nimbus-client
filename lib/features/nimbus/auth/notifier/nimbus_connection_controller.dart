@@ -60,6 +60,9 @@ bool shouldReapplyNimbusConnection({
 bool isNimbusOwnedConnection({required ConnectionStatus? connection, required bool connectedReported}) =>
     connection is Connected && connectedReported;
 
+bool shouldRestoreNimbusOwnership({required ConnectionStatus? connection, required bool startedByUser}) =>
+    startedByUser && connection is Connected;
+
 Future<NimbusRulesPackage> prepareNimbusRulesPackage({
   required NimbusRulesPackage? cached,
   required Future<NimbusRulesManifest> Function(NimbusRulesManifest? localManifest) fetchManifest,
@@ -190,7 +193,14 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     ref.listen(nimbusAppVersionControllerProvider, (_, next) {
       if (next.forceUpdate) unawaited(disconnect(reason: 'APP_VERSION_UNSUPPORTED'));
     });
-    return const NimbusConnectionState();
+    final currentConnection = ref.read(connectionNotifierProvider).valueOrNull;
+    final startedByUser = ref.read(Preferences.startedByUser);
+    return NimbusConnectionState(
+      connectedReported: shouldRestoreNimbusOwnership(
+        connection: currentConnection,
+        startedByUser: startedByUser,
+      ),
+    );
   }
 
   Future<void> toggle({bool showErrors = true}) async {
@@ -375,8 +385,9 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         return;
       }
       await ref.read(Preferences.startedByUser.notifier).update(true);
-      _handleConnectionStatus(ref.read(connectionNotifierProvider));
+      _markConnectionEstablished();
     } on ConnectionFailure catch (error) {
+      loggy.warning('Yundo connection start failed: $error');
       await _cleanupFailedConnectionAttempt();
       _fail(
         _t.nimbus.errors.connectFailed,
@@ -507,16 +518,21 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
 
   void _handleConnectionStatus(AsyncValue<ConnectionStatus> next) {
     final connection = next.valueOrNull;
-    if (connection is Connected && state.isPreparing && !state.connectedReported) {
-      state = state.copyWith(isPreparing: false, connectedReported: true, errorMessage: null, diagnostic: null);
-      final session = ref.read(nimbusAuthControllerProvider).session;
-      final plan = state.plan;
-      if (session != null && plan != null) unawaited(_safeReportResult(session, plan, 'connected', null));
+    // The core reports Connected before macOS tunnel activation completes. Only
+    // _connectInternal may promote the Nimbus-owned state to connected.
+    if (connection is Connected && state.isPreparing) {
       return;
     }
     if (connection is Disconnected && state.connectedReported) {
       state = state.copyWith(connectedReported: false, recoveryRequestId: state.recoveryRequestId + 1);
     }
+  }
+
+  void _markConnectionEstablished() {
+    state = state.copyWith(isPreparing: false, connectedReported: true, errorMessage: null, diagnostic: null);
+    final session = ref.read(nimbusAuthControllerProvider).session;
+    final plan = state.plan;
+    if (session != null && plan != null) unawaited(_safeReportResult(session, plan, 'connected', null));
   }
 
   void _fail(String message, {required String code, String? failureCode, required String stage}) {

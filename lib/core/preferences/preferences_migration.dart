@@ -11,7 +11,10 @@ class PreferencesMigration with InfraLogger {
   Future<void> migrate() async {
     final currentVersion = sharedPreferences.getInt(versionKey) ?? 0;
 
-    final migrationSteps = [PreferencesVersion1Migration(sharedPreferences)];
+    final List<PreferencesMigrationStep> migrationSteps = [
+      PreferencesVersion1Migration(sharedPreferences),
+      PreferencesVersion2MacOSTunMigration(sharedPreferences),
+    ];
 
     if (currentVersion == migrationSteps.length) {
       loggy.debug("already using the latest version (v$currentVersion)");
@@ -106,4 +109,18 @@ class PreferencesVersion1Migration extends PreferencesMigrationStep with InfraLo
     "ipv6Only" => "ipv6_only",
     _ => "",
   };
+}
+
+class PreferencesVersion2MacOSTunMigration extends PreferencesMigrationStep with InfraLogger {
+  PreferencesVersion2MacOSTunMigration(super.sharedPreferences);
+
+  @override
+  Future<void> migrate() async {
+    if (!PlatformUtils.isMacOS) return;
+    final serviceMode = sharedPreferences.getString("service-mode");
+    if (serviceMode == "system-proxy" || serviceMode == "proxy" || serviceMode == "systemProxy") {
+      loggy.debug("changing macOS service-mode from [$serviceMode] to [vpn]");
+      await sharedPreferences.setString("service-mode", "vpn");
+    }
+  }
 }

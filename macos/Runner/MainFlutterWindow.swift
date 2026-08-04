@@ -5,6 +5,7 @@ import LaunchAtLogin
 
 class MainFlutterWindow: NSWindow {
   private var statusItemBridge: YundoStatusItemBridge?
+  private var privilegedHelperBridge: PrivilegedHelperBridge?
   private var brandingChannel: FlutterMethodChannel?
 
   override func awakeFromNib() {
@@ -79,6 +80,8 @@ class MainFlutterWindow: NSWindow {
     }
     statusItemBridge = YundoStatusItemBridge(binaryMessenger: flutterViewController.engine.binaryMessenger)
     statusItemBridge?.register()
+    privilegedHelperBridge = PrivilegedHelperBridge(binaryMessenger: flutterViewController.engine.binaryMessenger)
+    privilegedHelperBridge?.register()
     //
     RegisterGeneratedPlugins(registry: flutterViewController)
 

@@ -28,6 +28,21 @@ void main() {
       expect(isNimbusOwnedConnection(connection: const Connected(), connectedReported: true), isTrue);
     });
 
+    test('restores ownership only for a persisted user-started connection', () {
+      expect(
+        shouldRestoreNimbusOwnership(connection: const Connected(), startedByUser: true),
+        isTrue,
+      );
+      expect(
+        shouldRestoreNimbusOwnership(connection: const Connected(), startedByUser: false),
+        isFalse,
+      );
+      expect(
+        shouldRestoreNimbusOwnership(connection: const Disconnected(), startedByUser: true),
+        isFalse,
+      );
+    });
+
     test('presents preparation as connecting before Nimbus ownership is reported', () {
       final status = presentNimbusOwnedConnectionStatus(
         rawConnectionStatus: const AsyncData(Disconnected()),

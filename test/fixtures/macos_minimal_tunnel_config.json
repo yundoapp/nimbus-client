@@ -1,0 +1,88 @@
+{
+  "log": {
+    "level": "warn"
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "yundo-tun",
+      "address": [
+        "172.20.0.1/30",
+        "fdfe:dcba:9876::1/126"
+      ],
+      "mtu": 9000,
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "system"
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "socks",
+      "tag": "yundo-socks",
+      "server": "127.0.0.1",
+      "server_port": 12334,
+      "version": "5"
+    },
+    {
+      "type": "direct",
+      "tag": "yundo-direct"
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "process_name": [
+          "Yundo Dev",
+          "YundoPrivilegedHelper"
+        ],
+        "action": "route",
+        "outbound": "yundo-direct"
+      },
+      {
+        "action": "sniff"
+      },
+      {
+        "domain_suffix": [
+          "force-proxy.example"
+        ],
+        "action": "route",
+        "outbound": "yundo-socks"
+      },
+      {
+        "rule_set": "geosite-geolocation-!cn",
+        "action": "route",
+        "outbound": "yundo-socks"
+      },
+      {
+        "ip_is_private": true,
+        "action": "route",
+        "outbound": "yundo-direct"
+      },
+      {
+        "rule_set": "geoip-cn",
+        "action": "route",
+        "outbound": "yundo-direct"
+      }
+    ],
+    "final": "yundo-socks",
+    "auto_detect_interface": true,
+    "rule_set": [
+      {
+        "tag": "geosite-geolocation-!cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://rules.example/geosite-geolocation-not-cn.srs",
+        "update_interval": "1d",
+        "download_detour": "yundo-socks"
+      },
+      {
+        "tag": "geoip-cn",
+        "type": "local",
+        "format": "binary",
+        "path": "__APP_CONTENTS_PATH__/Frameworks/App.framework/Resources/flutter_assets/assets/rules/geoip-cn.srs"
+      }
+    ]
+  }
+}
+

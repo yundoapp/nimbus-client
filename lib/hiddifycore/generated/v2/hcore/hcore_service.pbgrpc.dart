@@ -44,27 +44,21 @@ class CoreClient extends $grpc.Client {
     $1.Empty request, {
     $grpc.CallOptions? options,
   }) {
-    return $createStreamingCall(
-        _$coreInfoListener, $async.Stream.fromIterable([request]),
-        options: options);
+    return $createStreamingCall(_$coreInfoListener, $async.Stream.fromIterable([request]), options: options);
   }
 
   $grpc.ResponseStream<$0.OutboundGroupList> outboundsInfo(
     $1.Empty request, {
     $grpc.CallOptions? options,
   }) {
-    return $createStreamingCall(
-        _$outboundsInfo, $async.Stream.fromIterable([request]),
-        options: options);
+    return $createStreamingCall(_$outboundsInfo, $async.Stream.fromIterable([request]), options: options);
   }
 
   $grpc.ResponseStream<$0.OutboundGroupList> mainOutboundsInfo(
     $1.Empty request, {
     $grpc.CallOptions? options,
   }) {
-    return $createStreamingCall(
-        _$mainOutboundsInfo, $async.Stream.fromIterable([request]),
-        options: options);
+    return $createStreamingCall(_$mainOutboundsInfo, $async.Stream.fromIterable([request]), options: options);
   }
 
   $grpc.ResponseFuture<$0.SystemInfo> getSystemInfo(
@@ -78,9 +72,7 @@ class CoreClient extends $grpc.Client {
     $1.Empty request, {
     $grpc.CallOptions? options,
   }) {
-    return $createStreamingCall(
-        _$getSystemInfoStream, $async.Stream.fromIterable([request]),
-        options: options);
+    return $createStreamingCall(_$getSystemInfoStream, $async.Stream.fromIterable([request]), options: options);
   }
 
   $grpc.ResponseFuture<$1.Response> setup(
@@ -104,7 +96,13 @@ class CoreClient extends $grpc.Client {
     return $createUnaryCall(_$changeHiddifySettings, request, options: options);
   }
 
-  /// rpc GenerateConfig (GenerateConfigRequest) returns (GenerateConfigResponse);
+  $grpc.ResponseFuture<$0.GenerateConfigResponse> generateConfig(
+    $0.GenerateConfigRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$generateConfig, request, options: options);
+  }
+
   $grpc.ResponseFuture<$0.CoreInfoResponse> startService(
     $0.StartRequest request, {
     $grpc.CallOptions? options,
@@ -172,9 +170,7 @@ class CoreClient extends $grpc.Client {
     $0.LogRequest request, {
     $grpc.CallOptions? options,
   }) {
-    return $createStreamingCall(
-        _$logListener, $async.Stream.fromIterable([request]),
-        options: options);
+    return $createStreamingCall(_$logListener, $async.Stream.fromIterable([request]), options: options);
   }
 
   $grpc.ResponseFuture<$1.Empty> close(
@@ -193,102 +189,58 @@ class CoreClient extends $grpc.Client {
 
   // method descriptors
 
-  static final _$start =
-      $grpc.ClientMethod<$0.StartRequest, $0.CoreInfoResponse>(
-          '/hcore.Core/Start',
-          ($0.StartRequest value) => value.writeToBuffer(),
-          $0.CoreInfoResponse.fromBuffer);
-  static final _$coreInfoListener =
-      $grpc.ClientMethod<$1.Empty, $0.CoreInfoResponse>(
-          '/hcore.Core/CoreInfoListener',
-          ($1.Empty value) => value.writeToBuffer(),
-          $0.CoreInfoResponse.fromBuffer);
-  static final _$outboundsInfo =
-      $grpc.ClientMethod<$1.Empty, $0.OutboundGroupList>(
-          '/hcore.Core/OutboundsInfo',
-          ($1.Empty value) => value.writeToBuffer(),
-          $0.OutboundGroupList.fromBuffer);
-  static final _$mainOutboundsInfo =
-      $grpc.ClientMethod<$1.Empty, $0.OutboundGroupList>(
-          '/hcore.Core/MainOutboundsInfo',
-          ($1.Empty value) => value.writeToBuffer(),
-          $0.OutboundGroupList.fromBuffer);
+  static final _$start = $grpc.ClientMethod<$0.StartRequest, $0.CoreInfoResponse>(
+      '/hcore.Core/Start', ($0.StartRequest value) => value.writeToBuffer(), $0.CoreInfoResponse.fromBuffer);
+  static final _$coreInfoListener = $grpc.ClientMethod<$1.Empty, $0.CoreInfoResponse>(
+      '/hcore.Core/CoreInfoListener', ($1.Empty value) => value.writeToBuffer(), $0.CoreInfoResponse.fromBuffer);
+  static final _$outboundsInfo = $grpc.ClientMethod<$1.Empty, $0.OutboundGroupList>(
+      '/hcore.Core/OutboundsInfo', ($1.Empty value) => value.writeToBuffer(), $0.OutboundGroupList.fromBuffer);
+  static final _$mainOutboundsInfo = $grpc.ClientMethod<$1.Empty, $0.OutboundGroupList>(
+      '/hcore.Core/MainOutboundsInfo', ($1.Empty value) => value.writeToBuffer(), $0.OutboundGroupList.fromBuffer);
   static final _$getSystemInfo = $grpc.ClientMethod<$1.Empty, $0.SystemInfo>(
-      '/hcore.Core/GetSystemInfo',
-      ($1.Empty value) => value.writeToBuffer(),
-      $0.SystemInfo.fromBuffer);
-  static final _$getSystemInfoStream =
-      $grpc.ClientMethod<$1.Empty, $0.SystemInfo>(
-          '/hcore.Core/GetSystemInfoStream',
-          ($1.Empty value) => value.writeToBuffer(),
-          $0.SystemInfo.fromBuffer);
+      '/hcore.Core/GetSystemInfo', ($1.Empty value) => value.writeToBuffer(), $0.SystemInfo.fromBuffer);
+  static final _$getSystemInfoStream = $grpc.ClientMethod<$1.Empty, $0.SystemInfo>(
+      '/hcore.Core/GetSystemInfoStream', ($1.Empty value) => value.writeToBuffer(), $0.SystemInfo.fromBuffer);
   static final _$setup = $grpc.ClientMethod<$0.SetupRequest, $1.Response>(
-      '/hcore.Core/Setup',
-      ($0.SetupRequest value) => value.writeToBuffer(),
-      $1.Response.fromBuffer);
+      '/hcore.Core/Setup', ($0.SetupRequest value) => value.writeToBuffer(), $1.Response.fromBuffer);
   static final _$parse = $grpc.ClientMethod<$0.ParseRequest, $0.ParseResponse>(
-      '/hcore.Core/Parse',
-      ($0.ParseRequest value) => value.writeToBuffer(),
-      $0.ParseResponse.fromBuffer);
-  static final _$changeHiddifySettings =
-      $grpc.ClientMethod<$0.ChangeHiddifySettingsRequest, $0.CoreInfoResponse>(
-          '/hcore.Core/ChangeHiddifySettings',
-          ($0.ChangeHiddifySettingsRequest value) => value.writeToBuffer(),
-          $0.CoreInfoResponse.fromBuffer);
-  static final _$startService =
-      $grpc.ClientMethod<$0.StartRequest, $0.CoreInfoResponse>(
-          '/hcore.Core/StartService',
-          ($0.StartRequest value) => value.writeToBuffer(),
-          $0.CoreInfoResponse.fromBuffer);
-  static final _$stop = $grpc.ClientMethod<$1.Empty, $0.CoreInfoResponse>(
-      '/hcore.Core/Stop',
-      ($1.Empty value) => value.writeToBuffer(),
+      '/hcore.Core/Parse', ($0.ParseRequest value) => value.writeToBuffer(), $0.ParseResponse.fromBuffer);
+  static final _$changeHiddifySettings = $grpc.ClientMethod<$0.ChangeHiddifySettingsRequest, $0.CoreInfoResponse>(
+      '/hcore.Core/ChangeHiddifySettings',
+      ($0.ChangeHiddifySettingsRequest value) => value.writeToBuffer(),
       $0.CoreInfoResponse.fromBuffer);
-  static final _$restart =
-      $grpc.ClientMethod<$0.StartRequest, $0.CoreInfoResponse>(
-          '/hcore.Core/Restart',
-          ($0.StartRequest value) => value.writeToBuffer(),
-          $0.CoreInfoResponse.fromBuffer);
-  static final _$selectOutbound =
-      $grpc.ClientMethod<$0.SelectOutboundRequest, $1.Response>(
-          '/hcore.Core/SelectOutbound',
-          ($0.SelectOutboundRequest value) => value.writeToBuffer(),
-          $1.Response.fromBuffer);
+  static final _$generateConfig = $grpc.ClientMethod<$0.GenerateConfigRequest, $0.GenerateConfigResponse>(
+      '/hcore.Core/GenerateConfig',
+      ($0.GenerateConfigRequest value) => value.writeToBuffer(),
+      $0.GenerateConfigResponse.fromBuffer);
+  static final _$startService = $grpc.ClientMethod<$0.StartRequest, $0.CoreInfoResponse>(
+      '/hcore.Core/StartService', ($0.StartRequest value) => value.writeToBuffer(), $0.CoreInfoResponse.fromBuffer);
+  static final _$stop = $grpc.ClientMethod<$1.Empty, $0.CoreInfoResponse>(
+      '/hcore.Core/Stop', ($1.Empty value) => value.writeToBuffer(), $0.CoreInfoResponse.fromBuffer);
+  static final _$restart = $grpc.ClientMethod<$0.StartRequest, $0.CoreInfoResponse>(
+      '/hcore.Core/Restart', ($0.StartRequest value) => value.writeToBuffer(), $0.CoreInfoResponse.fromBuffer);
+  static final _$selectOutbound = $grpc.ClientMethod<$0.SelectOutboundRequest, $1.Response>(
+      '/hcore.Core/SelectOutbound', ($0.SelectOutboundRequest value) => value.writeToBuffer(), $1.Response.fromBuffer);
   static final _$urlTest = $grpc.ClientMethod<$0.UrlTestRequest, $1.Response>(
-      '/hcore.Core/UrlTest',
-      ($0.UrlTestRequest value) => value.writeToBuffer(),
-      $1.Response.fromBuffer);
+      '/hcore.Core/UrlTest', ($0.UrlTestRequest value) => value.writeToBuffer(), $1.Response.fromBuffer);
   static final _$urlTestActive = $grpc.ClientMethod<$1.Empty, $1.Response>(
-      '/hcore.Core/UrlTestActive',
-      ($1.Empty value) => value.writeToBuffer(),
-      $1.Response.fromBuffer);
-  static final _$generateWarpConfig = $grpc.ClientMethod<
-          $0.GenerateWarpConfigRequest, $0.WarpGenerationResponse>(
+      '/hcore.Core/UrlTestActive', ($1.Empty value) => value.writeToBuffer(), $1.Response.fromBuffer);
+  static final _$generateWarpConfig = $grpc.ClientMethod<$0.GenerateWarpConfigRequest, $0.WarpGenerationResponse>(
       '/hcore.Core/GenerateWarpConfig',
       ($0.GenerateWarpConfigRequest value) => value.writeToBuffer(),
       $0.WarpGenerationResponse.fromBuffer);
-  static final _$getSystemProxyStatus =
-      $grpc.ClientMethod<$1.Empty, $0.SystemProxyStatus>(
-          '/hcore.Core/GetSystemProxyStatus',
-          ($1.Empty value) => value.writeToBuffer(),
-          $0.SystemProxyStatus.fromBuffer);
-  static final _$setSystemProxyEnabled =
-      $grpc.ClientMethod<$0.SetSystemProxyEnabledRequest, $1.Response>(
-          '/hcore.Core/SetSystemProxyEnabled',
-          ($0.SetSystemProxyEnabledRequest value) => value.writeToBuffer(),
-          $1.Response.fromBuffer);
+  static final _$getSystemProxyStatus = $grpc.ClientMethod<$1.Empty, $0.SystemProxyStatus>(
+      '/hcore.Core/GetSystemProxyStatus', ($1.Empty value) => value.writeToBuffer(), $0.SystemProxyStatus.fromBuffer);
+  static final _$setSystemProxyEnabled = $grpc.ClientMethod<$0.SetSystemProxyEnabledRequest, $1.Response>(
+      '/hcore.Core/SetSystemProxyEnabled',
+      ($0.SetSystemProxyEnabledRequest value) => value.writeToBuffer(),
+      $1.Response.fromBuffer);
   static final _$logListener = $grpc.ClientMethod<$0.LogRequest, $0.LogMessage>(
-      '/hcore.Core/LogListener',
-      ($0.LogRequest value) => value.writeToBuffer(),
-      $0.LogMessage.fromBuffer);
+      '/hcore.Core/LogListener', ($0.LogRequest value) => value.writeToBuffer(), $0.LogMessage.fromBuffer);
   static final _$close = $grpc.ClientMethod<$0.CloseRequest, $1.Empty>(
-      '/hcore.Core/Close',
-      ($0.CloseRequest value) => value.writeToBuffer(),
-      $1.Empty.fromBuffer);
+      '/hcore.Core/Close', ($0.CloseRequest value) => value.writeToBuffer(), $1.Empty.fromBuffer);
   static final _$getLANIP = $grpc.ClientMethod<$1.Empty, $0.LANIPResponse>(
-      '/hcore.Core/GetLANIP',
-      ($1.Empty value) => value.writeToBuffer(),
-      $0.LANIPResponse.fromBuffer);
+      '/hcore.Core/GetLANIP', ($1.Empty value) => value.writeToBuffer(), $0.LANIPResponse.fromBuffer);
 }
 
 @$pb.GrpcServiceName('hcore.Core')
@@ -324,20 +276,10 @@ abstract class CoreServiceBase extends $grpc.Service {
         true,
         ($core.List<$core.int> value) => $1.Empty.fromBuffer(value),
         ($0.OutboundGroupList value) => value.writeToBuffer()));
-    $addMethod($grpc.ServiceMethod<$1.Empty, $0.SystemInfo>(
-        'GetSystemInfo',
-        getSystemInfo_Pre,
-        false,
-        false,
-        ($core.List<$core.int> value) => $1.Empty.fromBuffer(value),
-        ($0.SystemInfo value) => value.writeToBuffer()));
-    $addMethod($grpc.ServiceMethod<$1.Empty, $0.SystemInfo>(
-        'GetSystemInfoStream',
-        getSystemInfoStream_Pre,
-        false,
-        true,
-        ($core.List<$core.int> value) => $1.Empty.fromBuffer(value),
-        ($0.SystemInfo value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$1.Empty, $0.SystemInfo>('GetSystemInfo', getSystemInfo_Pre, false, false,
+        ($core.List<$core.int> value) => $1.Empty.fromBuffer(value), ($0.SystemInfo value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$1.Empty, $0.SystemInfo>('GetSystemInfoStream', getSystemInfoStream_Pre, false, true,
+        ($core.List<$core.int> value) => $1.Empty.fromBuffer(value), ($0.SystemInfo value) => value.writeToBuffer()));
     $addMethod($grpc.ServiceMethod<$0.SetupRequest, $1.Response>(
         'Setup',
         setup_Pre,
@@ -352,15 +294,20 @@ abstract class CoreServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $0.ParseRequest.fromBuffer(value),
         ($0.ParseResponse value) => value.writeToBuffer()));
-    $addMethod($grpc.ServiceMethod<$0.ChangeHiddifySettingsRequest,
-            $0.CoreInfoResponse>(
+    $addMethod($grpc.ServiceMethod<$0.ChangeHiddifySettingsRequest, $0.CoreInfoResponse>(
         'ChangeHiddifySettings',
         changeHiddifySettings_Pre,
         false,
         false,
-        ($core.List<$core.int> value) =>
-            $0.ChangeHiddifySettingsRequest.fromBuffer(value),
+        ($core.List<$core.int> value) => $0.ChangeHiddifySettingsRequest.fromBuffer(value),
         ($0.CoreInfoResponse value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GenerateConfigRequest, $0.GenerateConfigResponse>(
+        'GenerateConfig',
+        generateConfig_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.GenerateConfigRequest.fromBuffer(value),
+        ($0.GenerateConfigResponse value) => value.writeToBuffer()));
     $addMethod($grpc.ServiceMethod<$0.StartRequest, $0.CoreInfoResponse>(
         'StartService',
         startService_Pre,
@@ -387,8 +334,7 @@ abstract class CoreServiceBase extends $grpc.Service {
         selectOutbound_Pre,
         false,
         false,
-        ($core.List<$core.int> value) =>
-            $0.SelectOutboundRequest.fromBuffer(value),
+        ($core.List<$core.int> value) => $0.SelectOutboundRequest.fromBuffer(value),
         ($1.Response value) => value.writeToBuffer()));
     $addMethod($grpc.ServiceMethod<$0.UrlTestRequest, $1.Response>(
         'UrlTest',
@@ -397,21 +343,14 @@ abstract class CoreServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $0.UrlTestRequest.fromBuffer(value),
         ($1.Response value) => value.writeToBuffer()));
-    $addMethod($grpc.ServiceMethod<$1.Empty, $1.Response>(
-        'UrlTestActive',
-        urlTestActive_Pre,
-        false,
-        false,
-        ($core.List<$core.int> value) => $1.Empty.fromBuffer(value),
-        ($1.Response value) => value.writeToBuffer()));
-    $addMethod($grpc.ServiceMethod<$0.GenerateWarpConfigRequest,
-            $0.WarpGenerationResponse>(
+    $addMethod($grpc.ServiceMethod<$1.Empty, $1.Response>('UrlTestActive', urlTestActive_Pre, false, false,
+        ($core.List<$core.int> value) => $1.Empty.fromBuffer(value), ($1.Response value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GenerateWarpConfigRequest, $0.WarpGenerationResponse>(
         'GenerateWarpConfig',
         generateWarpConfig_Pre,
         false,
         false,
-        ($core.List<$core.int> value) =>
-            $0.GenerateWarpConfigRequest.fromBuffer(value),
+        ($core.List<$core.int> value) => $0.GenerateWarpConfigRequest.fromBuffer(value),
         ($0.WarpGenerationResponse value) => value.writeToBuffer()));
     $addMethod($grpc.ServiceMethod<$1.Empty, $0.SystemProxyStatus>(
         'GetSystemProxyStatus',
@@ -420,15 +359,13 @@ abstract class CoreServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $1.Empty.fromBuffer(value),
         ($0.SystemProxyStatus value) => value.writeToBuffer()));
-    $addMethod(
-        $grpc.ServiceMethod<$0.SetSystemProxyEnabledRequest, $1.Response>(
-            'SetSystemProxyEnabled',
-            setSystemProxyEnabled_Pre,
-            false,
-            false,
-            ($core.List<$core.int> value) =>
-                $0.SetSystemProxyEnabledRequest.fromBuffer(value),
-            ($1.Response value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.SetSystemProxyEnabledRequest, $1.Response>(
+        'SetSystemProxyEnabled',
+        setSystemProxyEnabled_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.SetSystemProxyEnabledRequest.fromBuffer(value),
+        ($1.Response value) => value.writeToBuffer()));
     $addMethod($grpc.ServiceMethod<$0.LogRequest, $0.LogMessage>(
         'LogListener',
         logListener_Pre,
@@ -436,13 +373,8 @@ abstract class CoreServiceBase extends $grpc.Service {
         true,
         ($core.List<$core.int> value) => $0.LogRequest.fromBuffer(value),
         ($0.LogMessage value) => value.writeToBuffer()));
-    $addMethod($grpc.ServiceMethod<$0.CloseRequest, $1.Empty>(
-        'Close',
-        close_Pre,
-        false,
-        false,
-        ($core.List<$core.int> value) => $0.CloseRequest.fromBuffer(value),
-        ($1.Empty value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.CloseRequest, $1.Empty>('Close', close_Pre, false, false,
+        ($core.List<$core.int> value) => $0.CloseRequest.fromBuffer(value), ($1.Empty value) => value.writeToBuffer()));
     $addMethod($grpc.ServiceMethod<$1.Empty, $0.LANIPResponse>(
         'GetLANIP',
         getLANIP_Pre,
@@ -452,130 +384,114 @@ abstract class CoreServiceBase extends $grpc.Service {
         ($0.LANIPResponse value) => value.writeToBuffer()));
   }
 
-  $async.Future<$0.CoreInfoResponse> start_Pre(
-      $grpc.ServiceCall $call, $async.Future<$0.StartRequest> $request) async {
+  $async.Future<$0.CoreInfoResponse> start_Pre($grpc.ServiceCall $call, $async.Future<$0.StartRequest> $request) async {
     return start($call, await $request);
   }
 
-  $async.Future<$0.CoreInfoResponse> start(
-      $grpc.ServiceCall call, $0.StartRequest request);
+  $async.Future<$0.CoreInfoResponse> start($grpc.ServiceCall call, $0.StartRequest request);
 
   $async.Stream<$0.CoreInfoResponse> coreInfoListener_Pre(
       $grpc.ServiceCall $call, $async.Future<$1.Empty> $request) async* {
     yield* coreInfoListener($call, await $request);
   }
 
-  $async.Stream<$0.CoreInfoResponse> coreInfoListener(
-      $grpc.ServiceCall call, $1.Empty request);
+  $async.Stream<$0.CoreInfoResponse> coreInfoListener($grpc.ServiceCall call, $1.Empty request);
 
   $async.Stream<$0.OutboundGroupList> outboundsInfo_Pre(
       $grpc.ServiceCall $call, $async.Future<$1.Empty> $request) async* {
     yield* outboundsInfo($call, await $request);
   }
 
-  $async.Stream<$0.OutboundGroupList> outboundsInfo(
-      $grpc.ServiceCall call, $1.Empty request);
+  $async.Stream<$0.OutboundGroupList> outboundsInfo($grpc.ServiceCall call, $1.Empty request);
 
   $async.Stream<$0.OutboundGroupList> mainOutboundsInfo_Pre(
       $grpc.ServiceCall $call, $async.Future<$1.Empty> $request) async* {
     yield* mainOutboundsInfo($call, await $request);
   }
 
-  $async.Stream<$0.OutboundGroupList> mainOutboundsInfo(
-      $grpc.ServiceCall call, $1.Empty request);
+  $async.Stream<$0.OutboundGroupList> mainOutboundsInfo($grpc.ServiceCall call, $1.Empty request);
 
-  $async.Future<$0.SystemInfo> getSystemInfo_Pre(
-      $grpc.ServiceCall $call, $async.Future<$1.Empty> $request) async {
+  $async.Future<$0.SystemInfo> getSystemInfo_Pre($grpc.ServiceCall $call, $async.Future<$1.Empty> $request) async {
     return getSystemInfo($call, await $request);
   }
 
-  $async.Future<$0.SystemInfo> getSystemInfo(
-      $grpc.ServiceCall call, $1.Empty request);
+  $async.Future<$0.SystemInfo> getSystemInfo($grpc.ServiceCall call, $1.Empty request);
 
   $async.Stream<$0.SystemInfo> getSystemInfoStream_Pre(
       $grpc.ServiceCall $call, $async.Future<$1.Empty> $request) async* {
     yield* getSystemInfoStream($call, await $request);
   }
 
-  $async.Stream<$0.SystemInfo> getSystemInfoStream(
-      $grpc.ServiceCall call, $1.Empty request);
+  $async.Stream<$0.SystemInfo> getSystemInfoStream($grpc.ServiceCall call, $1.Empty request);
 
-  $async.Future<$1.Response> setup_Pre(
-      $grpc.ServiceCall $call, $async.Future<$0.SetupRequest> $request) async {
+  $async.Future<$1.Response> setup_Pre($grpc.ServiceCall $call, $async.Future<$0.SetupRequest> $request) async {
     return setup($call, await $request);
   }
 
-  $async.Future<$1.Response> setup(
-      $grpc.ServiceCall call, $0.SetupRequest request);
+  $async.Future<$1.Response> setup($grpc.ServiceCall call, $0.SetupRequest request);
 
-  $async.Future<$0.ParseResponse> parse_Pre(
-      $grpc.ServiceCall $call, $async.Future<$0.ParseRequest> $request) async {
+  $async.Future<$0.ParseResponse> parse_Pre($grpc.ServiceCall $call, $async.Future<$0.ParseRequest> $request) async {
     return parse($call, await $request);
   }
 
-  $async.Future<$0.ParseResponse> parse(
-      $grpc.ServiceCall call, $0.ParseRequest request);
+  $async.Future<$0.ParseResponse> parse($grpc.ServiceCall call, $0.ParseRequest request);
 
   $async.Future<$0.CoreInfoResponse> changeHiddifySettings_Pre(
-      $grpc.ServiceCall $call,
-      $async.Future<$0.ChangeHiddifySettingsRequest> $request) async {
+      $grpc.ServiceCall $call, $async.Future<$0.ChangeHiddifySettingsRequest> $request) async {
     return changeHiddifySettings($call, await $request);
   }
 
   $async.Future<$0.CoreInfoResponse> changeHiddifySettings(
       $grpc.ServiceCall call, $0.ChangeHiddifySettingsRequest request);
 
+  $async.Future<$0.GenerateConfigResponse> generateConfig_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.GenerateConfigRequest> $request) async {
+    return generateConfig($call, await $request);
+  }
+
+  $async.Future<$0.GenerateConfigResponse> generateConfig($grpc.ServiceCall call, $0.GenerateConfigRequest request);
+
   $async.Future<$0.CoreInfoResponse> startService_Pre(
       $grpc.ServiceCall $call, $async.Future<$0.StartRequest> $request) async {
     return startService($call, await $request);
   }
 
-  $async.Future<$0.CoreInfoResponse> startService(
-      $grpc.ServiceCall call, $0.StartRequest request);
+  $async.Future<$0.CoreInfoResponse> startService($grpc.ServiceCall call, $0.StartRequest request);
 
-  $async.Future<$0.CoreInfoResponse> stop_Pre(
-      $grpc.ServiceCall $call, $async.Future<$1.Empty> $request) async {
+  $async.Future<$0.CoreInfoResponse> stop_Pre($grpc.ServiceCall $call, $async.Future<$1.Empty> $request) async {
     return stop($call, await $request);
   }
 
-  $async.Future<$0.CoreInfoResponse> stop(
-      $grpc.ServiceCall call, $1.Empty request);
+  $async.Future<$0.CoreInfoResponse> stop($grpc.ServiceCall call, $1.Empty request);
 
   $async.Future<$0.CoreInfoResponse> restart_Pre(
       $grpc.ServiceCall $call, $async.Future<$0.StartRequest> $request) async {
     return restart($call, await $request);
   }
 
-  $async.Future<$0.CoreInfoResponse> restart(
-      $grpc.ServiceCall call, $0.StartRequest request);
+  $async.Future<$0.CoreInfoResponse> restart($grpc.ServiceCall call, $0.StartRequest request);
 
-  $async.Future<$1.Response> selectOutbound_Pre($grpc.ServiceCall $call,
-      $async.Future<$0.SelectOutboundRequest> $request) async {
+  $async.Future<$1.Response> selectOutbound_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.SelectOutboundRequest> $request) async {
     return selectOutbound($call, await $request);
   }
 
-  $async.Future<$1.Response> selectOutbound(
-      $grpc.ServiceCall call, $0.SelectOutboundRequest request);
+  $async.Future<$1.Response> selectOutbound($grpc.ServiceCall call, $0.SelectOutboundRequest request);
 
-  $async.Future<$1.Response> urlTest_Pre($grpc.ServiceCall $call,
-      $async.Future<$0.UrlTestRequest> $request) async {
+  $async.Future<$1.Response> urlTest_Pre($grpc.ServiceCall $call, $async.Future<$0.UrlTestRequest> $request) async {
     return urlTest($call, await $request);
   }
 
-  $async.Future<$1.Response> urlTest(
-      $grpc.ServiceCall call, $0.UrlTestRequest request);
+  $async.Future<$1.Response> urlTest($grpc.ServiceCall call, $0.UrlTestRequest request);
 
-  $async.Future<$1.Response> urlTestActive_Pre(
-      $grpc.ServiceCall $call, $async.Future<$1.Empty> $request) async {
+  $async.Future<$1.Response> urlTestActive_Pre($grpc.ServiceCall $call, $async.Future<$1.Empty> $request) async {
     return urlTestActive($call, await $request);
   }
 
-  $async.Future<$1.Response> urlTestActive(
-      $grpc.ServiceCall call, $1.Empty request);
+  $async.Future<$1.Response> urlTestActive($grpc.ServiceCall call, $1.Empty request);
 
   $async.Future<$0.WarpGenerationResponse> generateWarpConfig_Pre(
-      $grpc.ServiceCall $call,
-      $async.Future<$0.GenerateWarpConfigRequest> $request) async {
+      $grpc.ServiceCall $call, $async.Future<$0.GenerateWarpConfigRequest> $request) async {
     return generateWarpConfig($call, await $request);
   }
 
@@ -587,38 +503,30 @@ abstract class CoreServiceBase extends $grpc.Service {
     return getSystemProxyStatus($call, await $request);
   }
 
-  $async.Future<$0.SystemProxyStatus> getSystemProxyStatus(
-      $grpc.ServiceCall call, $1.Empty request);
+  $async.Future<$0.SystemProxyStatus> getSystemProxyStatus($grpc.ServiceCall call, $1.Empty request);
 
-  $async.Future<$1.Response> setSystemProxyEnabled_Pre($grpc.ServiceCall $call,
-      $async.Future<$0.SetSystemProxyEnabledRequest> $request) async {
+  $async.Future<$1.Response> setSystemProxyEnabled_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.SetSystemProxyEnabledRequest> $request) async {
     return setSystemProxyEnabled($call, await $request);
   }
 
-  $async.Future<$1.Response> setSystemProxyEnabled(
-      $grpc.ServiceCall call, $0.SetSystemProxyEnabledRequest request);
+  $async.Future<$1.Response> setSystemProxyEnabled($grpc.ServiceCall call, $0.SetSystemProxyEnabledRequest request);
 
-  $async.Stream<$0.LogMessage> logListener_Pre(
-      $grpc.ServiceCall $call, $async.Future<$0.LogRequest> $request) async* {
+  $async.Stream<$0.LogMessage> logListener_Pre($grpc.ServiceCall $call, $async.Future<$0.LogRequest> $request) async* {
     yield* logListener($call, await $request);
   }
 
-  $async.Stream<$0.LogMessage> logListener(
-      $grpc.ServiceCall call, $0.LogRequest request);
+  $async.Stream<$0.LogMessage> logListener($grpc.ServiceCall call, $0.LogRequest request);
 
-  $async.Future<$1.Empty> close_Pre(
-      $grpc.ServiceCall $call, $async.Future<$0.CloseRequest> $request) async {
+  $async.Future<$1.Empty> close_Pre($grpc.ServiceCall $call, $async.Future<$0.CloseRequest> $request) async {
     return close($call, await $request);
   }
 
-  $async.Future<$1.Empty> close(
-      $grpc.ServiceCall call, $0.CloseRequest request);
+  $async.Future<$1.Empty> close($grpc.ServiceCall call, $0.CloseRequest request);
 
-  $async.Future<$0.LANIPResponse> getLANIP_Pre(
-      $grpc.ServiceCall $call, $async.Future<$1.Empty> $request) async {
+  $async.Future<$0.LANIPResponse> getLANIP_Pre($grpc.ServiceCall $call, $async.Future<$1.Empty> $request) async {
     return getLANIP($call, await $request);
   }
 
-  $async.Future<$0.LANIPResponse> getLANIP(
-      $grpc.ServiceCall call, $1.Empty request);
+  $async.Future<$0.LANIPResponse> getLANIP($grpc.ServiceCall call, $1.Empty request);
 }
