@@ -767,6 +767,12 @@
       "locationTitle": "منطقه سرور",
       "locationAuto": "انتخاب خودکار",
       "locationDetail": "انتخاب بر اساس کشور یا منطقه",
+      "locationNames": {
+        "hongKong": "هنگ‌کنگ",
+        "japan": "ژاپن",
+        "singapore": "سنگاپور",
+        "unitedStates": "ایالات متحده"
+      },
       "connect": "برای شروع شتاب‌دهی کلیک کنید",
       "updateRequired": "به‌روزرسانی لازم است"
     },
@@ -886,7 +892,10 @@
       "empty": "هنوز هیچ وب‌سایتی اضافه نشده است",
       "deleteTooltip": "حذف",
       "deleteTitle": "حذف قانون دسترسی",
-      "deleteConfirm": "«${value}» حذف شود؟"
+      "deleteConfirm": "«${value}» حذف شود؟",
+      "targetHintDomain": "دامنه را وارد کنید، مانند example.com",
+      "targetHintIp": "نشانی IP را وارد کنید، مانند 1.2.3.4 یا 2001:db8::1",
+      "targetHintCidr": "محدوده CIDR را وارد کنید، مانند 192.168.1.0/24"
     },
     "routeHistory": {
       "menuTitle": "سابقه",

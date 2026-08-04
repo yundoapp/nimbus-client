@@ -258,15 +258,30 @@ class NimbusLocation {
 
   String displayNameForLanguage(String languageCode) {
     if (code == 'auto') return '';
-    final english = (displayNames['en'] ?? '').trim();
-    final chinese = (displayNames['zh-CN'] ?? displayNames['zh'] ?? displayName).trim();
-    if (languageCode.toLowerCase().startsWith('zh')) {
-      if (english.isNotEmpty && chinese.isNotEmpty && english != chinese) return '$english · $chinese';
-      final localized = chinese.isNotEmpty ? chinese : english;
-      return localized.isEmpty ? code : localized;
+    final normalizedLanguage = languageCode.trim().toLowerCase().replaceAll('_', '-');
+    final languageCandidates = <String>{
+      normalizedLanguage,
+      if (normalizedLanguage.contains('-')) normalizedLanguage.split('-').first,
+    };
+
+    String? valueForLanguage(Iterable<String> candidates) {
+      for (final candidate in candidates) {
+        for (final entry in displayNames.entries) {
+          if (entry.key.trim().toLowerCase().replaceAll('_', '-') == candidate) {
+            final value = entry.value.trim();
+            if (value.isNotEmpty) return value;
+          }
+        }
+      }
+      return null;
     }
-    final localized = english.isNotEmpty ? english : displayName.trim();
-    return localized.isEmpty ? code : localized;
+
+    final localized = valueForLanguage(languageCandidates);
+    if (localized != null) return localized;
+
+    final fallbackCandidates = normalizedLanguage.startsWith('zh') ? const ['zh-cn', 'zh'] : const ['en'];
+    final fallback = valueForLanguage(fallbackCandidates) ?? displayName.trim();
+    return fallback.isEmpty ? code : fallback;
   }
 }
 

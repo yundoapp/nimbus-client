@@ -767,6 +767,12 @@
       "locationTitle": "Sunucu bölgesi",
       "locationAuto": "Otomatik seçim",
       "locationDetail": "Ülke veya bölgeye göre seç",
+      "locationNames": {
+        "hongKong": "Hong Kong",
+        "japan": "Japonya",
+        "singapore": "Singapur",
+        "unitedStates": "Amerika Birleşik Devletleri"
+      },
       "connect": "Hızlandırmayı başlatmak için tıklayın",
       "updateRequired": "Güncelleme gerekli"
     },
@@ -886,7 +892,10 @@
       "empty": "Henüz hiçbir web sitesi eklenmedi",
       "deleteTooltip": "Sil",
       "deleteTitle": "Erişim kuralını sil",
-      "deleteConfirm": "\"${value}\" silinsin mi?"
+      "deleteConfirm": "\"${value}\" silinsin mi?",
+      "targetHintDomain": "Bir alan adı girin, örneğin example.com",
+      "targetHintIp": "Bir IP adresi girin, örneğin 1.2.3.4 veya 2001:db8::1",
+      "targetHintCidr": "Bir CIDR aralığı girin, örneğin 192.168.1.0/24"
     },
     "routeHistory": {
       "menuTitle": "Geçmiş",

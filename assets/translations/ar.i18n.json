@@ -773,6 +773,12 @@
       "locationTitle": "منطقة الخادم",
       "locationAuto": "اختيار تلقائي",
       "locationDetail": "اختر حسب الدولة أو المنطقة",
+      "locationNames": {
+        "hongKong": "هونغ كونغ",
+        "japan": "اليابان",
+        "singapore": "سنغافورة",
+        "unitedStates": "الولايات المتحدة"
+      },
       "connect": "اضغط لبدء التسريع",
       "updateRequired": "يلزم التحديث"
     },
@@ -892,7 +898,10 @@
       "empty": "لم تتم إضافة أي مواقع بعد",
       "deleteTooltip": "حذف",
       "deleteTitle": "حذف قاعدة الوصول",
-      "deleteConfirm": "هل تريد حذف \"${value}\"؟"
+      "deleteConfirm": "هل تريد حذف \"${value}\"؟",
+      "targetHintDomain": "أدخل نطاقًا، مثل example.com",
+      "targetHintIp": "أدخل عنوان IP، مثل 1.2.3.4 أو 2001:db8::1",
+      "targetHintCidr": "أدخل نطاق CIDR، مثل 192.168.1.0/24"
     },
     "routeHistory": {
       "menuTitle": "السجل",

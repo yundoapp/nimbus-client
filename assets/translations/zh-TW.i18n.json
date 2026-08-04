@@ -767,6 +767,12 @@
       "locationTitle": "節點地區",
       "locationAuto": "自動選擇",
       "locationDetail": "按國家或地區選擇",
+      "locationNames": {
+        "hongKong": "香港",
+        "japan": "日本",
+        "singapore": "新加坡",
+        "unitedStates": "美國"
+      },
       "connect": "點擊開始加速",
       "updateRequired": "需要更新"
     },
@@ -891,6 +897,9 @@
       "targetType": "規則類型",
       "targetValue": "規則內容",
       "targetHint": "請輸入網域、IP 位址或 CIDR 網段",
+      "targetHintDomain": "請輸入網域，例如 example.com",
+      "targetHintIp": "請輸入 IP 位址，例如 1.2.3.4 或 2001:db8::1",
+      "targetHintCidr": "請輸入 CIDR 網段，例如 192.168.1.0/24",
       "targetInvalid": "請輸入正確的網域、IP 位址或 CIDR 網段",
       "domainType": "網域",
       "ipType": "IP 位址",

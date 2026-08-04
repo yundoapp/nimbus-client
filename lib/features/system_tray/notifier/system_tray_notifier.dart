@@ -12,6 +12,7 @@ import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_desktop_behavior_controller.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_location_display.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/window/notifier/window_notifier.dart';
 import 'package:hiddify/gen/assets.gen.dart';
@@ -408,6 +409,5 @@ String _proxyModeLabel(Translations t, NimbusProxyMode mode) => switch (mode) {
 };
 
 String _locationDisplayName(Translations t, NimbusLocation location, String languageCode) {
-  if (location.code == 'auto') return t.nimbus.home.locationAuto;
-  return location.displayNameForLanguage(languageCode);
+  return nimbusLocationDisplayName(t, location, languageCode);
 }

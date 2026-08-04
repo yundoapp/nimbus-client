@@ -14,6 +14,7 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dar
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_location_display.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -930,22 +931,28 @@ class _ProxyModeControlCard extends HookConsumerWidget {
     }
 
     return LayoutBuilder(
-      builder: (context, constraints) => MenuAnchor(
-        crossAxisUnconstrained: false,
-        useRootOverlay: true,
-        alignmentOffset: const Offset(0, 6),
-        style: _homeDropdownMenuStyle(theme, constraints.maxWidth),
-        menuChildren: menuChildren,
-        builder: (context, controller, child) => _HomeControlCard(
-          icon: Icons.route_rounded,
-          title: t.nimbus.home.connectionMode,
-          value: selectedMode.label(t),
-          detail: selectedMode == NimbusProxyMode.auto
-              ? t.nimbus.home.accessPolicyVersion(version: rulesVersion)
-              : t.nimbus.home.globalRoutingDetail,
-          isExpanded: controller.isOpen,
-          isLoading: disabled,
-          onTap: disabled ? null : () => controller.isOpen ? controller.close() : controller.open(),
+      builder: (context, constraints) => SizedBox(
+        width: constraints.maxWidth,
+        child: MenuAnchor(
+          crossAxisUnconstrained: false,
+          useRootOverlay: true,
+          alignmentOffset: const Offset(0, 6),
+          style: _homeDropdownMenuStyle(theme, constraints.maxWidth),
+          menuChildren: menuChildren,
+          builder: (context, controller, child) => SizedBox(
+            width: constraints.maxWidth,
+            child: _HomeControlCard(
+              icon: Icons.route_rounded,
+              title: t.nimbus.home.connectionMode,
+              value: selectedMode.label(t),
+              detail: selectedMode == NimbusProxyMode.auto
+                  ? t.nimbus.home.accessPolicyVersion(version: rulesVersion)
+                  : t.nimbus.home.globalRoutingDetail,
+              isExpanded: controller.isOpen,
+              isLoading: disabled,
+              onTap: disabled ? null : () => controller.isOpen ? controller.close() : controller.open(),
+            ),
+          ),
         ),
       ),
     );
@@ -971,8 +978,9 @@ class _LocationControlCard extends HookConsumerWidget {
     if (PlatformUtils.isMobile) {
       return _HomeControlCard(
         icon: Icons.public_rounded,
+        leading: nimbusLocationFlag(selectedLocation),
         title: t.nimbus.home.locationTitle,
-        value: _locationDisplayName(t, selectedLocation, locale.languageCode),
+        value: nimbusLocationDisplayName(t, selectedLocation, locale.languageCode),
         detail: t.nimbus.home.locationDetail,
         isLoading: isLoadingLocations.value,
         onTap: isSwitching || isLoadingLocations.value
@@ -1006,42 +1014,59 @@ class _LocationControlCard extends HookConsumerWidget {
           onPressed: isSwitching
               ? null
               : () => ref.read(nimbusConnectionControllerProvider.notifier).selectLocation(location),
-          child: Text(
-            _locationDisplayName(t, location, locale.languageCode),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600),
+          child: Row(
+            children: [
+              nimbusLocationFlag(location),
+              const Gap(10),
+              Expanded(
+                child: Text(
+                  nimbusLocationDisplayName(t, location, locale.languageCode),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );
     }
 
     return LayoutBuilder(
-      builder: (context, constraints) => MenuAnchor(
-        crossAxisUnconstrained: false,
-        useRootOverlay: true,
-        alignmentOffset: const Offset(0, 6),
-        style: _homeDropdownMenuStyle(theme, constraints.maxWidth),
-        menuChildren: menuChildren,
-        builder: (context, controller, child) => _HomeControlCard(
-          icon: Icons.public_rounded,
-          title: t.nimbus.home.locationTitle,
-          value: _locationDisplayName(t, selectedLocation, locale.languageCode),
-          detail: t.nimbus.home.locationDetail,
-          isExpanded: controller.isOpen,
-          isLoading: isLoadingLocations.value,
-          onTap: isSwitching || isLoadingLocations.value
-              ? null
-              : () async {
-                  isLoadingLocations.value = true;
-                  try {
-                    await ref.read(nimbusAuthControllerProvider.notifier).loadLocations();
-                    if (!context.mounted) return;
-                    controller.isOpen ? controller.close() : controller.open();
-                  } finally {
-                    if (context.mounted) isLoadingLocations.value = false;
-                  }
-                },
+      builder: (context, constraints) => SizedBox(
+        width: constraints.maxWidth,
+        child: MenuAnchor(
+          crossAxisUnconstrained: false,
+          useRootOverlay: true,
+          alignmentOffset: const Offset(0, 6),
+          style: _homeDropdownMenuStyle(theme, constraints.maxWidth),
+          menuChildren: menuChildren,
+          builder: (context, controller, child) => SizedBox(
+            width: constraints.maxWidth,
+            child: _HomeControlCard(
+              icon: Icons.public_rounded,
+              leading: nimbusLocationFlag(selectedLocation),
+              title: t.nimbus.home.locationTitle,
+              value: nimbusLocationDisplayName(t, selectedLocation, locale.languageCode),
+              detail: t.nimbus.home.locationDetail,
+              isExpanded: controller.isOpen,
+              isLoading: isLoadingLocations.value,
+              onTap: isSwitching || isLoadingLocations.value
+                  ? null
+                  : () async {
+                      isLoadingLocations.value = true;
+                      try {
+                        await ref.read(nimbusAuthControllerProvider.notifier).loadLocations();
+                        if (!context.mounted) return;
+                        controller.isOpen ? controller.close() : controller.open();
+                      } finally {
+                        if (context.mounted) isLoadingLocations.value = false;
+                      }
+                    },
+            ),
+          ),
         ),
       ),
     );
@@ -1112,8 +1137,8 @@ class _NimbusLocationSelectionPage extends HookConsumerWidget {
             final isSelected = location.code == authState.selectedLocationCode;
             return ListTile(
               enabled: !isSwitching,
-              leading: const Icon(Icons.public_rounded),
-              title: Text(_locationDisplayName(t, location, locale.languageCode)),
+              leading: nimbusLocationFlag(location),
+              title: Text(nimbusLocationDisplayName(t, location, locale.languageCode)),
               trailing: isSelected ? Icon(Icons.check_rounded, color: theme.colorScheme.primary) : null,
               onTap: isSwitching
                   ? null
@@ -1136,11 +1161,13 @@ class _HomeControlCard extends StatelessWidget {
     required this.value,
     required this.detail,
     required this.onTap,
+    this.leading,
     this.isExpanded,
     this.isLoading = false,
   });
 
   final IconData icon;
+  final Widget? leading;
   final String title;
   final String value;
   final String detail;
@@ -1182,13 +1209,14 @@ class _HomeControlCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 children: [
-                  Icon(
-                    icon,
-                    size: 22,
-                    color: enabled
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.52),
-                  ),
+                  leading ??
+                      Icon(
+                        icon,
+                        size: 22,
+                        color: enabled
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.52),
+                      ),
                   const Gap(12),
                   Expanded(
                     child: Column(
@@ -1419,11 +1447,6 @@ NimbusLocation _selectedLocation(NimbusAuthState authState) {
     (location) => location.code == authState.selectedLocationCode,
     orElse: () => const NimbusLocation(code: 'auto', displayName: ''),
   );
-}
-
-String _locationDisplayName(Translations t, NimbusLocation location, String languageCode) {
-  if (location.code == 'auto') return t.nimbus.home.locationAuto;
-  return location.displayNameForLanguage(languageCode);
 }
 
 String _formatRulesVersionForDisplay(String? version) {

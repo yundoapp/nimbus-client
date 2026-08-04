@@ -767,6 +767,12 @@
       "locationTitle": "Wilayah server",
       "locationAuto": "Pilihan otomatis",
       "locationDetail": "Pilih berdasarkan negara atau wilayah",
+      "locationNames": {
+        "hongKong": "Hong Kong",
+        "japan": "Jepang",
+        "singapore": "Singapura",
+        "unitedStates": "Amerika Serikat"
+      },
       "connect": "Klik untuk memulai percepatan",
       "updateRequired": "Perlu pembaruan"
     },
@@ -886,7 +892,10 @@
       "empty": "Belum ada situs yang ditambahkan",
       "deleteTooltip": "Hapus",
       "deleteTitle": "Hapus aturan akses",
-      "deleteConfirm": "Hapus \"${value}\"?"
+      "deleteConfirm": "Hapus \"${value}\"?",
+      "targetHintDomain": "Masukkan domain, misalnya example.com",
+      "targetHintIp": "Masukkan alamat IP, misalnya 1.2.3.4 atau 2001:db8::1",
+      "targetHintCidr": "Masukkan rentang CIDR, misalnya 192.168.1.0/24"
     },
     "routeHistory": {
       "menuTitle": "Riwayat",

@@ -759,6 +759,12 @@
       "locationTitle": "Région du serveur",
       "locationAuto": "Sélection automatique",
       "locationDetail": "Choisir par pays ou région",
+      "locationNames": {
+        "hongKong": "Hong Kong",
+        "japan": "Japon",
+        "singapore": "Singapour",
+        "unitedStates": "États-Unis"
+      },
       "connect": "Cliquez pour démarrer l’accélération",
       "updateRequired": "Mise à jour requise"
     },
@@ -878,7 +884,10 @@
       "empty": "Aucun site ajouté pour le moment",
       "deleteTooltip": "Supprimer",
       "deleteTitle": "Supprimer la règle d’accès",
-      "deleteConfirm": "Supprimer « ${value} » ?"
+      "deleteConfirm": "Supprimer « ${value} » ?",
+      "targetHintDomain": "Saisissez un domaine, par exemple example.com",
+      "targetHintIp": "Saisissez une adresse IP, par exemple 1.2.3.4 ou 2001:db8::1",
+      "targetHintCidr": "Saisissez une plage CIDR, par exemple 192.168.1.0/24"
     },
     "routeHistory": {
       "menuTitle": "Historique",

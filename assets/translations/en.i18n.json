@@ -767,6 +767,12 @@
       "locationTitle": "Server region",
       "locationAuto": "Automatic selection",
       "locationDetail": "Choose by country/region",
+      "locationNames": {
+        "hongKong": "Hong Kong",
+        "japan": "Japan",
+        "singapore": "Singapore",
+        "unitedStates": "United States"
+      },
       "connect": "Click to start acceleration",
       "updateRequired": "Update required"
     },
@@ -891,6 +897,9 @@
       "targetType": "Rule type",
       "targetValue": "Rule value",
       "targetHint": "Enter a domain, IP address, or CIDR range",
+      "targetHintDomain": "Enter a domain, such as example.com",
+      "targetHintIp": "Enter an IP address, such as 1.2.3.4 or 2001:db8::1",
+      "targetHintCidr": "Enter a CIDR range, such as 192.168.1.0/24",
       "targetInvalid": "Enter a valid domain, IP address, or CIDR range",
       "domainType": "Domain",
       "ipType": "IP address",

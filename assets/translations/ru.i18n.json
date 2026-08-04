@@ -771,6 +771,12 @@
       "locationTitle": "Регион сервера",
       "locationAuto": "Автоматический выбор",
       "locationDetail": "Выбрать страну или регион",
+      "locationNames": {
+        "hongKong": "Гонконг",
+        "japan": "Япония",
+        "singapore": "Сингапур",
+        "unitedStates": "США"
+      },
       "connect": "Нажмите, чтобы включить ускорение",
       "updateRequired": "Требуется обновление"
     },
@@ -890,7 +896,10 @@
       "empty": "Сайты пока не добавлены",
       "deleteTooltip": "Удалить",
       "deleteTitle": "Удалить правило доступа",
-      "deleteConfirm": "Удалить «${value}»?"
+      "deleteConfirm": "Удалить «${value}»?",
+      "targetHintDomain": "Введите домен, например example.com",
+      "targetHintIp": "Введите IP-адрес, например 1.2.3.4 или 2001:db8::1",
+      "targetHintCidr": "Введите диапазон CIDR, например 192.168.1.0/24"
     },
     "routeHistory": {
       "menuTitle": "История",

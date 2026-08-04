@@ -767,6 +767,12 @@
       "locationTitle": "节点地区",
       "locationAuto": "自动选择",
       "locationDetail": "按国家或地区选择",
+      "locationNames": {
+        "hongKong": "香港",
+        "japan": "日本",
+        "singapore": "新加坡",
+        "unitedStates": "美国"
+      },
       "connect": "点击开始加速",
       "updateRequired": "需要更新"
     },
@@ -891,6 +897,9 @@
       "targetType": "规则类型",
       "targetValue": "规则内容",
       "targetHint": "请输入域名、IP 地址或 CIDR 网段",
+      "targetHintDomain": "请输入域名，例如 example.com",
+      "targetHintIp": "请输入 IP 地址，例如 1.2.3.4 或 2001:db8::1",
+      "targetHintCidr": "请输入 CIDR 网段，例如 192.168.1.0/24",
       "targetInvalid": "请输入正确的域名、IP 地址或 CIDR 网段",
       "domainType": "域名",
       "ipType": "IP 地址",

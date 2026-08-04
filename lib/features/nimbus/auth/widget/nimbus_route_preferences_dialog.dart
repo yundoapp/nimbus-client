@@ -672,7 +672,7 @@ class NimbusRoutePreferenceEditorDialog extends HookConsumerWidget {
                 inputFormatters: [LengthLimitingTextInputFormatter(nimbusDomainMaxLength)],
                 decoration: InputDecoration(
                   labelText: t.nimbus.routePreferences.targetValue,
-                  hintText: t.nimbus.routePreferences.targetHint,
+                  hintText: nimbusRouteTargetHint(t, selectedTargetType.value),
                   errorText: error.value,
                 ),
                 onChanged: (_) => error.value = null,
@@ -757,3 +757,9 @@ class NimbusRoutePreferenceEditorDialog extends HookConsumerWidget {
     );
   }
 }
+
+String nimbusRouteTargetHint(Translations translations, String targetType) => switch (targetType) {
+  'ip' => translations.nimbus.routePreferences.targetHintIp,
+  'cidr' => translations.nimbus.routePreferences.targetHintCidr,
+  _ => translations.nimbus.routePreferences.targetHintDomain,
+};
