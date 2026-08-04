@@ -18,6 +18,7 @@ import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 const _yundoLogoColor = Color(0xFF4F67AA);
+const _homeDropdownItemHeight = 72.0;
 
 class HomePage extends HookConsumerWidget {
   const HomePage({super.key});
@@ -893,43 +894,48 @@ class _ProxyModeControlCard extends HookConsumerWidget {
       }
     }
 
+    final menuChildren = <Widget>[];
+    for (var index = 0; index < NimbusProxyMode.values.length; index++) {
+      if (index > 0) menuChildren.add(_homeDropdownDivider(theme));
+      final mode = NimbusProxyMode.values[index];
+      final isSelected = mode == selectedMode;
+      menuChildren.add(
+        MenuItemButton(
+          onPressed: disabled ? null : () => selectMode(mode),
+          trailingIcon: isSelected
+              ? Icon(Icons.check_rounded, size: 18, color: theme.colorScheme.primary)
+              : const SizedBox(width: 18),
+          style: _homeDropdownItemStyle(theme, isSelected: isSelected, height: _homeDropdownItemHeight),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                mode.label(t),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                mode.description(t),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.25),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) => MenuAnchor(
         crossAxisUnconstrained: false,
         useRootOverlay: true,
         alignmentOffset: const Offset(0, 6),
         style: _homeDropdownMenuStyle(theme, constraints.maxWidth),
-        menuChildren: NimbusProxyMode.values.map((mode) {
-          final isSelected = mode == selectedMode;
-          return MenuItemButton(
-            onPressed: disabled ? null : () => selectMode(mode),
-            trailingIcon: isSelected
-                ? Icon(Icons.check_rounded, size: 18, color: theme.colorScheme.primary)
-                : const SizedBox(width: 18),
-            style: _homeDropdownItemStyle(theme, isSelected: isSelected, height: 58),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  mode.label(t),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  mode.description(t),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.2),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
+        menuChildren: menuChildren,
         builder: (context, controller, child) => _HomeControlCard(
           icon: Icons.route_rounded,
           title: t.nimbus.home.connectionMode,
@@ -986,30 +992,37 @@ class _LocationControlCard extends HookConsumerWidget {
       );
     }
 
+    final menuChildren = <Widget>[];
+    for (var index = 0; index < locations.length; index++) {
+      if (index > 0) menuChildren.add(_homeDropdownDivider(theme));
+      final location = locations[index];
+      final isSelected = location.code == authState.selectedLocationCode;
+      menuChildren.add(
+        MenuItemButton(
+          style: _homeDropdownItemStyle(theme, isSelected: isSelected, height: _homeDropdownItemHeight),
+          trailingIcon: isSelected
+              ? Icon(Icons.check_rounded, size: 18, color: theme.colorScheme.primary)
+              : const SizedBox(width: 18),
+          onPressed: isSwitching
+              ? null
+              : () => ref.read(nimbusConnectionControllerProvider.notifier).selectLocation(location),
+          child: Text(
+            _locationDisplayName(t, location, locale.languageCode),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600),
+          ),
+        ),
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) => MenuAnchor(
         crossAxisUnconstrained: false,
         useRootOverlay: true,
         alignmentOffset: const Offset(0, 6),
         style: _homeDropdownMenuStyle(theme, constraints.maxWidth),
-        menuChildren: locations.map((location) {
-          final isSelected = location.code == authState.selectedLocationCode;
-          return MenuItemButton(
-            style: _homeDropdownItemStyle(theme, isSelected: isSelected, height: 44),
-            trailingIcon: isSelected
-                ? Icon(Icons.check_rounded, size: 18, color: theme.colorScheme.primary)
-                : const SizedBox(width: 18),
-            onPressed: isSwitching
-                ? null
-                : () => ref.read(nimbusConnectionControllerProvider.notifier).selectLocation(location),
-            child: Text(
-              _locationDisplayName(t, location, locale.languageCode),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600),
-            ),
-          );
-        }).toList(),
+        menuChildren: menuChildren,
         builder: (context, controller, child) => _HomeControlCard(
           icon: Icons.public_rounded,
           title: t.nimbus.home.locationTitle,
@@ -1043,7 +1056,7 @@ MenuStyle _homeDropdownMenuStyle(ThemeData theme, double width) {
     surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
     shadowColor: WidgetStatePropertyAll(colors.shadow.withValues(alpha: 0.12)),
     elevation: const WidgetStatePropertyAll(2),
-    padding: const WidgetStatePropertyAll(EdgeInsets.all(4)),
+    padding: const WidgetStatePropertyAll(EdgeInsets.all(6)),
     minimumSize: WidgetStatePropertyAll(Size(width, 0)),
     maximumSize: WidgetStatePropertyAll(Size(width, double.infinity)),
     side: WidgetStatePropertyAll(BorderSide(color: colors.outlineVariant.withValues(alpha: 0.52))),
@@ -1051,12 +1064,15 @@ MenuStyle _homeDropdownMenuStyle(ThemeData theme, double width) {
   );
 }
 
+Widget _homeDropdownDivider(ThemeData theme) =>
+    Divider(height: 1, indent: 10, endIndent: 10, color: theme.colorScheme.outlineVariant.withValues(alpha: 0.42));
+
 ButtonStyle _homeDropdownItemStyle(ThemeData theme, {required bool isSelected, required double height}) {
   final colors = theme.colorScheme;
   return ButtonStyle(
     minimumSize: WidgetStatePropertyAll(Size.fromHeight(height)),
     maximumSize: WidgetStatePropertyAll(Size.fromHeight(height)),
-    padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
+    padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12, vertical: 6)),
     backgroundColor: WidgetStateProperty.resolveWith((states) {
       if (isSelected) {
         final alpha = states.contains(WidgetState.hovered) ? 0.44 : 0.28;
