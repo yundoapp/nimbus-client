@@ -46,7 +46,7 @@ YundoPrivilegedHelper / root
   |- 把校验后的配置写入 root 私有目录，再启动同一签名 helper 的 raw-run 子进程
   |- 子进程通过包内 hiddify-core 的 `parseCli srun -c` 执行原始 sing-box 配置
   |- 不接收真实节点、账号、激活码或远端密钥
-  |- 不开放 TCP/gRPC 管理端口
+  |- 仅在本机回环地址开放独立的 Clash API 连接观测端口，不接受外部访问
   `- App/XPC 失联时终止 raw-run 子进程、删除活动配置并退出
 ```
 
@@ -69,8 +69,13 @@ helper 会再次解析并校验特权配置。远端节点、账号、激活码�
 - 原规则命中加速出站时，在 helper 内转发到 `127.0.0.1` 的普通 core。
 - `reject` 和 `sniff` 保留，DNS 劫持仍只由普通 core 负责。
 - 未命中规则的流量最终进入普通 core，确保全局模式不会被 GeoIP 提前直连。
+- 规则模式会在显式规则之后把未命中的 UDP 兜底送入加速出站，覆盖浏览器尚未识别域名或协议时的首包，避免访问落到普通 core 的直连兜底。
 
-包内 `geoip-cn.srs` 仍使用签名 App 的固定路径。投影需要的其他远程二进制规则集只允许 HTTPS、不得携带 URL 凭据，并固定通过本机 SOCKS 下载。Helper 只接收域名/IP/端口/进程等匹配条件和规则集 URL，不接收真实节点参数；活动配置位于 root 私有目录，停止后删除，不形成访问历史。
+包内 `geoip-cn.srs` 仍使用签名 App 的固定路径。投影需要的其他远程二进制规则集只允许 HTTPS、不得携带 URL 凭据，并固定通过本机 SOCKS 下载。Helper 只接收域名/IP/端口/进程等匹配条件和规则集 URL，不接收真实节点参数；活动配置位于 root 私有目录，停止后删除，不保留配置副本。
+
+### macOS 连接记录
+
+macOS 的 direct 流量在 helper 内物理直连，不会经过普通 core 的 Clash API。为避免记录页因此丢失直连记录，helper 会按开发版/正式版使用独立端口在 `127.0.0.1` 提供连接观测接口，并复用普通 core 的本机随机 secret。客户端只连接 `/connections` 读取当前快照，不开放局域网访问；停止 helper 后端口和活动配置同时消失。
 
 `scripts/verify_macos_privileged_helper.sh` 同时校验规则资源存在、路径替换后的投影配置和 App/helper 签名边界。
 
@@ -80,7 +85,7 @@ Debug 构建后必须存在：
 
 ```text
 Yundo Dev.app/Contents/Library/HelperTools/YundoPrivilegedHelper
-Yundo Dev.app/Contents/Library/LaunchDaemons/app.yundo.client.dev.privileged-helper.v2.plist
+Yundo Dev.app/Contents/Library/LaunchDaemons/app.yundo.client.rebuild.dev.privileged-helper.v3.plist
 ```
 
 运行只读校验：
@@ -118,7 +123,7 @@ IPv4/IPv6 探测使用字面量地址并设置 3 秒上限，不依赖尚未接�
 - App 在首次 XPC 启动失败时会异步注销 helper；由于注销回调可能早于 macOS 后台项目数据库释放旧登记，App 会以 250ms 间隔有限重试注册，最多等待约 3 秒，再按新的系统状态继续：已启用时只重试一次 XPC，要求批准时打开系统登录项设置，重新注册或第二次 XPC 启动仍失败时停止并返回诊断。
 - 开发版构建从开始阶段即退出旧 App，覆盖前再次确认进程已结束；没有有效 Apple Development 身份时拒绝覆盖 `/Applications/Yundo Dev.app`，避免把可真实加速的开发版替换为只能做包结构检查的 ad hoc 产物。
 - 本机开发版安装每次使用单调变化的 `CFBundleVersion`，使 macOS 能区分 helper 内容或签名已经变化的新构建；用户可见版本号仍沿用仓库版本，不因此改变。
-- 2026-07-26 本机 macOS 26 的旧开发版后台项目 UUID 持续复用过期 Launch Constraint，正常注销、有限重试和新 `CFBundleVersion` 均无法刷新。开发版内部服务标识一次性迁移为 `app.yundo.client.dev.privileged-helper.v2`，绕开损坏登记；正式版继续使用 `app.yundo.client.privileged-helper`，不受迁移影响。
+- 2026-08-04 本机 macOS 26 的开发版旧服务登记无法可靠刷新，且开发版 Bundle ID 已迁移为 `app.yundo.client.rebuild.dev`。开发版内部服务标识迁移为 `app.yundo.client.rebuild.dev.privileged-helper.v3`，绕开本机残留的旧登记；正式版继续使用 `app.yundo.client.privileged-helper`，不受迁移影响。
 - 同日使用开发版构建 `20260726132726` 完成真实加速验收：新服务登记为 `app.yundo.client.dev.privileged-helper.v2` 并成功启动，公网路由进入 `utun7`（网关 `172.20.0.1`），Google `generate_204` 返回 `204`；随后对 `www.google.com` 发起新请求，路由观察器记录命中 `geosite-google` 并最终走 `nimbus-proxy`。主动停止后首页恢复“开始加速”，TUN 子进程退出，`1.1.1.1` 路由恢复为 `en0`（网关 `192.168.1.1`）。验收结束时保持开发版停止加速。
 - 四端同类问题审计结论：本次根因只存在于 macOS 的 `SMAppService`、后台项目数据库与 Launch Constraint 链路，Windows 服务、iOS Packet Tunnel 和 Android VPN Service 均不读取 macOS helper 服务标识，也不经过本次修改的 Swift/LaunchDaemon 实现，因此不受影响；共享 Flutter 连接配置和规则匹配逻辑未因本次修复改变。Windows、iOS、Android 无需针对这个平台专属根因增加实体设备阻断项，后续仍按各自既有真机矩阵验收。
 - 正式版本机覆盖安装必须使用有效的 Apple Development 签名身份。无有效身份时停止双版本安装并保留现有 App，因为 ad hoc 签名不能证明真实 helper 注册可用。
@@ -218,6 +223,8 @@ env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
 ```
 
 2026-08-04 修复特权 helper 首次启动超时：旧隧道清理通过 `Process` 执行 `ps` 时，先等待子进程退出、再读取标准输出；当进程列表超过管道缓冲区时，`ps` 会等待输出被读取而 helper 同时等待 `ps` 退出，最终导致 XPC 启动请求一直不返回。现在先持续读取管道再等待退出，旧 root 隧道可以完成清理，随后再启动新的 TUN 子进程。该修复不改变普通 core、规则投影、DNS 或路由策略。
+
+2026-08-04 增加 macOS 加速启动阶段的网络能力有限重试：用户 core 启动后，节点代理可能还需要短暂时间完成首个可用连接；IPv4/IPv6 探测现在各自最多尝试 5 次、每次间隔 1 秒，避免把短暂的节点准备延迟直接显示为连接失败。超过约 20 秒仍不可用时才结束本次启动并交给既有自动恢复机制重试。
 
 ## 版本边界
 

@@ -104,8 +104,11 @@ core_path="${built_app}/Contents/Frameworks/YundoCore.dylib"
 codesign --force --sign "${codesign_identity}" "${core_path}"
 helper_path="${built_app}/Contents/Library/HelperTools/YundoPrivilegedHelper"
 [[ -x "${helper_path}" ]] || fail "构建产物缺少特权辅助进程：${helper_path}"
+helper_plist="${built_app}/Contents/Library/LaunchDaemons/app.yundo.client.rebuild.dev.privileged-helper.v3.plist"
+[[ -f "${helper_plist}" ]] || fail "构建产物缺少开发版 Helper 服务配置：${helper_plist}"
+helper_service_name="$(plutil -extract Label raw -o - "${helper_plist}")"
 codesign --force --sign "${codesign_identity}" \
-  --identifier "${expected_bundle_id}.privileged-helper" \
+  --identifier "${helper_service_name}" \
   "${helper_path}"
 login_item="${built_app}/Contents/Library/LoginItems/LaunchAtLoginHelper.app"
 if [[ -d "${login_item}" ]]; then
@@ -149,7 +152,8 @@ if [[ "${was_running}" == true ]]; then
   pgrep -f "${expected_executable}" >/dev/null 2>&1 \
     || fail "Yundo Dev 覆盖安装后未能启动"
   if [[ "${was_accelerated}" == true ]]; then
-    for _ in {1..120}; do
+    # macOS 后台恢复网络可能经历核心重启和连通性探测，允许最多等待 180 秒。
+    for _ in {1..360}; do
       if defaults read "${expected_bundle_id}" flutter.started_by_user 2>/dev/null \
         | grep -Eq '(^|[[:space:]])(1|true)([[:space:]]|$)'; then
         break

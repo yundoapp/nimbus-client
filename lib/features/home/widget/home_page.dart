@@ -949,7 +949,7 @@ class _ProxyModeControlCard extends HookConsumerWidget {
                   ? t.nimbus.home.accessPolicyVersion(version: rulesVersion)
                   : t.nimbus.home.globalRoutingDetail,
               isExpanded: controller.isOpen,
-              isLoading: disabled,
+              isLoading: isApplying.value,
               onTap: disabled ? null : () => controller.isOpen ? controller.close() : controller.open(),
             ),
           ),

@@ -6,7 +6,12 @@ typedef MacOSProxyProbeAttempt =
 typedef MacOSNetworkCapabilities = ({bool ipv4Available, bool ipv6Available});
 
 class MacOSNetworkCapabilityProbe {
-  MacOSNetworkCapabilityProbe({MacOSProxyProbeAttempt? attempt, this.timeout = const Duration(seconds: 3)})
+  MacOSNetworkCapabilityProbe({
+    MacOSProxyProbeAttempt? attempt,
+    this.timeout = const Duration(seconds: 3),
+    this.maxAttempts = 5,
+    this.retryDelay = const Duration(seconds: 1),
+  })
     : _attempt = attempt ?? _attemptThroughHttpProxy;
 
   static final ipv4ProbeUri = Uri.parse('https://1.1.1.1/');
@@ -14,6 +19,8 @@ class MacOSNetworkCapabilityProbe {
 
   final MacOSProxyProbeAttempt _attempt;
   final Duration timeout;
+  final int maxAttempts;
+  final Duration retryDelay;
 
   Future<MacOSNetworkCapabilities> probe({required int proxyPort}) async {
     final results = await Future.wait([_isAvailable(ipv4ProbeUri, proxyPort), _isAvailable(ipv6ProbeUri, proxyPort)]);
@@ -21,12 +28,17 @@ class MacOSNetworkCapabilityProbe {
   }
 
   Future<bool> _isAvailable(Uri uri, int proxyPort) async {
-    try {
-      await _attempt(uri: uri, proxyPort: proxyPort, timeout: timeout).timeout(timeout);
-      return true;
-    } catch (_) {
-      return false;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        await _attempt(uri: uri, proxyPort: proxyPort, timeout: timeout).timeout(timeout);
+        return true;
+      } catch (_) {
+        if (attempt + 1 < maxAttempts && retryDelay > Duration.zero) {
+          await Future<void>.delayed(retryDelay);
+        }
+      }
     }
+    return false;
   }
 
   static Future<void> _attemptThroughHttpProxy({

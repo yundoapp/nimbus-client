@@ -56,8 +56,14 @@ private final class TunnelConfigValidator {
     guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
       throw HelperFailure.invalidConfiguration("root must be an object")
     }
-    guard Set(root.keys).isSubset(of: ["log", "inbounds", "outbounds", "route"]) else {
+    guard Set(root.keys).isSubset(of: ["log", "experimental", "dns", "inbounds", "outbounds", "route"]) else {
       throw HelperFailure.invalidConfiguration("unexpected root key")
+    }
+    if let experimental = root["experimental"] {
+      try validateExperimental(experimental)
+    }
+    if let dns = root["dns"] {
+      try validateDNS(dns)
     }
 
     guard
@@ -154,6 +160,90 @@ private final class TunnelConfigValidator {
     return data
   }
 
+  private func validateExperimental(_ value: Any) throws {
+    guard
+      let experimental = value as? NSDictionary,
+      Set(experimental.allKeys.compactMap { $0 as? String }) == Set(["clash_api"]),
+      let clashAPI = experimental["clash_api"] as? NSDictionary,
+      Set(clashAPI.allKeys.compactMap { $0 as? String }).isSubset(of: ["external_controller", "secret"]),
+      clashAPI["external_controller"] as? String == routeHistoryControllerAddress
+    else {
+      throw HelperFailure.invalidConfiguration("invalid route history controller")
+    }
+    if let secret = clashAPI["secret"] {
+      guard let secret = secret as? String, !secret.isEmpty, secret.utf8.count <= 256 else {
+        throw HelperFailure.invalidConfiguration("invalid route history controller secret")
+      }
+    }
+  }
+
+  private func validateDNS(_ value: Any) throws {
+    guard
+      let dns = value as? NSDictionary,
+      Set(dns.allKeys.compactMap { $0 as? String }).isSubset(of: ["servers", "final", "strategy"]),
+      let servers = dns["servers"] as? NSArray,
+      servers.count > 0,
+      let final = dns["final"] as? String,
+      !final.isEmpty
+    else {
+      throw HelperFailure.invalidConfiguration("invalid DNS configuration")
+    }
+
+    if let strategy = dns["strategy"] as? String {
+      guard ["prefer_ipv4", "prefer_ipv6", "ipv4_only", "ipv6_only"].contains(strategy) else {
+        throw HelperFailure.invalidConfiguration("invalid DNS strategy")
+      }
+    } else if dns["strategy"] != nil {
+      throw HelperFailure.invalidConfiguration("invalid DNS strategy")
+    }
+
+    var tags = Set<String>()
+    for item in servers {
+      guard let server = item as? NSDictionary else {
+        throw HelperFailure.invalidConfiguration("invalid DNS server")
+      }
+      guard
+        Set(server.allKeys.compactMap { $0 as? String }).isSubset(of: ["type", "tag", "server", "server_port", "tls", "detour"]),
+        let type = server["type"] as? String,
+        ["https", "tls", "tcp", "udp", "quic"].contains(type),
+        let tag = server["tag"] as? String,
+        !tag.isEmpty,
+        tags.insert(tag).inserted,
+        let address = server["server"] as? String,
+        !address.isEmpty,
+        !address.hasPrefix("/"),
+        server["detour"] as? String == "yundo-socks"
+      else {
+        throw HelperFailure.invalidConfiguration("invalid DNS server")
+      }
+
+      if let port = server["server_port"] {
+        guard let port = (port as? NSNumber)?.intValue, (1...65_535).contains(port) else {
+          throw HelperFailure.invalidConfiguration("invalid DNS server port")
+        }
+      }
+      if let tls = server["tls"] {
+        guard
+          let tls = tls as? NSDictionary,
+          Set(tls.allKeys.compactMap { $0 as? String }).isSubset(of: ["enabled", "server_name"]),
+          ((tls["enabled"] as? Bool) == true || (tls["enabled"] as? NSNumber)?.boolValue == true),
+          (tls["server_name"] == nil
+            || ((tls["server_name"] as? String)?.isEmpty == false))
+        else {
+          throw HelperFailure.invalidConfiguration("invalid DNS TLS configuration")
+        }
+      }
+    }
+    guard tags.contains(final) else {
+      throw HelperFailure.invalidConfiguration("DNS final server is not defined")
+    }
+  }
+
+  private var routeHistoryControllerAddress: String {
+    let port = BuildIdentity.appBundleIdentifier == "app.yundo.client.rebuild.dev" ? 16757 : 16758
+    return "127.0.0.1:\(port)"
+  }
+
   private func validateRouteRule(
     _ rule: [String: Any],
     referencedRuleSets: inout Set<String>,
@@ -194,6 +284,10 @@ private final class TunnelConfigValidator {
     case "reject":
       guard rule["outbound"] == nil else {
         throw HelperFailure.invalidConfiguration("reject rule cannot contain an outbound")
+      }
+    case "hijack-dns":
+      guard rule["outbound"] == nil else {
+        throw HelperFailure.invalidConfiguration("DNS hijack rule cannot contain an outbound")
       }
     default:
       throw HelperFailure.invalidConfiguration("unsupported route action")

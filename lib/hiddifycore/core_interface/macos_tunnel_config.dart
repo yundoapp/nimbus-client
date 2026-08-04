@@ -19,6 +19,12 @@ const _macOSDirectRouteRuleSetTag = 'geoip-cn';
 const _macOSTunnelSocksOutboundTag = 'yundo-socks';
 const _macOSTunnelDirectOutboundTag = 'yundo-direct';
 
+const _macOSDevRouteHistoryPort = 16757;
+const _macOSReleaseRouteHistoryPort = 16758;
+
+int nimbusMacOSTunnelRouteHistoryPort(String appProcessName) =>
+    appProcessName.trim() == 'Yundo Dev' ? _macOSDevRouteHistoryPort : _macOSReleaseRouteHistoryPort;
+
 typedef _MacOSTunnelRoutePolicy = ({List<Map<String, dynamic>> rules, List<Map<String, dynamic>> ruleSets});
 
 PreparedMacOSTunnelConfig splitMacOSTunnelConfig(
@@ -63,6 +69,7 @@ PreparedMacOSTunnelConfig splitMacOSTunnelConfig(
   }
 
   final originalTun = tunInbounds.single;
+  final routeHistoryClashApi = _macOSTunnelClashApi(config, appProcessName);
   final tunnelRoutePolicy = configureWindowsDnsBridge
       ? (
           rules: <Map<String, dynamic>>[
@@ -96,8 +103,11 @@ PreparedMacOSTunnelConfig splitMacOSTunnelConfig(
     appProcessName.trim(),
     'YundoPrivilegedHelper',
   }.where((name) => name.isNotEmpty).toList();
+  final tunnelDns = _projectMacOSTunnelDns(config);
   final tunnelConfig = <String, dynamic>{
     'log': {'level': 'warn'},
+    if (routeHistoryClashApi != null) 'experimental': {'clash_api': routeHistoryClashApi},
+    if (tunnelDns != null) 'dns': tunnelDns,
     'inbounds': [tunnelInbound],
     'outbounds': [
       {
@@ -125,6 +135,53 @@ PreparedMacOSTunnelConfig splitMacOSTunnelConfig(
 
   const encoder = JsonEncoder.withIndent('  ');
   return (userCoreConfig: encoder.convert(config), tunnelConfig: encoder.convert(tunnelConfig), socksPort: socksPort);
+}
+
+Map<String, dynamic>? _projectMacOSTunnelDns(Map<String, dynamic> config) {
+  final sourceDns = config['dns'];
+  if (sourceDns is! Map) return null;
+
+  final sourceServers = sourceDns['servers'];
+  if (sourceServers is! List) return null;
+
+  const allowedServerKeys = {'type', 'tag', 'server', 'server_port', 'tls', 'detour'};
+  final servers = <Map<String, dynamic>>[];
+  for (final item in sourceServers) {
+    if (item is! Map) continue;
+    final source = Map<String, dynamic>.from(item);
+    final type = source['type'];
+    final tag = source['tag'];
+    final server = source['server'];
+    if (type is! String || !{'https', 'tls', 'tcp', 'udp', 'quic'}.contains(type)) continue;
+    if (tag is! String || tag.isEmpty || server is! String || server.isEmpty || server.startsWith('/')) continue;
+    if (source.keys.any((key) => !allowedServerKeys.contains(key))) continue;
+
+    servers.add({
+      for (final entry in source.entries) entry.key: jsonDecode(jsonEncode(entry.value)),
+      'detour': _macOSTunnelSocksOutboundTag,
+    });
+  }
+
+  if (servers.isEmpty) return null;
+  final finalTag = sourceDns['final'];
+  if (finalTag is! String || finalTag.isEmpty || !servers.any((server) => server['tag'] == finalTag)) {
+    return null;
+  }
+
+  final strategy = sourceDns['strategy'];
+  return {'servers': servers, 'final': finalTag, if (strategy is String && strategy.isNotEmpty) 'strategy': strategy};
+}
+
+Map<String, dynamic>? _macOSTunnelClashApi(Map<String, dynamic> config, String appProcessName) {
+  final experimental = config['experimental'];
+  final clashApi = experimental is Map ? experimental['clash_api'] : null;
+  if (clashApi is! Map) return null;
+
+  final secret = clashApi['secret'];
+  return {
+    'external_controller': '127.0.0.1:${nimbusMacOSTunnelRouteHistoryPort(appProcessName)}',
+    if (secret is String && secret.isNotEmpty) 'secret': secret,
+  };
 }
 
 _MacOSTunnelRoutePolicy _projectMacOSTunnelRoutePolicy(Map<String, dynamic> config, String? directRouteRuleSetPath) {
@@ -201,8 +258,7 @@ Map<String, dynamic>? _projectMacOSTunnelRouteRule(Map<String, dynamic> source, 
     }
     return {'action': 'sniff'};
   }
-  if (action == 'hijack-dns') return null;
-  if (action != 'route' && action != 'reject') return null;
+  if (action != 'route' && action != 'reject' && action != 'hijack-dns') return null;
   if (source.keys.any((key) => !metadataKeys.contains(key) && !matcherKeys.contains(key))) {
     throw const MacOSTunnelConfigException('macOS tunnel route rule contains unsupported fields');
   }
@@ -213,6 +269,13 @@ Map<String, dynamic>? _projectMacOSTunnelRouteRule(Map<String, dynamic> source, 
   };
   if (match.keys.where((key) => key != 'invert').isEmpty) {
     throw const MacOSTunnelConfigException('macOS tunnel route rule has no matcher');
+  }
+
+  if (action == 'hijack-dns') {
+    return {
+      ...match,
+      'action': 'hijack-dns',
+    };
   }
 
   if (action == 'reject') {

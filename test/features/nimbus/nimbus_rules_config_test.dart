@@ -9,7 +9,7 @@ void main() {
     test('puts a custom direct domain before public rules and local fallback', () {
       final options = buildNimbusManagedRouteOptions(rulesPackage: _rulesPackage, isAutomaticMode: true);
 
-      expect(options.rules, hasLength(3));
+      expect(options.rules, hasLength(4));
       expect(options.rules[0], {
         'domain_suffix': ['rawya.ai'],
         'action': 'route',
@@ -17,7 +17,12 @@ void main() {
       });
       expect(options.rules[1]['rule_set'], ['geosite-gfw']);
       expect(options.rules[1]['outbound'], 'nimbus-proxy');
-      expect(options.rules[2], {'ip_is_private': true, 'action': 'route', 'outbound': nimbusHiddifyDirectTag});
+      expect(options.rules[2], {
+        'network': ['udp'],
+        'action': 'route',
+        'outbound': 'nimbus-proxy',
+      });
+      expect(options.rules[3], {'ip_is_private': true, 'action': 'route', 'outbound': nimbusHiddifyDirectTag});
       expect(options.ruleSets.single['tag'], 'geosite-gfw');
       expect(options.ruleSets.single['download_detour'], 'nimbus-proxy');
     });

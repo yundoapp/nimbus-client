@@ -77,4 +77,16 @@ void main() {
     expect(entry, isNotNull);
     expect(entry!.decision, NimbusRouteDecision.direct);
   });
+
+  test('recognizes the macOS helper direct outbound as direct access', () {
+    final entry = parseNimbusRouteHistoryEntry({
+      'id': 'connection-helper-direct',
+      'metadata': {'host': 'baidu.com', 'destinationPort': '443', 'network': 'tcp'},
+      'rule': 'domain_suffix=baidu.com => route(yundo-direct)',
+      'chains': ['yundo-direct'],
+    }, observedAt: DateTime(2026, 8, 3, 12));
+
+    expect(entry, isNotNull);
+    expect(entry!.decision, NimbusRouteDecision.direct);
+  });
 }

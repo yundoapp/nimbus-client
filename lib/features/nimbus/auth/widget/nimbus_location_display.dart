@@ -24,9 +24,32 @@ String? nimbusLocationCountryCode(String locationCode) => switch (locationCode) 
   _ => null,
 };
 
-Widget nimbusLocationFlag(NimbusLocation location, {double size = 22}) {
-  final countryCode = nimbusLocationCountryCode(location.code);
-  return countryCode == null
-      ? Icon(Icons.public_rounded, size: size)
-      : IPCountryFlag(countryCode: countryCode, size: size);
+Widget nimbusLocationFlag(NimbusLocation location, {double size = 30}) {
+  return Builder(
+    builder: (context) {
+      final theme = Theme.of(context);
+      final countryCode = nimbusLocationCountryCode(location.code);
+      final flag = countryCode == null
+          ? Icon(Icons.public_rounded, size: size, color: theme.colorScheme.primary)
+          : IPCountryFlag(countryCode: countryCode, size: size);
+      return Container(
+        width: size + 12,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.72)),
+          boxShadow: [
+            BoxShadow(
+              color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: flag,
+      );
+    },
+  );
 }

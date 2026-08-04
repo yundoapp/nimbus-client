@@ -138,6 +138,10 @@ void main() {
         'outbound': 'yundo-direct',
       },
       {'action': 'sniff'},
+      {
+        'port': [53],
+        'action': 'hijack-dns',
+      },
       {'ip_is_private': true, 'action': 'route', 'outbound': 'yundo-direct'},
       {'ip_version': 6, 'action': 'reject'},
       {
@@ -163,6 +167,19 @@ void main() {
       },
       {'tag': 'geoip-cn', 'type': 'local', 'format': 'binary', 'path': bundledRuleSetPath},
     ]);
+    expect(tunnelConfig['dns'], {
+      'servers': [
+        {
+          'type': 'https',
+          'tag': 'yundo-macos-dns',
+          'server': '1.1.1.1',
+          'detour': 'yundo-socks',
+          'tls': {'enabled': true, 'server_name': 'cloudflare-dns.com'},
+        },
+      ],
+      'final': 'yundo-macos-dns',
+      'strategy': 'ipv4_only',
+    });
 
     final tunnelJson = jsonEncode(tunnelConfig);
     expect(tunnelJson, isNot(contains('private.example')));
@@ -203,6 +220,68 @@ void main() {
     ]);
     final tunnelInbound = (tunnelConfig['inbounds'] as List<dynamic>).single as Map<String, dynamic>;
     expect(tunnelInbound['address'], ['172.20.0.1/30', 'fdfe:dcba:9876::1/126']);
+  });
+
+  test('projects DNS hijack rules into the privileged tunnel', () {
+    final config = managedConfig();
+    (config['route'] as Map<String, dynamic>)['rules'] = [
+      {'action': 'sniff'},
+      {
+        'port': [53],
+        'action': 'hijack-dns',
+      },
+      {
+        'protocol': 'dns',
+        'action': 'hijack-dns',
+      },
+      {
+        'domain_suffix': ['force-proxy.example'],
+        'action': 'route',
+        'outbound': 'private-node',
+      },
+    ];
+
+    final prepared = splitMacOSTunnelConfig(
+      config,
+      appProcessName: 'Yundo Dev',
+      macOSDirectRouteRuleSetPath: bundledRuleSetPath,
+    );
+    final tunnelConfig = jsonDecode(prepared.tunnelConfig) as Map<String, dynamic>;
+    expect((tunnelConfig['route'] as Map<String, dynamic>)['rules'], [
+      {
+        'process_name': ['Yundo Dev', 'YundoPrivilegedHelper'],
+        'action': 'route',
+        'outbound': 'yundo-direct',
+      },
+      {'action': 'sniff'},
+      {
+        'port': [53],
+        'action': 'hijack-dns',
+      },
+      {'protocol': 'dns', 'action': 'hijack-dns'},
+      {
+        'domain_suffix': ['force-proxy.example'],
+        'action': 'route',
+        'outbound': 'yundo-socks',
+      },
+    ]);
+  });
+
+  test('adds a separate loopback Clash API for macOS route history', () {
+    final config = managedConfig()
+      ..['experimental'] = {
+        'clash_api': {'external_controller': '127.0.0.1:16756', 'secret': 'route-history-secret'},
+      };
+    final prepared = splitMacOSTunnelConfig(
+      config,
+      appProcessName: 'Yundo Dev',
+      macOSDirectRouteRuleSetPath: bundledRuleSetPath,
+    );
+    final tunnelConfig = jsonDecode(prepared.tunnelConfig) as Map<String, dynamic>;
+
+    expect(tunnelConfig['experimental'], {
+      'clash_api': {'external_controller': '127.0.0.1:16757', 'secret': 'route-history-secret'},
+    });
   });
 
   test('global mode keeps all public traffic on the local SOCKS path', () {

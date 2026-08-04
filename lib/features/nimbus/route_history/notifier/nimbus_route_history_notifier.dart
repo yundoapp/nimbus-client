@@ -8,6 +8,8 @@ import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/route_history/model/nimbus_route_history.dart';
+import 'package:hiddify/hiddifycore/core_interface/macos_tunnel_config.dart';
+import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path/path.dart' as p;
 
@@ -35,6 +37,11 @@ class NimbusRouteHistoryControllerConfig {
   final String secret;
 
   Map<String, dynamic>? get headers => secret.isEmpty ? null : {'Authorization': 'Bearer $secret'};
+
+  NimbusRouteHistoryControllerConfig copyWithPort(int port) => NimbusRouteHistoryControllerConfig(
+    webSocketUri: webSocketUri.replace(port: port),
+    secret: secret,
+  );
 }
 
 @visibleForTesting
@@ -128,7 +135,7 @@ class NimbusRouteHistoryNotifier extends Notifier<NimbusRouteHistoryState> {
     _started = true;
     while (!_disposed && _enabled) {
       try {
-        final controller = await loadNimbusRouteHistoryControllerConfig(_controllerConfigFile);
+        final controller = await _loadMonitoringController();
         if (controller == null) throw const FormatException('local route history controller is unavailable');
         final socket = await WebSocket.connect(controller.webSocketUri.toString(), headers: controller.headers);
         if (_disposed) {
@@ -155,6 +162,12 @@ class NimbusRouteHistoryNotifier extends Notifier<NimbusRouteHistoryState> {
       if (!_disposed && _enabled) await Future<void>.delayed(_retryDelay);
     }
     _started = false;
+  }
+
+  Future<NimbusRouteHistoryControllerConfig?> _loadMonitoringController() async {
+    final controller = await loadNimbusRouteHistoryControllerConfig(_controllerConfigFile);
+    if (controller == null || !PlatformUtils.isMacOS) return controller;
+    return controller.copyWithPort(nimbusMacOSTunnelRouteHistoryPort(p.basename(Platform.resolvedExecutable)));
   }
 
   void _handleMessage(Object? message) {

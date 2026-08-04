@@ -205,7 +205,7 @@ final class PrivilegedHelperBridge {
           NSLog("Privileged helper start failed: %@", error)
           finishFailure(
             FlutterError(code: "helper_start_failed", message: error, details: nil),
-            false
+            error.contains("invalid tunnel configuration")
           )
         } else {
           finishSuccess()

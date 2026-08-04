@@ -154,6 +154,13 @@ NimbusManagedRouteOptions buildNimbusManagedRouteOptions({
   return NimbusManagedRouteOptions(
     rules: [
       ...buildNimbusRouteRules(activeRules, proxyTag, directTag: directTag),
+      // 浏览器可能在域名和协议尚未可供规则匹配前就发起 UDP。将其送入加速
+      // 出站，避免首包落入 macOS TUN 下不可用的普通直连兜底。
+      {
+        'network': ['udp'],
+        'action': 'route',
+        'outbound': proxyTag,
+      },
       nimbusFallbackRouteRule(directTag: directTag),
     ],
     ruleSets: buildNimbusRuleSets(activeRules, proxyTag),

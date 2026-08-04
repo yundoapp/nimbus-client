@@ -692,7 +692,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
-				YUNDO_PRIVILEGED_HELPER_SERVICE = app.yundo.client.rebuild.dev.privileged-helper;
+				YUNDO_PRIVILEGED_HELPER_SERVICE = app.yundo.client.rebuild.dev.privileged-helper.v3;
 			};
 			name = Profile;
 		};
@@ -824,7 +824,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-				YUNDO_PRIVILEGED_HELPER_SERVICE = app.yundo.client.rebuild.dev.privileged-helper;
+				YUNDO_PRIVILEGED_HELPER_SERVICE = app.yundo.client.rebuild.dev.privileged-helper.v3;
 			};
 			name = Debug;
 		};
