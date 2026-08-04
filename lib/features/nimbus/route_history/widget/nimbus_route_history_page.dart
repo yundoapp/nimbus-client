@@ -9,6 +9,7 @@ import 'package:hiddify/features/nimbus/auth/model/nimbus_input_validation.dart'
 import 'package:hiddify/features/nimbus/auth/model/nimbus_route_preference_logic.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_access_icons.dart';
 import 'package:hiddify/features/nimbus/route_history/model/nimbus_route_history.dart';
 import 'package:hiddify/features/nimbus/route_history/notifier/nimbus_route_history_notifier.dart';
 import 'package:hiddify/utils/utils.dart';
@@ -121,8 +122,8 @@ class NimbusRouteHistoryPage extends HookConsumerWidget {
 }
 
 IconData nimbusRouteHistoryDecisionIcon(NimbusRouteDecision decision) => switch (decision) {
-  NimbusRouteDecision.direct => Icons.language_rounded,
-  NimbusRouteDecision.accelerated => Icons.rocket_launch_rounded,
+  NimbusRouteDecision.direct => nimbusRouteAccessIcon(requiresConnection: false),
+  NimbusRouteDecision.accelerated => nimbusRouteAccessIcon(requiresConnection: true),
 };
 
 class _RouteHistoryToolbar extends ConsumerWidget {

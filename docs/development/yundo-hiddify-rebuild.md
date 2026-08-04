@@ -190,3 +190,8 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 
 - 记录列表中代表“加速访问”的条目图标与主页、主导航统一使用 `rocket_launch_rounded`；“直连访问”继续使用 `language_rounded`。
 - 图标选择集中到共享 Flutter/Dart 函数并补充单元测试，macOS、Windows、iOS、Android 使用同一映射。
+
+### 4.13 自定义网站图标与数量一致性（2026-08-04）
+
+- 自定义网站弹窗中的加速访问也统一使用小飞机图标。
+- 加速模式弹窗通过共享的路由偏好数据源显示网站数量，并在登录态恢复完成以及网站增删改后重新加载，避免模式弹窗和自定义网站列表展示不同快照。

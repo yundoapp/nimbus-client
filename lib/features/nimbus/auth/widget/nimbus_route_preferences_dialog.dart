@@ -11,6 +11,8 @@ import 'package:hiddify/features/nimbus/auth/model/nimbus_input_validation.dart'
 import 'package:hiddify/features/nimbus/auth/model/nimbus_route_preference_logic.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_route_preferences_provider.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_access_icons.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class NimbusRoutePreferencesDialog extends HookConsumerWidget {
@@ -99,6 +101,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
         } else {
           await repository.updateRoutePreference(session: session, id: existing.id, type: selectedType.value);
         }
+        ref.invalidate(nimbusRoutePreferencesProvider);
         await ref.read(nimbusConnectionControllerProvider.notifier).reapplyIfConnected(userRulesOnly: true);
         await loadPreferences();
         inputController.clear();
@@ -137,6 +140,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
       errorMessage.value = null;
       try {
         await repository.deleteRoutePreference(session: session, id: preference.id);
+        ref.invalidate(nimbusRoutePreferencesProvider);
         await ref.read(nimbusConnectionControllerProvider.notifier).reapplyIfConnected(userRulesOnly: true);
         await loadPreferences();
       } catch (error) {
@@ -229,7 +233,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
                   child: _RoutePreferenceTypeRadio(
                     value: 'accelerate',
                     label: t.nimbus.routePreferences.requiresConnection,
-                    icon: Icons.bolt_rounded,
+                    icon: nimbusRouteAccessIcon(requiresConnection: true),
                     color: theme.colorScheme.primary,
                     enabled: !mutationInProgress && !connectionIsSwitching,
                   ),
@@ -448,10 +452,7 @@ class _RoutePreferenceTile extends ConsumerWidget {
     final preferenceColor = preference.requiresConnection ? colorScheme.primary : colorScheme.tertiary;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        preference.requiresConnection ? Icons.bolt_rounded : Icons.language_rounded,
-        color: preferenceColor,
-      ),
+      leading: Icon(nimbusRouteAccessIcon(requiresConnection: preference.requiresConnection), color: preferenceColor),
       title: Text(preference.value, overflow: TextOverflow.ellipsis),
       subtitle: Text('${_preferenceLabel(t, preference)} · ${_formatDateTime(preference.createdAt)}'),
       trailing: IconButton(

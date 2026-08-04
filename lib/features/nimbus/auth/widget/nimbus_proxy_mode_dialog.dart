@@ -5,9 +5,8 @@ import 'package:gap/gap.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
-import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
-import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_route_preferences_provider.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_route_preferences_dialog.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -38,22 +37,19 @@ class _NimbusProxyModeDialogState extends ConsumerState<NimbusProxyModeDialog> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadConfiguredSiteCount());
+    if (widget.loadConfiguredSiteCount != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadConfiguredSiteCount());
+    }
   }
 
   Future<void> _loadConfiguredSiteCount() async {
+    final countLoader = widget.loadConfiguredSiteCount;
+    if (countLoader == null) return;
+
     if (mounted) setState(() => _isLoadingCount = true);
     try {
-      final countLoader = widget.loadConfiguredSiteCount;
-      if (countLoader != null) {
-        final count = await countLoader();
-        if (mounted) setState(() => _configuredSiteCount = count);
-      } else {
-        final session = ref.read(nimbusAuthControllerProvider).session;
-        if (session == null) return;
-        final preferences = await ref.read(nimbusAuthRepositoryProvider).fetchRoutePreferences(session);
-        if (mounted) setState(() => _configuredSiteCount = preferences.used);
-      }
+      final count = await countLoader();
+      if (mounted) setState(() => _configuredSiteCount = count);
     } catch (_) {
       if (mounted) setState(() => _configuredSiteCount = null);
     } finally {
@@ -70,7 +66,12 @@ class _NimbusProxyModeDialogState extends ConsumerState<NimbusProxyModeDialog> {
     } else {
       await showDialog<void>(context: context, builder: (_) => const NimbusRoutePreferencesDialog());
     }
-    if (mounted) await _loadConfiguredSiteCount();
+    if (!mounted) return;
+    if (widget.loadConfiguredSiteCount != null) {
+      await _loadConfiguredSiteCount();
+    } else {
+      ref.invalidate(nimbusRoutePreferencesProvider);
+    }
   }
 
   Future<void> _applyPreferenceChange(Future<void> Function() updatePreference) async {
@@ -103,13 +104,20 @@ class _NimbusProxyModeDialogState extends ConsumerState<NimbusProxyModeDialog> {
     final theme = Theme.of(context);
     final selectedMode = ref.watch(Preferences.nimbusProxyMode);
     final customWebsiteAccessEnabled = ref.watch(Preferences.nimbusCustomWebsiteAccessEnabled);
+    final routePreferences = ref.watch(nimbusRoutePreferencesProvider);
     final connection = ref.watch(connectionNotifierProvider).valueOrNull;
     final t = ref.watch(translationsProvider).requireValue;
     final isAutomaticMode = selectedMode == NimbusProxyMode.auto;
     final controlsEnabled = !_isApplying && !(connection?.isSwitching ?? false);
     final availableWidth = math.max(0.0, MediaQuery.sizeOf(context).width - 80);
     final contentWidth = math.min(520.0, availableWidth);
-    final configuredCount = _isLoadingCount ? '—' : (_configuredSiteCount?.toString() ?? '—');
+    final configuredCount = widget.loadConfiguredSiteCount != null
+        ? (_isLoadingCount ? '—' : (_configuredSiteCount?.toString() ?? '—'))
+        : routePreferences.when(
+            data: (preferences) => preferences?.used.toString() ?? '—',
+            loading: () => '—',
+            error: (_, _) => '—',
+          );
 
     final content = RadioGroup<NimbusProxyMode>(
       groupValue: selectedMode,
