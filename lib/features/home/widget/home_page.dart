@@ -845,15 +845,15 @@ class _HomeQuickControls extends HookConsumerWidget {
         if (constraints.maxWidth < 420) {
           return Column(
             children: [
-              SizedBox(height: 76, child: proxyCard()),
+              SizedBox(height: 72, child: proxyCard()),
               const Gap(10),
-              SizedBox(height: 76, child: locationCard()),
+              SizedBox(height: 72, child: locationCard()),
             ],
           );
         }
 
         return SizedBox(
-          height: 76,
+          height: 72,
           child: Row(
             children: [
               Expanded(child: proxyCard()),
@@ -898,18 +898,7 @@ class _ProxyModeControlCard extends HookConsumerWidget {
         crossAxisUnconstrained: false,
         useRootOverlay: true,
         alignmentOffset: const Offset(0, 6),
-        style: MenuStyle(
-          alignment: AlignmentDirectional.bottomStart,
-          backgroundColor: WidgetStatePropertyAll(theme.colorScheme.surface),
-          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-          shadowColor: WidgetStatePropertyAll(theme.colorScheme.shadow.withValues(alpha: 0.16)),
-          elevation: const WidgetStatePropertyAll(3),
-          padding: const WidgetStatePropertyAll(EdgeInsets.all(6)),
-          minimumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, 0)),
-          maximumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, double.infinity)),
-          side: WidgetStatePropertyAll(BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.65))),
-          shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-        ),
+        style: _homeDropdownMenuStyle(theme, constraints.maxWidth),
         menuChildren: NimbusProxyMode.values.map((mode) {
           final isSelected = mode == selectedMode;
           return MenuItemButton(
@@ -917,24 +906,7 @@ class _ProxyModeControlCard extends HookConsumerWidget {
             trailingIcon: isSelected
                 ? Icon(Icons.check_rounded, size: 18, color: theme.colorScheme.primary)
                 : const SizedBox(width: 18),
-            style: ButtonStyle(
-              minimumSize: const WidgetStatePropertyAll(Size.fromHeight(62)),
-              maximumSize: const WidgetStatePropertyAll(Size.fromHeight(72)),
-              padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12)),
-              backgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (isSelected) {
-                  final alpha = states.contains(WidgetState.hovered) ? 0.72 : 0.52;
-                  return theme.colorScheme.primaryContainer.withValues(alpha: alpha);
-                }
-                if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
-                  return theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.72);
-                }
-                return Colors.transparent;
-              }),
-              shape: const WidgetStatePropertyAll(
-                RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
-              ),
-            ),
+            style: _homeDropdownItemStyle(theme, isSelected: isSelected, height: 58),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -944,15 +916,15 @@ class _ProxyModeControlCard extends HookConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(
                   mode.description(t),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.2),
                 ),
               ],
             ),
@@ -1019,37 +991,11 @@ class _LocationControlCard extends HookConsumerWidget {
         crossAxisUnconstrained: false,
         useRootOverlay: true,
         alignmentOffset: const Offset(0, 6),
-        style: MenuStyle(
-          alignment: AlignmentDirectional.bottomStart,
-          backgroundColor: WidgetStatePropertyAll(theme.colorScheme.surface),
-          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-          shadowColor: WidgetStatePropertyAll(theme.colorScheme.shadow.withValues(alpha: 0.16)),
-          elevation: const WidgetStatePropertyAll(3),
-          padding: const WidgetStatePropertyAll(EdgeInsets.all(6)),
-          minimumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, 0)),
-          maximumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, double.infinity)),
-          side: WidgetStatePropertyAll(BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.65))),
-          shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-        ),
+        style: _homeDropdownMenuStyle(theme, constraints.maxWidth),
         menuChildren: locations.map((location) {
           final isSelected = location.code == authState.selectedLocationCode;
           return MenuItemButton(
-            style: ButtonStyle(
-              minimumSize: const WidgetStatePropertyAll(Size.fromHeight(42)),
-              maximumSize: const WidgetStatePropertyAll(Size.fromHeight(42)),
-              padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12)),
-              backgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (isSelected) {
-                  final alpha = states.contains(WidgetState.hovered) ? 0.72 : 0.52;
-                  return theme.colorScheme.primaryContainer.withValues(alpha: alpha);
-                }
-                if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
-                  return theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.72);
-                }
-                return Colors.transparent;
-              }),
-              shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-            ),
+            style: _homeDropdownItemStyle(theme, isSelected: isSelected, height: 44),
             trailingIcon: isSelected
                 ? Icon(Icons.check_rounded, size: 18, color: theme.colorScheme.primary)
                 : const SizedBox(width: 18),
@@ -1060,7 +1006,7 @@ class _LocationControlCard extends HookConsumerWidget {
               _locationDisplayName(t, location, locale.languageCode),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500),
+              style: theme.textTheme.bodySmall?.copyWith(fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600),
             ),
           );
         }).toList(),
@@ -1087,6 +1033,42 @@ class _LocationControlCard extends HookConsumerWidget {
       ),
     );
   }
+}
+
+MenuStyle _homeDropdownMenuStyle(ThemeData theme, double width) {
+  final colors = theme.colorScheme;
+  return MenuStyle(
+    alignment: AlignmentDirectional.bottomStart,
+    backgroundColor: WidgetStatePropertyAll(colors.surface),
+    surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+    shadowColor: WidgetStatePropertyAll(colors.shadow.withValues(alpha: 0.12)),
+    elevation: const WidgetStatePropertyAll(2),
+    padding: const WidgetStatePropertyAll(EdgeInsets.all(4)),
+    minimumSize: WidgetStatePropertyAll(Size(width, 0)),
+    maximumSize: WidgetStatePropertyAll(Size(width, double.infinity)),
+    side: WidgetStatePropertyAll(BorderSide(color: colors.outlineVariant.withValues(alpha: 0.52))),
+    shape: const WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12)))),
+  );
+}
+
+ButtonStyle _homeDropdownItemStyle(ThemeData theme, {required bool isSelected, required double height}) {
+  final colors = theme.colorScheme;
+  return ButtonStyle(
+    minimumSize: WidgetStatePropertyAll(Size.fromHeight(height)),
+    maximumSize: WidgetStatePropertyAll(Size.fromHeight(height)),
+    padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
+    backgroundColor: WidgetStateProperty.resolveWith((states) {
+      if (isSelected) {
+        final alpha = states.contains(WidgetState.hovered) ? 0.44 : 0.28;
+        return colors.primaryContainer.withValues(alpha: alpha);
+      }
+      if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+        return colors.surfaceContainerHighest.withValues(alpha: 0.56);
+      }
+      return Colors.transparent;
+    }),
+    shape: const WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8)))),
+  );
 }
 
 class _NimbusLocationSelectionPage extends HookConsumerWidget {
