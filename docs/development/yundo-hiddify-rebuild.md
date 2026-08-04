@@ -185,3 +185,8 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 ### 4.11 主导航记录图标统一（2026-08-04）
 
 - 桌面侧栏和移动端底部导航的“记录”入口统一使用主页同款小飞机图标 `rocket_launch_rounded`；页面内筛选、状态和清空图标保持原有语义，不受影响。
+
+### 4.12 记录条目加速图标统一（2026-08-04）
+
+- 记录列表中代表“加速访问”的条目图标与主页、主导航统一使用 `rocket_launch_rounded`；“直连访问”继续使用 `language_rounded`。
+- 图标选择集中到共享 Flutter/Dart 函数并补充单元测试，macOS、Windows、iOS、Android 使用同一映射。

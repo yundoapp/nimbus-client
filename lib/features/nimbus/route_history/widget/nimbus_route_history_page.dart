@@ -120,6 +120,11 @@ class NimbusRouteHistoryPage extends HookConsumerWidget {
   }
 }
 
+IconData nimbusRouteHistoryDecisionIcon(NimbusRouteDecision decision) => switch (decision) {
+  NimbusRouteDecision.direct => Icons.language_rounded,
+  NimbusRouteDecision.accelerated => Icons.rocket_launch_rounded,
+};
+
 class _RouteHistoryToolbar extends ConsumerWidget {
   const _RouteHistoryToolbar({
     required this.state,
@@ -426,10 +431,7 @@ class _RouteHistoryTile extends ConsumerWidget {
             color: decisionColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            entry.decision == NimbusRouteDecision.direct ? Icons.language_rounded : Icons.bolt_rounded,
-            color: decisionColor,
-          ),
+          child: Icon(nimbusRouteHistoryDecisionIcon(entry.decision), color: decisionColor),
         ),
       ),
       title: Text(entry.endpoint, maxLines: 1, overflow: TextOverflow.ellipsis),
