@@ -935,7 +935,7 @@
       "raw": "原始配置",
       "commonRules": "通用规则",
       "myRules": "我的规则",
-      "commonVersion": "通用规则版本 · ${version}",
+      "commonVersion": "v${version}",
       "myRulesPriorityHint": "我的规则优先于通用规则执行。",
       "addRule": "添加规则",
       "editRule": "编辑规则",

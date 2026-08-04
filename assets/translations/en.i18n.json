@@ -935,7 +935,7 @@
       "raw": "Raw configuration",
       "commonRules": "Common rules",
       "myRules": "My rules",
-      "commonVersion": "Common rules version · ${version}",
+      "commonVersion": "v${version}",
       "myRulesPriorityHint": "My rules take priority over common rules.",
       "addRule": "Add rule",
       "editRule": "Edit rule",

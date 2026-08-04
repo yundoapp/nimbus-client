@@ -14,7 +14,6 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dar
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.dart';
-import 'package:hiddify/features/nimbus/auth/widget/nimbus_proxy_mode_dialog.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -833,21 +832,12 @@ class _HomeQuickControls extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final proxyMode = ref.watch(Preferences.nimbusProxyMode);
     final authState = ref.watch(nimbusAuthControllerProvider);
     final t = ref.watch(translationsProvider).requireValue;
     final selectedLocation = _selectedLocation(authState);
     final rulesText = _formatRulesVersionForDisplay(rulesVersion);
 
-    Widget proxyCard() => _HomeControlCard(
-      icon: Icons.route_rounded,
-      title: t.nimbus.home.connectionMode,
-      value: proxyMode.label(t),
-      detail: proxyMode == NimbusProxyMode.auto
-          ? t.nimbus.home.accessPolicyVersion(version: rulesText)
-          : t.nimbus.home.globalRoutingDetail,
-      onTap: () => _showProxyModeDialog(context),
-    );
+    Widget proxyCard() => _ProxyModeControlCard(rulesVersion: rulesText);
 
     Widget locationCard() => _LocationControlCard(selectedLocation: selectedLocation);
 
@@ -874,6 +864,98 @@ class _HomeQuickControls extends HookConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _ProxyModeControlCard extends HookConsumerWidget {
+  const _ProxyModeControlCard({required this.rulesVersion});
+
+  final String rulesVersion;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final t = ref.watch(translationsProvider).requireValue;
+    final selectedMode = ref.watch(Preferences.nimbusProxyMode);
+    final connection = ref.watch(nimbusOwnedConnectionStatusProvider).valueOrNull;
+    final isSwitching = connection?.isSwitching ?? false;
+    final isApplying = useState(false);
+    final disabled = isApplying.value || isSwitching;
+
+    Future<void> selectMode(NimbusProxyMode mode) async {
+      if (disabled || mode == selectedMode) return;
+      isApplying.value = true;
+      try {
+        await ref.read(Preferences.nimbusProxyMode.notifier).update(mode);
+        await ref.read(nimbusConnectionControllerProvider.notifier).reapplyIfConnected();
+      } finally {
+        if (context.mounted) isApplying.value = false;
+      }
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) => MenuAnchor(
+        crossAxisUnconstrained: false,
+        useRootOverlay: true,
+        alignmentOffset: const Offset(0, 6),
+        style: MenuStyle(
+          alignment: AlignmentDirectional.bottomStart,
+          backgroundColor: WidgetStatePropertyAll(theme.colorScheme.surface),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shadowColor: WidgetStatePropertyAll(theme.colorScheme.shadow.withValues(alpha: 0.16)),
+          elevation: const WidgetStatePropertyAll(3),
+          padding: const WidgetStatePropertyAll(EdgeInsets.all(6)),
+          minimumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, 0)),
+          maximumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, double.infinity)),
+          side: WidgetStatePropertyAll(BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.65))),
+          shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+        ),
+        menuChildren: NimbusProxyMode.values.map((mode) {
+          final isSelected = mode == selectedMode;
+          return MenuItemButton(
+            onPressed: disabled ? null : () => selectMode(mode),
+            trailingIcon: isSelected
+                ? Icon(Icons.check_rounded, size: 18, color: theme.colorScheme.primary)
+                : const SizedBox(width: 18),
+            style: ButtonStyle(
+              minimumSize: const WidgetStatePropertyAll(Size.fromHeight(42)),
+              maximumSize: const WidgetStatePropertyAll(Size.fromHeight(42)),
+              padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12)),
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (isSelected) {
+                  final alpha = states.contains(WidgetState.hovered) ? 0.72 : 0.52;
+                  return theme.colorScheme.primaryContainer.withValues(alpha: alpha);
+                }
+                if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+                  return theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.72);
+                }
+                return Colors.transparent;
+              }),
+              shape: const WidgetStatePropertyAll(
+                RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+              ),
+            ),
+            child: Text(
+              mode.label(t),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500),
+            ),
+          );
+        }).toList(),
+        builder: (context, controller, child) => _HomeControlCard(
+          icon: Icons.route_rounded,
+          title: t.nimbus.home.connectionMode,
+          value: selectedMode.label(t),
+          detail: selectedMode == NimbusProxyMode.auto
+              ? t.nimbus.home.accessPolicyVersion(version: rulesVersion)
+              : t.nimbus.home.globalRoutingDetail,
+          isExpanded: controller.isOpen,
+          isLoading: disabled,
+          onTap: disabled ? null : () => controller.isOpen ? controller.close() : controller.open(),
+        ),
+      ),
     );
   }
 }
@@ -1143,14 +1225,6 @@ class _HomeControlCard extends StatelessWidget {
       ),
     );
   }
-}
-
-Future<void> _showProxyModeDialog(BuildContext context) async {
-  if (PlatformUtils.isMobile) {
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const NimbusProxyModePage()));
-    return;
-  }
-  await showDialog<void>(context: context, builder: (_) => const NimbusProxyModeDialog());
 }
 
 class _HomePrimaryActionButton extends StatelessWidget {
