@@ -779,9 +779,9 @@
       "submit": "啟用"
     },
     "proxyMode": {
-      "auto": "自動加速",
-      "global": "全域加速",
-      "autoDescription": "自動判斷哪些存取需要透過 Yundo 加速。",
+      "auto": "規則模式",
+      "global": "全域模式",
+      "autoDescription": "根據通用規則和我的規則，自動選擇加速、直連或攔截。",
       "globalDescription": "全部存取都透過 Yundo 加速，適合臨時排查網路問題。",
       "customWebsiteAccess": "自訂網站存取",
       "customWebsiteAccessDescription": "為指定網站設定「加速存取」或「直接存取」",
@@ -869,6 +869,7 @@
       "addedWebsites": "已新增網站",
       "requiresConnection": "加速存取",
       "directConnection": "直連存取",
+      "blockConnection": "攔截存取",
       "requiresConnectionDescription": "新增到這裡的網站，開啟雲渡加速後會強制加速存取。",
       "directConnectionDescription": "新增到這裡的網站，即使雲渡加速已開啟也會略過雲渡直接存取。",
       "domainRequired": "請輸入網站網域",
@@ -936,7 +937,7 @@
       "commonRules": "通用規則",
       "myRules": "我的規則",
       "commonVersion": "v${version}",
-      "myRulesPriorityHint": "我的規則優先於通用規則執行。",
+      "myRulesPriorityHint": "我的規則優先於通用規則執行，並儲存在帳號雲端。",
       "addRule": "新增規則",
       "editRule": "編輯規則",
       "domain": "網域",
@@ -949,7 +950,7 @@
     },
     "routeHistory": {
       "menuTitle": "記錄",
-      "title": "加速記錄",
+      "title": "記錄",
       "settingsSubtitle": "本次啟動以來的存取記錄 · 最多 ${limit} 條",
       "count": "${count}/${limit} 條",
       "searchHint": "搜尋網域、IP 位址或命中規則",

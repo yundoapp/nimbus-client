@@ -779,9 +779,9 @@
       "submit": "Ativar"
     },
     "proxyMode": {
-      "auto": "Aceleração automática",
-      "global": "Aceleração global",
-      "autoDescription": "Escolhe automaticamente quando o Yundo é necessário.",
+      "auto": "Modo de regras",
+      "global": "Modo global",
+      "autoDescription": "Encaminha cada acesso usando as regras comuns e suas regras, com aceleração, acesso direto ou bloqueio.",
       "globalDescription": "Envia todo o tráfego pelo Yundo. Útil para diagnóstico temporário.",
       "customWebsiteAccess": "Acesso personalizado a sites",
       "customWebsiteAccessDescription": "Escolha “Acesso acelerado” ou “Acesso direto” para sites específicos.",
@@ -868,6 +868,7 @@
       "addedWebsites": "Sites adicionados",
       "requiresConnection": "Acesso acelerado",
       "directConnection": "Acesso direto",
+      "blockConnection": "Acesso bloqueado",
       "requiresConnectionDescription": "Os sites adicionados aqui sempre usarão o acesso acelerado enquanto o Yundo estiver conectado.",
       "directConnectionDescription": "Os sites adicionados aqui ignorarão o Yundo e terão acesso direto, mesmo quando ele estiver conectado.",
       "domainRequired": "Digite o domínio do site",

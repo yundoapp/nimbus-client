@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_route_preferences_provider.dart';
@@ -6,7 +8,6 @@ import 'package:hiddify/features/nimbus/auth/widget/nimbus_access_icons.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_route_preferences_dialog.dart';
 import 'package:hiddify/features/nimbus/rules/notifier/nimbus_rules_state.dart';
 import 'package:hiddify/features/nimbus/widget/nimbus_page_layout.dart';
-import 'package:hiddify/utils/date_time_formatter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class NimbusRulesOverviewPage extends ConsumerStatefulWidget {
@@ -34,6 +35,7 @@ class _NimbusRulesOverviewPageState extends ConsumerState<NimbusRulesOverviewPag
   @override
   Widget build(BuildContext context) {
     final t = ref.watch(translationsProvider).requireValue;
+    final localeTag = ref.watch(localePreferencesProvider).flutterLocale.toString();
     final package = ref.watch(nimbusCachedRulesPackageProvider);
     final preferences = ref.watch(nimbusRoutePreferencesProvider);
     final publicItems = _sortRuleItems([
@@ -85,6 +87,7 @@ class _NimbusRulesOverviewPageState extends ConsumerState<NimbusRulesOverviewPag
                   count: publicItems.length,
                   caption: t.nimbus.rules.commonVersion(version: package?.manifest.publicRulesVersion ?? '--'),
                   items: publicItems,
+                  localeTag: localeTag,
                   previewLimit: _commonRulesPreviewLimit,
                   expanded: _publicExpanded,
                   onToggle: publicItems.length > _commonRulesPreviewLimit
@@ -98,6 +101,7 @@ class _NimbusRulesOverviewPageState extends ConsumerState<NimbusRulesOverviewPag
                   count: userItems?.length ?? 0,
                   caption: t.nimbus.rules.myRulesPriorityHint,
                   items: userItems,
+                  localeTag: localeTag,
                   previewLimit: _myRulesPreviewLimit,
                   expanded: _userExpanded,
                   onToggle: (userItems?.length ?? 0) > _myRulesPreviewLimit
@@ -125,6 +129,7 @@ class _RuleGroupCard extends StatelessWidget {
     required this.count,
     required this.caption,
     required this.items,
+    required this.localeTag,
     required this.previewLimit,
     required this.expanded,
     required this.onToggle,
@@ -137,6 +142,7 @@ class _RuleGroupCard extends StatelessWidget {
   final int count;
   final String caption;
   final List<_RuleItem>? items;
+  final String localeTag;
   final int previewLimit;
   final bool expanded;
   final VoidCallback? onToggle;
@@ -209,6 +215,7 @@ class _RuleGroupCard extends StatelessWidget {
               _RuleRow(
                 item: visibleItems[index],
                 translations: translations,
+                localeTag: localeTag,
                 onTap: onItemTap == null ? null : () => onItemTap!(visibleItems[index]),
               ),
               if (index < visibleItems.length - 1) const Divider(height: 1, indent: 76),
@@ -242,10 +249,11 @@ class _ExpandRulesButton extends StatelessWidget {
 }
 
 class _RuleRow extends StatelessWidget {
-  const _RuleRow({required this.item, required this.translations, this.onTap});
+  const _RuleRow({required this.item, required this.translations, required this.localeTag, this.onTap});
 
   final _RuleItem item;
   final Translations translations;
+  final String localeTag;
   final VoidCallback? onTap;
 
   @override
@@ -291,7 +299,7 @@ class _RuleRow extends StatelessWidget {
                   ],
                 );
                 final updated = Text(
-                  _updatedLabel(translations, item.updatedAt),
+                  _updatedLabel(translations, item.updatedAt, localeTag),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
@@ -376,9 +384,10 @@ String _actionLabel(Translations t, _RuleAction action) => switch (action) {
   _RuleAction.block => t.nimbus.rules.block,
 };
 
-String _updatedLabel(Translations t, DateTime? updatedAt) {
+String _updatedLabel(Translations t, DateTime? updatedAt, String localeTag) {
   if (updatedAt == null) return t.nimbus.rules.notUpdated;
-  return '${t.nimbus.rules.updatedAt}: ${updatedAt.toLocal().format()}';
+  final formatted = DateFormat.yMd(localeTag).add_Hm().format(updatedAt.toLocal());
+  return '${t.nimbus.rules.updatedAt}: $formatted';
 }
 
 List<_RuleItem> _sortRuleItems(Iterable<_RuleItem> items) {

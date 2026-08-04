@@ -5,9 +5,9 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dar
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_change_password_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_devices_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.dart';
+import 'package:hiddify/features/nimbus/widget/nimbus_page_layout.dart';
 import 'package:hiddify/features/settings/notifier/reset_tunnel/reset_tunnel_notifier.dart';
 import 'package:hiddify/features/settings/overview/sections/general_page.dart';
-import 'package:hiddify/features/nimbus/widget/nimbus_page_layout.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -19,7 +19,7 @@ class SettingsPage extends HookConsumerWidget {
     final t = ref.watch(translationsProvider).requireValue;
     final settingsMenuOpensPage = shouldOpenNimbusMenuAsPage(isMobilePlatform: PlatformUtils.isMobile);
     return Scaffold(
-      appBar: AppBar(title: Text(t.pages.settings.title)),
+      appBar: AppBar(title: Text(t.pages.settings.title), centerTitle: false, titleSpacing: 16),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -30,12 +30,8 @@ class SettingsPage extends HookConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    _SettingsGroup(children: const [GeneralSettingsTiles(showDividers: true)]),
                     _SettingsGroup(
-                      title: t.nimbus.settings.generalSection,
-                      children: const [GeneralSettingsTiles(showDividers: true)],
-                    ),
-                    _SettingsGroup(
-                      title: t.nimbus.settings.accountSection,
                       children: [
                         ListTile(
                           title: Text(t.nimbus.settings.deviceManagement),
@@ -69,7 +65,6 @@ class SettingsPage extends HookConsumerWidget {
                       ],
                     ),
                     _SettingsGroup(
-                      title: t.nimbus.settings.supportSection,
                       children: [
                         ListTile(
                           title: Text(t.nimbus.settings.issueReport),
@@ -120,37 +115,26 @@ Future<void> _openAdaptiveSettingsMenu(BuildContext context, {required Widget di
 bool shouldOpenNimbusMenuAsPage({required bool isMobilePlatform}) => isMobilePlatform;
 
 class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.title, required this.children});
+  const _SettingsGroup({required this.children});
 
-  final String title;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsetsDirectional.only(start: 8, bottom: 8),
-            child: Text(title, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-          ),
-          Material(
-            color: theme.colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(8),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                for (var index = 0; index < children.length; index++) ...[
-                  children[index],
-                  if (index < children.length - 1) const Divider(height: 1, indent: 56),
-                ],
-              ],
-            ),
-          ),
-        ],
+      child: Material(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(8),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            for (var index = 0; index < children.length; index++) ...[
+              children[index],
+              if (index < children.length - 1) const Divider(height: 1, indent: 56),
+            ],
+          ],
+        ),
       ),
     );
   }

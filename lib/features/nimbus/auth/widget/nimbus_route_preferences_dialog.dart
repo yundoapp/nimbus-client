@@ -119,6 +119,7 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
           final code = repository.apiErrorCode(error);
           if (code == 'ROUTE_PREFERENCE_ALREADY_ACCELERATED' ||
               code == 'ROUTE_PREFERENCE_ALREADY_DIRECT' ||
+              code == 'ROUTE_PREFERENCE_ALREADY_BLOCKED' ||
               code == 'ROUTE_PREFERENCE_CONFLICT') {
             await loadPreferences();
           }
@@ -244,6 +245,15 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
                     label: t.nimbus.routePreferences.directConnection,
                     icon: Icons.language_rounded,
                     color: theme.colorScheme.tertiary,
+                    enabled: !mutationInProgress && !connectionIsSwitching,
+                  ),
+                ),
+                Expanded(
+                  child: _RoutePreferenceTypeRadio(
+                    value: 'block',
+                    label: t.nimbus.routePreferences.blockConnection,
+                    icon: Icons.block_rounded,
+                    color: theme.colorScheme.error,
                     enabled: !mutationInProgress && !connectionIsSwitching,
                   ),
                 ),
@@ -449,10 +459,19 @@ class _RoutePreferenceTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
     final colorScheme = Theme.of(context).colorScheme;
-    final preferenceColor = preference.requiresConnection ? colorScheme.primary : colorScheme.tertiary;
+    final preferenceColor = preference.isBlocked
+        ? colorScheme.error
+        : preference.requiresConnection
+        ? colorScheme.primary
+        : colorScheme.tertiary;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(nimbusRouteAccessIcon(requiresConnection: preference.requiresConnection), color: preferenceColor),
+      leading: Icon(
+        preference.isBlocked
+            ? Icons.block_rounded
+            : nimbusRouteAccessIcon(requiresConnection: preference.requiresConnection),
+        color: preferenceColor,
+      ),
       title: Text(preference.value, overflow: TextOverflow.ellipsis),
       subtitle: Text('${_preferenceLabel(t, preference)} · ${_formatDateTime(preference.createdAt)}'),
       trailing: IconButton(
@@ -510,12 +529,13 @@ Future<bool> _confirmSwitch(
       false;
 }
 
-String _preferenceLabel(Translations t, NimbusRoutePreference preference) => preference.requiresConnection
-    ? t.nimbus.routePreferences.requiresConnection
-    : t.nimbus.routePreferences.directConnection;
+String _preferenceLabel(Translations t, NimbusRoutePreference preference) => _preferenceTypeLabel(t, preference.type);
 
-String _preferenceTypeLabel(Translations t, String type) =>
-    type == 'accelerate' ? t.nimbus.routePreferences.requiresConnection : t.nimbus.routePreferences.directConnection;
+String _preferenceTypeLabel(Translations t, String type) => switch (type) {
+  'accelerate' => t.nimbus.routePreferences.requiresConnection,
+  'block' => t.nimbus.routePreferences.blockConnection,
+  _ => t.nimbus.routePreferences.directConnection,
+};
 
 String _formatDateTime(DateTime? value) {
   if (value == null) return '--';
@@ -692,6 +712,17 @@ class NimbusRoutePreferenceEditorDialog extends HookConsumerWidget {
                           ),
                           const Gap(8),
                           Text(t.nimbus.routePreferences.directConnection),
+                        ],
+                      ),
+                    ),
+                    RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      value: 'block',
+                      title: Row(
+                        children: [
+                          Icon(Icons.block_rounded, color: Theme.of(context).colorScheme.error),
+                          const Gap(8),
+                          Text(t.nimbus.routePreferences.blockConnection),
                         ],
                       ),
                     ),

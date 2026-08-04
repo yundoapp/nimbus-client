@@ -779,9 +779,9 @@
       "submit": "Etkinleştir"
     },
     "proxyMode": {
-      "auto": "Otomatik hızlandırma",
-      "global": "Genel hızlandırma",
-      "autoDescription": "Yundo gerektiğinde otomatik olarak seçer.",
+      "auto": "Kural modu",
+      "global": "Genel mod",
+      "autoDescription": "Her ziyareti ortak kurallarınız ve kurallarınızla hızlandırma, doğrudan erişim veya engelleme olarak yönlendirir.",
       "globalDescription": "Tüm trafiği Yundo üzerinden yönlendirir. Geçici tanılama için kullanışlıdır.",
       "customWebsiteAccess": "Özel web sitesi erişimi",
       "customWebsiteAccessDescription": "Belirli siteler için “Hızlandırılmış erişim” veya “Doğrudan erişim” seçin.",
@@ -868,6 +868,7 @@
       "addedWebsites": "Eklenen siteler",
       "requiresConnection": "Hızlandırılmış erişim",
       "directConnection": "Doğrudan eriş",
+      "blockConnection": "Engellenen erişim",
       "requiresConnectionDescription": "Buraya eklenen siteler, Yundo bağlıyken her zaman hızlandırılmış erişimi kullanır.",
       "directConnectionDescription": "Buraya eklenen siteler Yundo bağlı olsa bile Yundo'yu atlayarak doğrudan açılır.",
       "domainRequired": "Site alan adını girin",

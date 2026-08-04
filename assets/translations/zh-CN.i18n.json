@@ -779,9 +779,9 @@
       "submit": "激活"
     },
     "proxyMode": {
-      "auto": "自动加速",
-      "global": "全局加速",
-      "autoDescription": "自动判断哪些访问需要通过云渡加速。",
+      "auto": "规则模式",
+      "global": "全局模式",
+      "autoDescription": "根据通用规则和我的规则，自动选择加速、直连或拦截。",
       "globalDescription": "全部访问都通过云渡加速，适合临时排查网络问题。",
       "customWebsiteAccess": "自定义网站访问",
       "customWebsiteAccessDescription": "为指定网站设置“加速访问”或“直连访问”",
@@ -869,6 +869,7 @@
       "addedWebsites": "已添加网站",
       "requiresConnection": "加速访问",
       "directConnection": "直连访问",
+      "blockConnection": "拦截访问",
       "requiresConnectionDescription": "添加到这里的网站，开启云渡加速后会强制加速访问。",
       "directConnectionDescription": "添加到这里的网站，即使云渡加速已开启也会绕过云渡直接访问。",
       "domainRequired": "请输入网站域名",
@@ -936,7 +937,7 @@
       "commonRules": "通用规则",
       "myRules": "我的规则",
       "commonVersion": "v${version}",
-      "myRulesPriorityHint": "我的规则优先于通用规则执行。",
+      "myRulesPriorityHint": "我的规则优先于通用规则执行，并保存在账号云端。",
       "addRule": "添加规则",
       "editRule": "编辑规则",
       "domain": "域名",
@@ -949,7 +950,7 @@
     },
     "routeHistory": {
       "menuTitle": "记录",
-      "title": "加速记录",
+      "title": "记录",
       "settingsSubtitle": "本次启动以来的访问记录 · 最多 ${limit} 条",
       "count": "${count}/${limit} 条",
       "searchHint": "搜索域名、IP 地址或命中规则",

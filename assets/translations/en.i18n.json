@@ -779,9 +779,9 @@
       "submit": "Activate"
     },
     "proxyMode": {
-      "auto": "Automatic acceleration",
-      "global": "Global acceleration",
-      "autoDescription": "Automatically chooses which traffic needs Yundo acceleration.",
+      "auto": "Rule mode",
+      "global": "Global mode",
+      "autoDescription": "Routes each visit using common rules and your rules, with acceleration, direct access, or blocking.",
       "globalDescription": "Accelerates all traffic through Yundo. Useful for temporary troubleshooting.",
       "customWebsiteAccess": "Custom website access",
       "customWebsiteAccessDescription": "Choose “Accelerated access” or “Direct access” for specific websites.",
@@ -869,6 +869,7 @@
       "addedWebsites": "Added websites",
       "requiresConnection": "Accelerated access",
       "directConnection": "Direct access",
+      "blockConnection": "Blocked access",
       "requiresConnectionDescription": "Websites added here will always use accelerated access while Yundo acceleration is on.",
       "directConnectionDescription": "Websites added here will bypass Yundo and connect directly, even while Yundo acceleration is on.",
       "domainRequired": "Enter a website domain",
@@ -936,7 +937,7 @@
       "commonRules": "Common rules",
       "myRules": "My rules",
       "commonVersion": "v${version}",
-      "myRulesPriorityHint": "My rules take priority over common rules.",
+      "myRulesPriorityHint": "My rules take priority over common rules and are stored in your account cloud.",
       "addRule": "Add rule",
       "editRule": "Edit rule",
       "domain": "Domain",
@@ -949,7 +950,7 @@
     },
     "routeHistory": {
       "menuTitle": "History",
-      "title": "Acceleration history",
+      "title": "History",
       "settingsSubtitle": "Records since the app opened · up to ${limit}",
       "count": "${count} of ${limit}",
       "searchHint": "Search domain, IP address, or rule",

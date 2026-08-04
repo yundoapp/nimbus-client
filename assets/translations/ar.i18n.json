@@ -785,9 +785,9 @@
       "submit": "تفعيل"
     },
     "proxyMode": {
-      "auto": "تسريع تلقائي",
-      "global": "تسريع شامل",
-      "autoDescription": "يختار تلقائيًا متى تكون Yundo مطلوبة.",
+      "auto": "وضع القواعد",
+      "global": "الوضع الشامل",
+      "autoDescription": "يوجه كل زيارة باستخدام القواعد العامة وقواعدك، مع التسريع أو الوصول المباشر أو الحظر.",
       "globalDescription": "يمرر كل الحركة عبر Yundo. مفيد للتشخيص المؤقت.",
       "customWebsiteAccess": "وصول مخصص للمواقع",
       "customWebsiteAccessDescription": "اختر الوصول المسرّع أو المباشر لمواقع محددة.",
@@ -874,6 +874,7 @@
       "addedWebsites": "المواقع المضافة",
       "requiresConnection": "الوصول المسرّع",
       "directConnection": "الوصول المباشر",
+      "blockConnection": "الوصول المحظور",
       "requiresConnectionDescription": "ستستخدم المواقع المضافة هنا دائمًا الوصول المسرّع عند اتصال Yundo.",
       "directConnectionDescription": "ستتجاوز المواقع المضافة هنا Yundo وتُفتح مباشرةً حتى عند اتصال Yundo.",
       "domainRequired": "أدخل نطاق الموقع",

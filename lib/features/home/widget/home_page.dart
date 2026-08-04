@@ -833,7 +833,6 @@ class _HomeQuickControls extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(nimbusAuthControllerProvider);
-    final t = ref.watch(translationsProvider).requireValue;
     final selectedLocation = _selectedLocation(authState);
     final rulesText = _formatRulesVersionForDisplay(rulesVersion);
 
@@ -919,8 +918,8 @@ class _ProxyModeControlCard extends HookConsumerWidget {
                 ? Icon(Icons.check_rounded, size: 18, color: theme.colorScheme.primary)
                 : const SizedBox(width: 18),
             style: ButtonStyle(
-              minimumSize: const WidgetStatePropertyAll(Size.fromHeight(42)),
-              maximumSize: const WidgetStatePropertyAll(Size.fromHeight(42)),
+              minimumSize: const WidgetStatePropertyAll(Size.fromHeight(62)),
+              maximumSize: const WidgetStatePropertyAll(Size.fromHeight(72)),
               padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12)),
               backgroundColor: WidgetStateProperty.resolveWith((states) {
                 if (isSelected) {
@@ -936,11 +935,26 @@ class _ProxyModeControlCard extends HookConsumerWidget {
                 RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
               ),
             ),
-            child: Text(
-              mode.label(t),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  mode.label(t),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  mode.description(t),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ],
             ),
           );
         }).toList(),
@@ -1424,6 +1438,11 @@ extension on NimbusProxyMode {
   String label(Translations t) => switch (this) {
     NimbusProxyMode.auto => t.nimbus.proxyMode.auto,
     NimbusProxyMode.global => t.nimbus.proxyMode.global,
+  };
+
+  String description(Translations t) => switch (this) {
+    NimbusProxyMode.auto => t.nimbus.proxyMode.autoDescription,
+    NimbusProxyMode.global => t.nimbus.proxyMode.globalDescription,
   };
 }
 

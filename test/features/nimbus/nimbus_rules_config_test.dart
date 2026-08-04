@@ -29,6 +29,19 @@ void main() {
       expect(options.rules.any((rule) => rule['rule_set'] != null), isTrue);
     });
 
+    test('compiles a custom block rule to a reject route action', () {
+      final rules = buildNimbusRouteRules([
+        const NimbusRulePackageItem(pattern: 'ads.example.com', patternType: 'domain', action: 'block'),
+      ], 'nimbus-proxy');
+
+      expect(rules, [
+        {
+          'domain_suffix': ['ads.example.com'],
+          'action': 'reject',
+        },
+      ]);
+    });
+
     test('does not inject product routes in global mode', () {
       final options = buildNimbusManagedRouteOptions(rulesPackage: _rulesPackage, isAutomaticMode: false);
 

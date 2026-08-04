@@ -779,9 +779,9 @@
       "submit": "Aktifkan"
     },
     "proxyMode": {
-      "auto": "Akselerasi otomatis",
-      "global": "Akselerasi global",
-      "autoDescription": "Otomatis memilih kapan Yundo diperlukan.",
+      "auto": "Mode aturan",
+      "global": "Mode global",
+      "autoDescription": "Merutekan setiap kunjungan menggunakan aturan umum dan aturan Anda, dengan akselerasi, akses langsung, atau pemblokiran.",
       "globalDescription": "Mengarahkan semua lalu lintas melalui Yundo. Berguna untuk diagnosis sementara.",
       "customWebsiteAccess": "Akses situs khusus",
       "customWebsiteAccessDescription": "Pilih “Akses dipercepat” atau “Akses langsung” untuk situs tertentu.",
@@ -868,6 +868,7 @@
       "addedWebsites": "Situs yang ditambahkan",
       "requiresConnection": "Akses dipercepat",
       "directConnection": "Akses langsung",
+      "blockConnection": "Akses diblokir",
       "requiresConnectionDescription": "Situs yang ditambahkan di sini akan selalu menggunakan akses dipercepat saat Yundo terhubung.",
       "directConnectionDescription": "Situs yang ditambahkan di sini akan melewati Yundo dan diakses langsung, meski Yundo terhubung.",
       "domainRequired": "Masukkan domain situs",

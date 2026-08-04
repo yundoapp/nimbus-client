@@ -321,6 +321,8 @@ class NimbusRoutePreference {
   final DateTime? updatedAt;
 
   bool get requiresConnection => type == 'accelerate';
+
+  bool get isBlocked => type == 'block';
 }
 
 class NimbusRoutePreferencesList {

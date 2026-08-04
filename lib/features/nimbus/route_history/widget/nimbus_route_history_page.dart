@@ -12,7 +12,6 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controll
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_access_icons.dart';
 import 'package:hiddify/features/nimbus/route_history/model/nimbus_route_history.dart';
 import 'package:hiddify/features/nimbus/route_history/notifier/nimbus_route_history_notifier.dart';
-import 'package:hiddify/features/nimbus/widget/nimbus_page_layout.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -51,6 +50,8 @@ class NimbusRouteHistoryPage extends HookConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(t.nimbus.routeHistory.title),
+        centerTitle: false,
+        titleSpacing: 16,
         actions: [
           if (state.entries.isNotEmpty)
             IconButton(
