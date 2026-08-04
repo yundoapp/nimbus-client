@@ -131,6 +131,7 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
   String? _lastTrayIconPath;
   String? _lastTrayTooltip;
   String? _lastTrayMenuKey;
+  String? _locationsLoadRequestedForUser;
 
   @override
   Future<void> build() async {
@@ -152,7 +153,11 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
     final locale = ref.watch(localePreferencesProvider);
     final proxyMode = ref.watch(Preferences.nimbusProxyMode);
     final authState = ref.watch(nimbusAuthControllerProvider);
-    if (authState.isAuthenticated && authState.locations == null && !authState.isLoading) {
+    final userId = authState.session?.user.id;
+    if (!authState.isAuthenticated) {
+      _locationsLoadRequestedForUser = null;
+    } else if (authState.locations == null && userId != null && userId != _locationsLoadRequestedForUser) {
+      _locationsLoadRequestedForUser = userId;
       Future.microtask(() => ref.read(nimbusAuthControllerProvider.notifier).loadLocations());
     }
     final urlTestDelay = ref.watch(activeProxyNotifierProvider.select((value) => value.valueOrNull?.urlTestDelay ?? 0));

@@ -54,4 +54,20 @@ void main() {
     expect(source, contains('if (!authState.isAuthenticated || authState.session == null) return null;'));
     expect(source, contains('authState.isRestoring'));
   });
+
+  test('limits the desktop tray location request to one attempt per user session', () {
+    final source = File('lib/features/system_tray/notifier/system_tray_notifier.dart').readAsStringSync();
+
+    expect(source, contains('_locationsLoadRequestedForUser'));
+    expect(source, contains('userId != _locationsLoadRequestedForUser'));
+  });
+
+  test('location loading is not coupled to the account-wide loading indicator', () {
+    final source = File('lib/features/nimbus/auth/notifier/nimbus_auth_controller.dart').readAsStringSync();
+    final start = source.indexOf('Future<void> _loadLocations()');
+    final end = source.indexOf('Future<void> selectLocation(', start);
+    final locationSection = source.substring(start, end);
+
+    expect(locationSection, isNot(contains('isLoading: true')));
+  });
 }

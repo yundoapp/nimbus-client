@@ -56,6 +56,8 @@ class NimbusAuthState {
 
 class NimbusAuthController extends Notifier<NimbusAuthState> with AppLogger {
   Future<NimbusAuthSession?>? _refreshInFlight;
+  Future<void>? _refreshMeInFlight;
+  Future<void>? _loadLocationsInFlight;
 
   NimbusAuthRepository get _repository => ref.read(nimbusAuthRepositoryProvider);
   Translations get _t => ref.read(translationsProvider).requireValue;
@@ -179,9 +181,29 @@ class NimbusAuthController extends Notifier<NimbusAuthState> with AppLogger {
     }
   }
 
-  Future<void> refreshMe() async {
+  Future<void> refreshMe() {
+    final active = _refreshMeInFlight;
+    if (active != null) return active;
+
     final session = state.session;
-    if (session == null) return;
+    if (session == null) return Future<void>.value();
+
+    final future = _refreshMe(session);
+    _refreshMeInFlight = future;
+    return future.whenComplete(() {
+      if (identical(_refreshMeInFlight, future)) _refreshMeInFlight = null;
+    });
+  }
+
+  Future<void> _refreshMe(NimbusAuthSession session) async {
+    state = NimbusAuthState.authenticated(
+      session: session,
+      me: state.me,
+      devices: state.devices,
+      locations: state.locations,
+      selectedLocationCode: state.selectedLocationCode,
+      isLoading: true,
+    );
     try {
       final me = await _repository.fetchMe(session.accessToken);
       state = NimbusAuthState.authenticated(
@@ -243,17 +265,20 @@ class NimbusAuthController extends Notifier<NimbusAuthState> with AppLogger {
     }
   }
 
-  Future<void> loadLocations() async {
+  Future<void> loadLocations() {
+    final active = _loadLocationsInFlight;
+    if (active != null) return active;
+
+    final future = _loadLocations();
+    _loadLocationsInFlight = future;
+    return future.whenComplete(() {
+      if (identical(_loadLocationsInFlight, future)) _loadLocationsInFlight = null;
+    });
+  }
+
+  Future<void> _loadLocations() async {
     final session = state.session;
     if (session == null) return;
-    state = NimbusAuthState.authenticated(
-      session: session,
-      me: state.me,
-      devices: state.devices,
-      locations: state.locations,
-      selectedLocationCode: state.selectedLocationCode,
-      isLoading: true,
-    );
     try {
       final locations = await _repository.fetchLocations(session);
       final hasSelected = locations.items.any((item) => item.code == state.selectedLocationCode);
