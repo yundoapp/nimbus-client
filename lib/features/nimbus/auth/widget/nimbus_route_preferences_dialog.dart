@@ -523,3 +523,206 @@ String _formatDateTime(DateTime? value) {
 }
 
 String _twoDigits(int value) => value.toString().padLeft(2, '0');
+
+class NimbusRoutePreferenceEditorDialog extends HookConsumerWidget {
+  const NimbusRoutePreferenceEditorDialog({super.key, this.preference});
+
+  final NimbusRoutePreference? preference;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = ref.watch(translationsProvider).requireValue;
+    final repository = ref.watch(nimbusAuthRepositoryProvider);
+    final inputController = useTextEditingController(text: preference?.value ?? '');
+    final selectedTargetType = useState(preference?.targetType ?? 'domain');
+    final selectedAction = useState(preference?.type ?? 'accelerate');
+    final error = useState<String?>(null);
+    final isSubmitting = useState(false);
+    final isDeleting = useState(false);
+    final connection = ref.watch(connectionNotifierProvider).valueOrNull;
+    final disabled = isSubmitting.value || isDeleting.value || (connection?.isSwitching ?? false);
+    final editing = preference != null;
+
+    Future<void> save() async {
+      final normalized = normalizeNimbusRuleTarget(inputController.text, selectedTargetType.value);
+      if (normalized == null) {
+        error.value = t.nimbus.routePreferences.targetInvalid;
+        return;
+      }
+      final session = ref.read(nimbusAuthControllerProvider).session;
+      if (session == null) return;
+      isSubmitting.value = true;
+      error.value = null;
+      try {
+        if (preference == null) {
+          await repository.createRoutePreference(
+            session: session,
+            type: selectedAction.value,
+            targetType: selectedTargetType.value,
+            input: normalized,
+          );
+        } else {
+          await repository.updateRoutePreference(
+            session: session,
+            id: preference!.id,
+            type: selectedAction.value,
+            targetType: selectedTargetType.value,
+            input: normalized,
+          );
+        }
+        ref.invalidate(nimbusRoutePreferencesProvider);
+        await ref.read(nimbusConnectionControllerProvider.notifier).reapplyIfConnected(userRulesOnly: true);
+        if (context.mounted) Navigator.of(context).pop(true);
+      } catch (exception) {
+        if (repository.isUnauthorized(exception)) {
+          await ref.read(nimbusAuthControllerProvider.notifier).refreshAfterUnauthorized(session);
+        } else {
+          error.value = repository.describeError(exception, t);
+        }
+      } finally {
+        if (context.mounted) isSubmitting.value = false;
+      }
+    }
+
+    Future<void> delete() async {
+      final current = preference;
+      if (current == null) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(t.nimbus.routePreferences.deleteTitle),
+          content: Text(t.nimbus.routePreferences.deleteConfirm(value: current.value)),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(t.common.cancel)),
+            FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: Text(t.common.delete)),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+      final session = ref.read(nimbusAuthControllerProvider).session;
+      if (session == null) return;
+      isDeleting.value = true;
+      error.value = null;
+      try {
+        await repository.deleteRoutePreference(session: session, id: current.id);
+        ref.invalidate(nimbusRoutePreferencesProvider);
+        await ref.read(nimbusConnectionControllerProvider.notifier).reapplyIfConnected(userRulesOnly: true);
+        if (context.mounted) Navigator.of(context).pop(true);
+      } catch (exception) {
+        if (repository.isUnauthorized(exception)) {
+          await ref.read(nimbusAuthControllerProvider.notifier).refreshAfterUnauthorized(session);
+        } else {
+          error.value = repository.describeError(exception, t);
+        }
+      } finally {
+        if (context.mounted) isDeleting.value = false;
+      }
+    }
+
+    final targetTypes = <String, String>{
+      'domain': t.nimbus.routePreferences.domainType,
+      'ip': t.nimbus.routePreferences.ipType,
+      'cidr': t.nimbus.routePreferences.cidrType,
+    };
+
+    return AlertDialog(
+      title: Text(editing ? t.nimbus.rules.editRule : t.nimbus.rules.addRule),
+      content: SizedBox(
+        width: 520,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DropdownButtonFormField<String>(
+                value: selectedTargetType.value,
+                decoration: InputDecoration(labelText: t.nimbus.routePreferences.targetType),
+                items: [
+                  for (final entry in targetTypes.entries)
+                    DropdownMenuItem<String>(value: entry.key, child: Text(entry.value)),
+                ],
+                onChanged: disabled ? null : (value) => value == null ? null : selectedTargetType.value = value,
+              ),
+              const Gap(12),
+              TextField(
+                controller: inputController,
+                enabled: !disabled,
+                autofocus: !editing,
+                keyboardType: selectedTargetType.value == 'domain' ? TextInputType.url : TextInputType.text,
+                inputFormatters: [LengthLimitingTextInputFormatter(nimbusDomainMaxLength)],
+                decoration: InputDecoration(
+                  labelText: t.nimbus.routePreferences.targetValue,
+                  hintText: t.nimbus.routePreferences.targetHint,
+                  errorText: error.value,
+                ),
+                onChanged: (_) => error.value = null,
+                onSubmitted: (_) => save(),
+              ),
+              const Gap(16),
+              Text(t.nimbus.routePreferences.accessMethod, style: Theme.of(context).textTheme.labelLarge),
+              RadioGroup<String>(
+                groupValue: selectedAction.value,
+                onChanged: (value) {
+                  if (!disabled && value != null) selectedAction.value = value;
+                },
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      value: 'accelerate',
+                      title: Row(
+                        children: [
+                          Icon(
+                            nimbusRouteAccessIcon(requiresConnection: true),
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const Gap(8),
+                          Text(t.nimbus.routePreferences.requiresConnection),
+                        ],
+                      ),
+                    ),
+                    RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      value: 'direct',
+                      title: Row(
+                        children: [
+                          Icon(
+                            nimbusRouteAccessIcon(requiresConnection: false),
+                            color: Theme.of(context).colorScheme.tertiary,
+                          ),
+                          const Gap(8),
+                          Text(t.nimbus.routePreferences.directConnection),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSubmitting.value || isDeleting.value) ...[
+                const Gap(4),
+                const LinearProgressIndicator(minHeight: 2),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        if (editing)
+          TextButton.icon(
+            onPressed: disabled ? null : delete,
+            icon: const Icon(Icons.delete_outline_rounded),
+            label: Text(t.common.delete),
+          ),
+        const Spacer(),
+        TextButton(onPressed: disabled ? null : () => Navigator.of(context).pop(), child: Text(t.common.cancel)),
+        FilledButton.icon(
+          onPressed: disabled ? null : save,
+          icon: isSubmitting.value
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.check_rounded),
+          label: Text(t.common.save),
+        ),
+      ],
+    );
+  }
+}

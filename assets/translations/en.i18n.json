@@ -886,7 +886,14 @@
       "empty": "No websites added yet",
       "deleteTooltip": "Delete",
       "deleteTitle": "Delete access rule",
-      "deleteConfirm": "Delete \"${value}\"?"
+      "deleteConfirm": "Delete \"${value}\"?",
+      "targetType": "Rule type",
+      "targetValue": "Rule value",
+      "targetHint": "Enter a domain, IP address, or CIDR range",
+      "targetInvalid": "Enter a valid domain, IP address, or CIDR range",
+      "domainType": "Domain",
+      "ipType": "IP address",
+      "cidrType": "CIDR range"
     },
     "rules": {
       "menuTitle": "Rules",
@@ -925,7 +932,20 @@
       "empty": "No rules available",
       "count": "${count} rules",
       "librariesCount": "${count} libraries",
-      "raw": "Raw configuration"
+      "raw": "Raw configuration",
+      "commonRules": "Common rules",
+      "myRules": "My rules",
+      "commonVersion": "Common rules version · ${version}",
+      "myRulesPriorityHint": "My rules take priority over common rules.",
+      "addRule": "Add rule",
+      "editRule": "Edit rule",
+      "domain": "Domain",
+      "ip": "IP address",
+      "cidr": "CIDR range",
+      "ruleLibrary": "Rule library",
+      "updatedAt": "Updated",
+      "expand": "Show all rules",
+      "collapse": "Show fewer rules"
     },
     "routeHistory": {
       "menuTitle": "History",
@@ -1049,7 +1069,7 @@
       "subscriptionExpired": "Your plan has expired. Activate a new plan to continue.",
       "noAvailableLocation": "No available location right now. Please try again later.",
       "routePreferenceConflict": "This access preference already exists.",
-      "routeTargetInvalid": "Enter a valid domain.",
+      "routeTargetInvalid": "Enter a valid domain, IP address, or CIDR range.",
       "issueReportAlreadyOpen": "You already have an open issue report."
     }
   }

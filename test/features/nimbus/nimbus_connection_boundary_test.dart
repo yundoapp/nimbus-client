@@ -46,7 +46,6 @@ void main() {
           connectedReported: false,
           userRulesOnly: false,
           proxyMode: NimbusProxyMode.auto,
-          customWebsiteAccessEnabled: true,
         ),
         isFalse,
       );
@@ -56,7 +55,6 @@ void main() {
           connectedReported: true,
           userRulesOnly: false,
           proxyMode: NimbusProxyMode.auto,
-          customWebsiteAccessEnabled: true,
         ),
         isFalse,
       );
@@ -69,7 +67,6 @@ void main() {
           connectedReported: true,
           userRulesOnly: true,
           proxyMode: NimbusProxyMode.auto,
-          customWebsiteAccessEnabled: true,
         ),
         isTrue,
       );
@@ -79,7 +76,6 @@ void main() {
           connectedReported: true,
           userRulesOnly: true,
           proxyMode: NimbusProxyMode.global,
-          customWebsiteAccessEnabled: true,
         ),
         isFalse,
       );

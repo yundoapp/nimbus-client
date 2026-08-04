@@ -886,7 +886,14 @@
       "empty": "暂未添加任何网站",
       "deleteTooltip": "删除",
       "deleteTitle": "删除访问规则",
-      "deleteConfirm": "确定删除“${value}”吗？"
+      "deleteConfirm": "确定删除“${value}”吗？",
+      "targetType": "规则类型",
+      "targetValue": "规则内容",
+      "targetHint": "请输入域名、IP 地址或 CIDR 网段",
+      "targetInvalid": "请输入正确的域名、IP 地址或 CIDR 网段",
+      "domainType": "域名",
+      "ipType": "IP 地址",
+      "cidrType": "CIDR 网段"
     },
     "rules": {
       "menuTitle": "规则",
@@ -925,7 +932,20 @@
       "empty": "暂无规则",
       "count": "${count} 条规则",
       "librariesCount": "${count} 个规则库",
-      "raw": "原始配置"
+      "raw": "原始配置",
+      "commonRules": "通用规则",
+      "myRules": "我的规则",
+      "commonVersion": "通用规则版本 · ${version}",
+      "myRulesPriorityHint": "我的规则优先于通用规则执行。",
+      "addRule": "添加规则",
+      "editRule": "编辑规则",
+      "domain": "域名",
+      "ip": "IP 地址",
+      "cidr": "CIDR 网段",
+      "ruleLibrary": "规则库",
+      "updatedAt": "更新时间",
+      "expand": "展开全部规则",
+      "collapse": "收起多余规则"
     },
     "routeHistory": {
       "menuTitle": "记录",
@@ -1049,7 +1069,7 @@
       "subscriptionExpired": "套餐已到期，请激活新套餐后继续。",
       "noAvailableLocation": "当前暂无可用位置，请稍后再试。",
       "routePreferenceConflict": "这个访问偏好已存在。",
-      "routeTargetInvalid": "请输入有效域名。",
+      "routeTargetInvalid": "请输入正确的域名、IP 地址或 CIDR 网段。",
       "issueReportAlreadyOpen": "你已有一个待处理的问题上报。"
     }
   }

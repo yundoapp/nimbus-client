@@ -1,69 +1,109 @@
 import 'package:flutter/material.dart';
-import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_route_preferences_provider.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_access_icons.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_route_preferences_dialog.dart';
 import 'package:hiddify/features/nimbus/rules/notifier/nimbus_rules_state.dart';
-import 'package:hiddify/features/route_rules/notifier/rules_notifier.dart';
-import 'package:hiddify/hiddifycore/generated/v2/config/route_rule.pb.dart';
 import 'package:hiddify/utils/date_time_formatter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-class NimbusRulesOverviewPage extends ConsumerWidget {
+class NimbusRulesOverviewPage extends ConsumerStatefulWidget {
   const NimbusRulesOverviewPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NimbusRulesOverviewPage> createState() => _NimbusRulesOverviewPageState();
+}
+
+class _NimbusRulesOverviewPageState extends ConsumerState<NimbusRulesOverviewPage> {
+  bool _publicExpanded = false;
+  bool _userExpanded = false;
+
+  Future<void> _openEditor({NimbusRoutePreference? preference}) async {
+    final changed = await showDialog<bool>(
+      context: context,
+      builder: (_) => NimbusRoutePreferenceEditorDialog(preference: preference),
+    );
+    if (changed == true && mounted) {
+      ref.invalidate(nimbusRoutePreferencesProvider);
+      ref.invalidate(nimbusCachedRulesPackageProvider);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final t = ref.watch(translationsProvider).requireValue;
     final package = ref.watch(nimbusCachedRulesPackageProvider);
-    final localRules = ref.watch(rulesNotifierProvider);
-    final appInfo = ref.watch(appInfoProvider).valueOrNull;
-    final groups = _buildRuleGroups(t, package, localRules);
-    final ruleCount = groups.fold<int>(0, (total, group) => total + group.items.length);
-
+    final preferences = ref.watch(nimbusRoutePreferencesProvider);
+    final publicItems = [
+      for (final item in package?.publicRules ?? const <NimbusRulePackageItem>[])
+        if (item.pattern.trim().isNotEmpty)
+          _RuleItem(
+            pattern: item.pattern,
+            patternType: item.patternType,
+            action: _ruleAction(item.action),
+            updatedAt: package?.cachedAt,
+          ),
+    ];
+    final userItems = preferences.when(
+      data: (value) => [
+        for (final item in value?.items ?? const <NimbusRoutePreference>[])
+          if (item.value.trim().isNotEmpty)
+            _RuleItem(
+              pattern: item.value,
+              patternType: item.targetType,
+              action: _ruleAction(item.type),
+              updatedAt: item.updatedAt ?? item.createdAt,
+              preference: item,
+            ),
+      ],
+      loading: () => null,
+      error: (_, _) => const <_RuleItem>[],
+    );
     return Scaffold(
-      appBar: AppBar(title: Text(t.nimbus.rules.title)),
+      appBar: AppBar(
+        title: Text(t.nimbus.rules.title),
+        actions: [
+          IconButton.filledTonal(
+            tooltip: t.nimbus.rules.addRule,
+            onPressed: () => _openEditor(),
+            icon: const Icon(Icons.add_rounded),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1080),
+            constraints: const BoxConstraints(maxWidth: 980),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
-                _RulesSummary(
+                _RuleGroupCard(
+                  title: t.nimbus.rules.commonRules,
+                  count: publicItems.length,
+                  caption: t.nimbus.rules.commonVersion(version: package?.manifest.publicRulesVersion ?? '--'),
+                  items: publicItems,
+                  expanded: _publicExpanded,
+                  onToggle: publicItems.length > _rulesPreviewLimit
+                      ? () => setState(() => _publicExpanded = !_publicExpanded)
+                      : null,
                   translations: t,
-                  package: package,
-                  appVersion: appInfo?.presentVersion ?? '--',
-                  ruleCount: ruleCount,
                 ),
-                const SizedBox(height: 24),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(child: Text(t.nimbus.rules.currentRules, style: Theme.of(context).textTheme.titleMedium)),
-                    Text(
-                      t.nimbus.rules.count(count: ruleCount),
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    ),
-                  ],
+                const SizedBox(height: 16),
+                _RuleGroupCard(
+                  title: t.nimbus.rules.myRules,
+                  count: userItems?.length ?? 0,
+                  caption: t.nimbus.rules.myRulesPriorityHint,
+                  items: userItems,
+                  expanded: _userExpanded,
+                  onToggle: (userItems?.length ?? 0) > _rulesPreviewLimit
+                      ? () => setState(() => _userExpanded = !_userExpanded)
+                      : null,
+                  translations: t,
+                  onItemTap: (item) => _openEditor(preference: item.preference),
+                  onAdd: () => _openEditor(),
                 ),
-                const SizedBox(height: 8),
-                if (groups.isEmpty)
-                  _EmptyRules(label: t.nimbus.rules.empty)
-                else
-                  Card(
-                    margin: EdgeInsets.zero,
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(
-                      children: [
-                        for (var index = 0; index < groups.length; index++) ...[
-                          _RuleGroup(group: groups[index], translations: t),
-                          if (index < groups.length - 1) const Divider(height: 1),
-                        ],
-                      ],
-                    ),
-                  ),
               ],
             ),
           ),
@@ -73,176 +113,215 @@ class NimbusRulesOverviewPage extends ConsumerWidget {
   }
 }
 
-class _RulesSummary extends StatelessWidget {
-  const _RulesSummary({
+const _rulesPreviewLimit = 10;
+
+class _RuleGroupCard extends StatelessWidget {
+  const _RuleGroupCard({
+    required this.title,
+    required this.count,
+    required this.caption,
+    required this.items,
+    required this.expanded,
+    required this.onToggle,
     required this.translations,
-    required this.package,
-    required this.appVersion,
-    required this.ruleCount,
+    this.onItemTap,
+    this.onAdd,
   });
 
+  final String title;
+  final int count;
+  final String caption;
+  final List<_RuleItem>? items;
+  final bool expanded;
+  final VoidCallback? onToggle;
   final Translations translations;
-  final NimbusRulesPackage? package;
-  final String appVersion;
-  final int ruleCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = translations;
-    final theme = Theme.of(context);
-    final manifest = package?.manifest;
-    final metadata = [
-      (t.nimbus.rules.appVersion, appVersion),
-      (t.nimbus.rules.rulesVersion, manifest?.publicRulesVersion ?? '--'),
-      (t.nimbus.rules.customRulesVersion, _shortVersion(manifest?.userRulesVersion)),
-      (t.nimbus.rules.lastUpdated, package?.cachedAt?.toLocal().format() ?? t.nimbus.rules.notUpdated),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(t.nimbus.rules.summary, style: theme.textTheme.titleLarge),
-        const SizedBox(height: 4),
-        Text(
-          t.nimbus.rules.summaryCount(count: ruleCount),
-          style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 28,
-          runSpacing: 12,
-          children: [for (final item in metadata) _SummaryItem(label: item.$1, value: item.$2)],
-        ),
-      ],
-    );
-  }
-}
-
-class _SummaryItem extends StatelessWidget {
-  const _SummaryItem({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => ConstrainedBox(
-    constraints: const BoxConstraints(minWidth: 150, maxWidth: 300),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.labelMedium),
-        const SizedBox(height: 2),
-        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis),
-      ],
-    ),
-  );
-}
-
-class _RuleGroup extends StatelessWidget {
-  const _RuleGroup({required this.group, required this.translations});
-
-  final _RuleGroupData group;
-  final Translations translations;
+  final ValueChanged<_RuleItem>? onItemTap;
+  final VoidCallback? onAdd;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-          child: Text(
-            '${group.title} · ${translations.nimbus.rules.count(count: group.items.length)}',
-            style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+    final loaded = items != null;
+    final visibleItems = items == null
+        ? const <_RuleItem>[]
+        : expanded
+        ? items!
+        : items!.take(_rulesPreviewLimit).toList(growable: false);
+    final hasMore = (items?.length ?? 0) > _rulesPreviewLimit;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 12, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$title · ${translations.nimbus.rules.count(count: count)}',
+                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        caption,
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                if (onAdd != null)
+                  IconButton(
+                    tooltip: translations.nimbus.rules.addRule,
+                    onPressed: onAdd,
+                    icon: const Icon(Icons.add_rounded),
+                  ),
+              ],
+            ),
           ),
-        ),
-        for (var index = 0; index < group.items.length; index++) ...[
-          _RuleRow(item: group.items[index], translations: translations),
-          if (index < group.items.length - 1) const Divider(height: 1, indent: 72),
+          if (!loaded)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            )
+          else if (visibleItems.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+              child: Text(
+                translations.nimbus.rules.empty,
+                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+            )
+          else ...[
+            for (var index = 0; index < visibleItems.length; index++) ...[
+              _RuleRow(
+                item: visibleItems[index],
+                translations: translations,
+                onTap: onItemTap == null ? null : () => onItemTap!(visibleItems[index]),
+              ),
+              if (index < visibleItems.length - 1) const Divider(height: 1, indent: 76),
+            ],
+            if (hasMore)
+              _ExpandRulesButton(
+                expanded: expanded,
+                onPressed: onToggle,
+                label: expanded ? translations.nimbus.rules.collapse : translations.nimbus.rules.expand,
+              ),
+          ],
         ],
-        const SizedBox(height: 6),
-      ],
+      ),
     );
   }
+}
+
+class _ExpandRulesButton extends StatelessWidget {
+  const _ExpandRulesButton({required this.expanded, required this.onPressed, required this.label});
+
+  final bool expanded;
+  final VoidCallback? onPressed;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => TextButton.icon(
+    onPressed: onPressed,
+    icon: Icon(expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded),
+    label: Text(label),
+  );
 }
 
 class _RuleRow extends StatelessWidget {
-  const _RuleRow({required this.item, required this.translations});
+  const _RuleRow({required this.item, required this.translations, this.onTap});
 
   final _RuleItem item;
   final Translations translations;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final actionColor = switch (item.action) {
-      _RuleAction.accelerate => theme.colorScheme.primary,
-      _RuleAction.direct => theme.colorScheme.tertiary,
-      _RuleAction.block => theme.colorScheme.error,
-    };
-
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      leading: Icon(_actionIcon(item.action), color: actionColor),
-      title: Text(item.pattern, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text('${item.sourceLabel} · ${_actionLabel(translations, item.action)}'),
-      dense: true,
+    final actionColor = _actionColor(theme.colorScheme, item.action);
+    final content = Padding(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: actionColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: SizedBox.square(dimension: 42, child: Icon(_actionIcon(item.action), color: actionColor, size: 22)),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.pattern, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyLarge),
+                const SizedBox(height: 5),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 3,
+                  children: [
+                    Text(
+                      _targetTypeLabel(translations, item.patternType),
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(_actionIcon(item.action), size: 15, color: actionColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          _actionLabel(translations, item.action),
+                          style: theme.textTheme.bodySmall?.copyWith(color: actionColor),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      _updatedLabel(translations, item.updatedAt),
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (onTap != null) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right_rounded, color: theme.colorScheme.onSurfaceVariant),
+          ],
+        ],
+      ),
     );
+
+    return InkWell(onTap: onTap, child: content);
   }
 }
 
-class _EmptyRules extends StatelessWidget {
-  const _EmptyRules({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 64),
-    child: Center(child: Text(label, style: Theme.of(context).textTheme.bodyLarge)),
-  );
-}
-
-class _RuleGroupData {
-  const _RuleGroupData({required this.title, required this.items});
-
-  final String title;
-  final List<_RuleItem> items;
-}
-
 class _RuleItem {
-  const _RuleItem({required this.pattern, required this.sourceLabel, required this.action});
+  const _RuleItem({
+    required this.pattern,
+    required this.patternType,
+    required this.action,
+    this.updatedAt,
+    this.preference,
+  });
 
   final String pattern;
-  final String sourceLabel;
+  final String patternType;
   final _RuleAction action;
+  final DateTime? updatedAt;
+  final NimbusRoutePreference? preference;
 }
 
 enum _RuleAction { accelerate, direct, block }
-
-List<_RuleGroupData> _buildRuleGroups(Translations t, NimbusRulesPackage? package, List<Rule> localRules) {
-  final groups = <_RuleGroupData>[];
-  final customItems = [
-    for (final item in package?.userRules ?? const <NimbusRulePackageItem>[])
-      if (item.pattern.trim().isNotEmpty)
-        _RuleItem(pattern: item.pattern, sourceLabel: t.nimbus.rules.custom, action: _ruleAction(item.action)),
-  ];
-  final publicItems = [
-    for (final item in package?.publicRules ?? const <NimbusRulePackageItem>[])
-      if (item.pattern.trim().isNotEmpty)
-        _RuleItem(pattern: item.pattern, sourceLabel: t.nimbus.rules.public, action: _ruleAction(item.action)),
-  ];
-  final localItems = [
-    for (final rule in localRules)
-      _RuleItem(pattern: _nativeRulePattern(rule), sourceLabel: t.nimbus.rules.local, action: _nativeRuleAction(rule)),
-  ];
-
-  if (customItems.isNotEmpty) groups.add(_RuleGroupData(title: t.nimbus.rules.custom, items: customItems));
-  if (publicItems.isNotEmpty) groups.add(_RuleGroupData(title: t.nimbus.rules.public, items: publicItems));
-  if (localItems.isNotEmpty) groups.add(_RuleGroupData(title: t.nimbus.rules.local, items: localItems));
-  return groups;
-}
 
 _RuleAction _ruleAction(String action) => switch (action.trim().toLowerCase()) {
   'direct' => _RuleAction.direct,
@@ -250,16 +329,11 @@ _RuleAction _ruleAction(String action) => switch (action.trim().toLowerCase()) {
   _ => _RuleAction.accelerate,
 };
 
-_RuleAction _nativeRuleAction(Rule rule) => switch (rule.outbound) {
-  Outbound.direct || Outbound.direct_with_fragment => _RuleAction.direct,
-  Outbound.block => _RuleAction.block,
-  _ => _RuleAction.accelerate,
-};
-
-IconData _actionIcon(_RuleAction action) => switch (action) {
-  _RuleAction.accelerate => Icons.rocket_launch_outlined,
-  _RuleAction.direct => Icons.public_outlined,
-  _RuleAction.block => Icons.block_outlined,
+String _targetTypeLabel(Translations t, String type) => switch (type) {
+  'ip' => t.nimbus.rules.ip,
+  'cidr' => t.nimbus.rules.cidr,
+  'geosite' || 'geoip' || 'rule_set' => t.nimbus.rules.ruleLibrary,
+  _ => t.nimbus.rules.domain,
 };
 
 String _actionLabel(Translations t, _RuleAction action) => switch (action) {
@@ -268,22 +342,19 @@ String _actionLabel(Translations t, _RuleAction action) => switch (action) {
   _RuleAction.block => t.nimbus.rules.block,
 };
 
-String _nativeRulePattern(Rule rule) {
-  if (rule.hasName() && rule.name.trim().isNotEmpty) return rule.name;
-  final values = <String>[
-    ...rule.domains,
-    ...rule.domainSuffixes,
-    ...rule.domainKeywords,
-    ...rule.ipCidrs,
-    ...rule.ruleSets,
-    ...rule.processNames,
-  ];
-  return values.firstWhere((value) => value.trim().isNotEmpty, orElse: () => '--');
+String _updatedLabel(Translations t, DateTime? updatedAt) {
+  final value = updatedAt?.toLocal().format() ?? t.nimbus.rules.notUpdated;
+  return '${t.nimbus.rules.updatedAt}: $value';
 }
 
-String _shortVersion(String? version) {
-  final value = version?.trim() ?? '';
-  if (value.isEmpty) return '--';
-  if (value.startsWith('sha256:')) return value.substring(0, 15);
-  return value;
-}
+IconData _actionIcon(_RuleAction action) => switch (action) {
+  _RuleAction.accelerate => nimbusRouteAccessIcon(requiresConnection: true),
+  _RuleAction.direct => nimbusRouteAccessIcon(requiresConnection: false),
+  _RuleAction.block => Icons.block_rounded,
+};
+
+Color _actionColor(ColorScheme colorScheme, _RuleAction action) => switch (action) {
+  _RuleAction.accelerate => colorScheme.primary,
+  _RuleAction.direct => colorScheme.tertiary,
+  _RuleAction.block => colorScheme.error,
+};

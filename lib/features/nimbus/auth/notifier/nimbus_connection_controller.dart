@@ -51,11 +51,10 @@ bool shouldReapplyNimbusConnection({
   required bool connectedReported,
   required bool userRulesOnly,
   required NimbusProxyMode proxyMode,
-  required bool customWebsiteAccessEnabled,
 }) {
   if (connection is! Connected || !connectedReported) return false;
   if (!userRulesOnly) return true;
-  return proxyMode == NimbusProxyMode.auto && customWebsiteAccessEnabled;
+  return proxyMode == NimbusProxyMode.auto;
 }
 
 bool isNimbusOwnedConnection({required ConnectionStatus? connection, required bool connectedReported}) =>
@@ -227,7 +226,6 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       connectedReported: state.connectedReported,
       userRulesOnly: userRulesOnly,
       proxyMode: ref.read(Preferences.nimbusProxyMode),
-      customWebsiteAccessEnabled: ref.read(Preferences.nimbusCustomWebsiteAccessEnabled),
     );
     if (!shouldReapply) return false;
     await reconnect(reason: 'CLIENT_SETTINGS_CHANGED');
@@ -435,7 +433,6 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     final options = buildNimbusManagedRouteOptions(
       rulesPackage: rulesPackage,
       isAutomaticMode: ref.read(Preferences.nimbusProxyMode) == NimbusProxyMode.auto,
-      customWebsiteAccessEnabled: ref.read(Preferences.nimbusCustomWebsiteAccessEnabled),
     );
     ref.read(nimbusManagedRouteOptionsProvider.notifier).state = options;
   }

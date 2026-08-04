@@ -7,11 +7,7 @@ import 'package:hiddify/features/nimbus/auth/model/nimbus_rules_config.dart';
 void main() {
   group('Nimbus managed Hiddify routes', () {
     test('puts a custom direct domain before public rules and local fallback', () {
-      final options = buildNimbusManagedRouteOptions(
-        rulesPackage: _rulesPackage,
-        isAutomaticMode: true,
-        customWebsiteAccessEnabled: true,
-      );
+      final options = buildNimbusManagedRouteOptions(rulesPackage: _rulesPackage, isAutomaticMode: true);
 
       expect(options.rules, hasLength(3));
       expect(options.rules[0], {
@@ -26,23 +22,15 @@ void main() {
       expect(options.ruleSets.single['download_detour'], 'nimbus-proxy');
     });
 
-    test('keeps public rules but omits custom sites when the device switch is off', () {
-      final options = buildNimbusManagedRouteOptions(
-        rulesPackage: _rulesPackage,
-        isAutomaticMode: true,
-        customWebsiteAccessEnabled: false,
-      );
+    test('keeps custom rules effective in automatic mode', () {
+      final options = buildNimbusManagedRouteOptions(rulesPackage: _rulesPackage, isAutomaticMode: true);
 
-      expect(options.rules.where((rule) => rule['domain_suffix'] != null), isEmpty);
+      expect(options.rules.where((rule) => rule['domain_suffix'] != null), isNotEmpty);
       expect(options.rules.any((rule) => rule['rule_set'] != null), isTrue);
     });
 
     test('does not inject product routes in global mode', () {
-      final options = buildNimbusManagedRouteOptions(
-        rulesPackage: _rulesPackage,
-        isAutomaticMode: false,
-        customWebsiteAccessEnabled: true,
-      );
+      final options = buildNimbusManagedRouteOptions(rulesPackage: _rulesPackage, isAutomaticMode: false);
 
       expect(options.rules, isEmpty);
       expect(options.ruleSets, isEmpty);

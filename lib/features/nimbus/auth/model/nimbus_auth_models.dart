@@ -299,6 +299,7 @@ class NimbusRoutePreference {
     required this.targetType,
     required this.value,
     required this.createdAt,
+    this.updatedAt,
   });
 
   factory NimbusRoutePreference.fromJson(Map<String, dynamic> json) {
@@ -308,6 +309,7 @@ class NimbusRoutePreference {
       targetType: json['targetType'] as String? ?? 'domain',
       value: json['value'] as String? ?? '',
       createdAt: _dateTime(json['createdAt']),
+      updatedAt: _dateTime(json['updatedAt']),
     );
   }
 
@@ -316,6 +318,7 @@ class NimbusRoutePreference {
   final String targetType;
   final String value;
   final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   bool get requiresConnection => type == 'accelerate';
 }

@@ -46,10 +46,9 @@ Map<String, dynamic> normalizeNimbusRouteRule(Map<String, dynamic> rule) {
 
 List<NimbusRulePackageItem> selectActiveNimbusUserRules({
   required bool isAutomaticMode,
-  required bool customWebsiteAccessEnabled,
   required List<NimbusRulePackageItem> userRules,
 }) {
-  if (!isAutomaticMode || !customWebsiteAccessEnabled) {
+  if (!isAutomaticMode) {
     return const <NimbusRulePackageItem>[];
   }
   return userRules;
@@ -142,7 +141,6 @@ Map<String, dynamic> nimbusFallbackRouteRule({String directTag = 'nimbus-direct'
 NimbusManagedRouteOptions buildNimbusManagedRouteOptions({
   required NimbusRulesPackage rulesPackage,
   required bool isAutomaticMode,
-  required bool customWebsiteAccessEnabled,
   String proxyTag = 'nimbus-proxy',
   String directTag = nimbusHiddifyDirectTag,
 }) {
@@ -150,7 +148,6 @@ NimbusManagedRouteOptions buildNimbusManagedRouteOptions({
 
   final activeUserRules = selectActiveNimbusUserRules(
     isAutomaticMode: isAutomaticMode,
-    customWebsiteAccessEnabled: customWebsiteAccessEnabled,
     userRules: rulesPackage.userRules,
   );
   final activeRules = [...activeUserRules, ...rulesPackage.publicRules];

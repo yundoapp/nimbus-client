@@ -886,7 +886,14 @@
       "empty": "暫未新增任何網站",
       "deleteTooltip": "刪除",
       "deleteTitle": "刪除存取規則",
-      "deleteConfirm": "確定刪除「${value}」嗎？"
+      "deleteConfirm": "確定刪除「${value}」嗎？",
+      "targetType": "規則類型",
+      "targetValue": "規則內容",
+      "targetHint": "請輸入網域、IP 位址或 CIDR 網段",
+      "targetInvalid": "請輸入正確的網域、IP 位址或 CIDR 網段",
+      "domainType": "網域",
+      "ipType": "IP 位址",
+      "cidrType": "CIDR 網段"
     },
     "rules": {
       "menuTitle": "規則",
@@ -925,7 +932,20 @@
       "empty": "暫無規則",
       "count": "${count} 條規則",
       "librariesCount": "${count} 個規則庫",
-      "raw": "原始設定"
+      "raw": "原始設定",
+      "commonRules": "通用規則",
+      "myRules": "我的規則",
+      "commonVersion": "通用規則版本 · ${version}",
+      "myRulesPriorityHint": "我的規則優先於通用規則執行。",
+      "addRule": "新增規則",
+      "editRule": "編輯規則",
+      "domain": "網域",
+      "ip": "IP 位址",
+      "cidr": "CIDR 網段",
+      "ruleLibrary": "規則庫",
+      "updatedAt": "更新時間",
+      "expand": "展開全部規則",
+      "collapse": "收起多餘規則"
     },
     "routeHistory": {
       "menuTitle": "記錄",
@@ -1049,7 +1069,7 @@
       "subscriptionExpired": "套餐已到期，請啟用新套餐後繼續。",
       "noAvailableLocation": "目前暫無可用位置，請稍後再試。",
       "routePreferenceConflict": "這個存取偏好已存在。",
-      "routeTargetInvalid": "請輸入有效網域。",
+      "routeTargetInvalid": "請輸入正確的網域、IP 位址或 CIDR 網段。",
       "issueReportAlreadyOpen": "你已有一個待處理的問題回報。"
     }
   }

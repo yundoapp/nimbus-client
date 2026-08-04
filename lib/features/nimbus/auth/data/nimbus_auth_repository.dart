@@ -249,10 +249,11 @@ class NimbusAuthRepository {
     required NimbusAuthSession session,
     required String type,
     required String input,
+    String targetType = 'domain',
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       'route-preferences',
-      data: {'type': type, 'input': input},
+      data: {'type': type, 'targetType': targetType, 'input': input},
       options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
     );
     final data = Map<String, dynamic>.from(response.data ?? const {});
@@ -263,10 +264,12 @@ class NimbusAuthRepository {
     required NimbusAuthSession session,
     required String id,
     required String type,
+    String? targetType,
+    String? input,
   }) async {
     final response = await _dio.patch<Map<String, dynamic>>(
       'route-preferences/${Uri.encodeComponent(id)}',
-      data: {'type': type},
+      data: {'type': type, if (targetType != null) 'targetType': targetType, if (input != null) 'input': input},
       options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
     );
     final data = Map<String, dynamic>.from(response.data ?? const {});
