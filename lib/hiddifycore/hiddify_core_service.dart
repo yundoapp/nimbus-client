@@ -1,32 +1,29 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:fpdart/fpdart.dart';
 import 'package:grpc/grpc.dart';
 import 'package:hiddify/core/directories/directories_provider.dart';
-import 'package:hiddify/core/model/directories.dart';
+import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
+import 'package:hiddify/features/log/model/log_level.dart' as config_log_level;
+import 'package:hiddify/features/nimbus/auth/model/nimbus_acceleration_diagnostic.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_acceleration_diagnostics_controller.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
-import 'package:hiddify/hiddifycore/core_interface/core_interface.dart';
+import 'package:hiddify/hiddifycore/core_interface/core_interface_wrapper_stub.dart'
+    if (dart.library.io) 'package:hiddify/hiddifycore/core_interface/core_interface_wrapper.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcommon/common.pb.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore_service.pbgrpc.dart';
 import 'package:hiddify/hiddifycore/init_signal.dart';
-import 'package:hiddify/singbox/model/singbox_config_option.dart';
-import 'package:hiddify/features/log/model/log_level.dart' as config_log_level;
 import 'package:hiddify/singbox/model/core_status.dart';
-import 'package:hiddify/singbox/model/warp_account.dart';
-
-import 'package:hiddify/hiddifycore/core_interface/core_interface_wrapper_stub.dart'
-    if (dart.library.io) 'package:hiddify/hiddifycore/core_interface/core_interface_wrapper.dart';
+import 'package:hiddify/singbox/model/singbox_config_option.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:loggy/loggy.dart' as loggyl;
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:rxdart/rxdart.dart';
 
 class HiddifyCoreService with InfraLogger {
@@ -146,11 +143,20 @@ class HiddifyCoreService with InfraLogger {
     bool enableRawConfig = false,
   }) {
     return TaskEither(() async {
+      final diagnostics = ref.read(nimbusAccelerationDiagnosticsProvider.notifier);
+      final t = ref.read(translationsProvider).requireValue;
       statusController.add(currentState = const CoreStatus.starting());
+      diagnostics.startStep(NimbusAccelerationStepId.core, detail: t.nimbus.diagnostics.core);
       loggy.debug("starting");
       final background = await core.setupBackground(path, name);
       loggy.info('core background preparation response: $background');
       if (background != const CoreStatus.started()) {
+        diagnostics.failStep(
+          NimbusAccelerationStepId.core,
+          detail: background.toString(),
+          errorCode: 'CORE_PREPARE_FAILED',
+        );
+        diagnostics.fail(errorCode: 'Y-CORE-001', detail: background.toString());
         loggy.warning('core background preparation failed: $background');
         statusController.add(currentState = const CoreStatus.stopped());
         return left(background.getCoreAlert() ?? const ConnectionFailure.unexpected("failed to start core"));
@@ -174,6 +180,8 @@ class HiddifyCoreService with InfraLogger {
         loggy.info('core start response: state=${res.coreState}, type=${res.messageType}, message=${res.message}');
         ref.read(coreRestartSignalProvider.notifier).restart();
         if (res.messageType != MessageType.ALREADY_STARTED && res.messageType != MessageType.EMPTY) {
+          diagnostics.failStep(NimbusAccelerationStepId.core, detail: res.message, errorCode: 'CORE_START_FAILED');
+          diagnostics.fail(errorCode: 'Y-CORE-002', detail: res.message);
           final alert = _isSystemPermissionError(res.message) ? CoreAlert.requestVPNPermission : CoreAlert.startFailed;
           currentState = CoreStatus.stopped(
             alert: alert,
@@ -189,29 +197,57 @@ class HiddifyCoreService with InfraLogger {
                 ConnectionFailure.unexpected("failed to start core ${res.messageType} ${res.message}"),
           );
         }
+        diagnostics.completeStep(NimbusAccelerationStepId.core, detail: t.nimbus.diagnostics.detailCoreStarted);
 
-        final networkPreparationError = await _prepareTunnelNetworkMode(
+        diagnostics.startStep(NimbusAccelerationStepId.network, detail: t.nimbus.diagnostics.network);
+        final networkPreparation = await _prepareTunnelNetworkMode(
           name: name,
           disableMemoryLimit: disableMemoryLimit,
           enableRawConfig: useRawConfig,
         );
-        if (networkPreparationError != null) {
-          loggy.warning('macOS tunnel network preparation failed: $networkPreparationError');
+        final networkError = networkPreparation.errorMessage;
+        if (networkError != null) {
+          diagnostics.failStep(
+            NimbusAccelerationStepId.network,
+            detail: networkError,
+            errorCode: 'NETWORK_PROBE_FAILED',
+          );
+          diagnostics.fail(errorCode: 'Y-NETWORK-001', detail: networkError);
+          loggy.warning('macOS tunnel network preparation failed: $networkError');
           await core.bgClient.stop(Empty());
           await core.stop();
           statusController.add(currentState = const CoreStatus.stopped());
-          return left(ConnectionFailure.unexpected(networkPreparationError));
+          return left(ConnectionFailure.unexpected(networkError));
         }
+        diagnostics.completeStep(
+          NimbusAccelerationStepId.network,
+          detail: networkPreparation.usedIpv4Fallback
+              ? t.nimbus.diagnostics.detailNetworkFallback
+              : t.nimbus.diagnostics.detailNetworkDualStack,
+        );
 
+        diagnostics.startStep(NimbusAccelerationStepId.tunnel, detail: t.nimbus.diagnostics.tunnel);
         final tunnel = await core.activateTunnel();
         loggy.info('macOS tunnel activation response: $tunnel');
         if (tunnel != const CoreStatus.started()) {
+          diagnostics.failStep(
+            NimbusAccelerationStepId.tunnel,
+            detail: tunnel.toString(),
+            errorCode: 'TUNNEL_START_FAILED',
+          );
+          diagnostics.fail(errorCode: 'Y-TUNNEL-001', detail: tunnel.toString());
           await core.bgClient.stop(Empty());
           await core.stop();
           statusController.add(currentState = const CoreStatus.stopped());
           return left(tunnel.getCoreAlert() ?? const ConnectionFailure.unexpected('failed to start tunnel'));
         }
+        diagnostics.completeStep(NimbusAccelerationStepId.tunnel, detail: t.nimbus.diagnostics.detailTunnelActive);
+        diagnostics.startStep(NimbusAccelerationStepId.routing, detail: t.nimbus.diagnostics.routing);
+        diagnostics.completeStep(NimbusAccelerationStepId.routing, detail: t.nimbus.diagnostics.detailRoutingActive);
+        loggy.info('macOS tunnel activation flow completed; releasing prepared config');
       } on GrpcError catch (e) {
+        diagnostics.failStep(NimbusAccelerationStepId.core, detail: e.message ?? e.toString(), errorCode: 'GRPC_ERROR');
+        diagnostics.fail(errorCode: 'Y-CORE-003', detail: e.message ?? e.toString());
         loggy.error("failed to start bg core: $e");
         ref.read(coreRestartSignalProvider.notifier).restart();
         if (e.code == StatusCode.unavailable) {
@@ -224,9 +260,12 @@ class HiddifyCoreService with InfraLogger {
         }
         return left(const ConnectionFailure.unexpected("failed to start background core"));
       } finally {
+        loggy.debug('discarding prepared macOS connection config');
         await core.discardPreparedConfig();
+        loggy.debug('prepared macOS connection config discarded');
       }
 
+      loggy.info('core start flow completed');
       // if (res.messageType != MessageType.EMPTY) return left(res);
 
       return right(unit);
@@ -240,13 +279,13 @@ class HiddifyCoreService with InfraLogger {
         normalized.contains('access denied');
   }
 
-  Future<String?> _prepareTunnelNetworkMode({
+  Future<({String? errorMessage, bool usedIpv4Fallback})> _prepareTunnelNetworkMode({
     required String name,
     required bool disableMemoryLimit,
     required bool enableRawConfig,
   }) async {
     final preparation = await core.prepareTunnelActivation();
-    if (preparation.errorMessage case final error?) return error;
+    if (preparation.errorMessage case final error?) return (errorMessage: error, usedIpv4Fallback: false);
     if (preparation.fallbackConfigPath case final fallbackPath?) {
       loggy.info('restarting macOS user core with the IPv4 fallback config');
       final response = await core.bgClient.restart(
@@ -258,18 +297,25 @@ class HiddifyCoreService with InfraLogger {
         ),
       );
       if (response.messageType != MessageType.EMPTY && response.messageType != MessageType.ALREADY_STARTED) {
-        return 'failed to apply macOS IPv4 fallback: ${response.messageType} ${response.message}';
+        return (
+          errorMessage: 'failed to apply macOS IPv4 fallback: ${response.messageType} ${response.message}',
+          usedIpv4Fallback: true,
+        );
       }
     }
-    return null;
+    return (errorMessage: null, usedIpv4Fallback: preparation.usedIpv4Fallback);
   }
 
   TaskEither<String, Unit> stop() {
     return TaskEither(() async {
+      final diagnostics = ref.read(nimbusAccelerationDiagnosticsProvider.notifier);
+      final t = ref.read(translationsProvider).requireValue;
+      final isDiagnosticStop = diagnostics.isOperationRunning(NimbusAccelerationOperation.stop);
+      if (isDiagnosticStop) diagnostics.startStep(NimbusAccelerationStepId.core, detail: t.nimbus.diagnostics.core);
       loggy.debug("stopping");
       var errMsg = "";
       try {
-        final res = await core.bgClient.stop(Empty());
+        await core.bgClient.stop(Empty());
       } on GrpcError catch (e) {
         if (e.code == StatusCode.unknown && !(e.message?.contains("HTTP/2") ?? false)) {
           errMsg = e.message ?? "failed to stop core: $e";
@@ -281,6 +327,13 @@ class HiddifyCoreService with InfraLogger {
         // left("failed to stop core: $e");
       }
       if (!await core.stop()) {}
+      if (isDiagnosticStop) {
+        diagnostics.completeStep(NimbusAccelerationStepId.core, detail: t.nimbus.diagnostics.detailCoreStopped);
+        diagnostics.startStep(NimbusAccelerationStepId.tunnel, detail: t.nimbus.diagnostics.tunnel);
+        diagnostics.completeStep(NimbusAccelerationStepId.tunnel, detail: t.nimbus.diagnostics.detailTunnelReleased);
+        diagnostics.startStep(NimbusAccelerationStepId.routing, detail: t.nimbus.diagnostics.routing);
+        diagnostics.completeStep(NimbusAccelerationStepId.routing, detail: t.nimbus.diagnostics.detailRoutingRestored);
+      }
       statusController.add(currentState = const CoreStatus.stopped());
       if (errMsg.isNotEmpty) return left(errMsg);
       return right(unit);
@@ -312,15 +365,15 @@ class HiddifyCoreService with InfraLogger {
         );
         loggy.info('core restart response: state=${res.coreState}, type=${res.messageType}, message=${res.message}');
         if (res.messageType != MessageType.EMPTY) return left("${res.messageType} ${res.message}");
-        final networkPreparationError = await _prepareTunnelNetworkMode(
+        final networkPreparation = await _prepareTunnelNetworkMode(
           name: name,
           disableMemoryLimit: disableMemoryLimit,
           enableRawConfig: useRawConfig,
         );
-        if (networkPreparationError != null) {
+        if (networkPreparation.errorMessage != null) {
           await core.bgClient.stop(Empty());
           await core.stop();
-          return left(networkPreparationError);
+          return left(networkPreparation.errorMessage!);
         }
         final tunnel = await core.activateTunnel();
         loggy.info('macOS tunnel activation response: $tunnel');
@@ -654,7 +707,6 @@ class HiddifyCoreService with InfraLogger {
       config_log_level.LogLevel.error => LogLevel.ERROR,
       config_log_level.LogLevel.fatal => LogLevel.FATAL,
       config_log_level.LogLevel.panic => LogLevel.FATAL,
-      _ => LogLevel.INFO, // Default case
     };
   }
 
@@ -667,10 +719,14 @@ class HiddifyCoreService with InfraLogger {
       await stopListenSingle("bg");
       try {
         await core.fgClient.close(CloseRequest(mode: SetupMode.GRPC_NORMAL_INSECURE));
-      } catch (e) {}
+      } catch (error) {
+        loggy.debug('front core insecure close skipped: $error');
+      }
       try {
         await core.fgClient.close(CloseRequest(mode: SetupMode.GRPC_NORMAL));
-      } catch (e) {}
+      } catch (error) {
+        loggy.debug('front core secure close skipped: $error');
+      }
     }
   }
 

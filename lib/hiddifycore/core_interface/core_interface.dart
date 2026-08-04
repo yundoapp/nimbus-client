@@ -3,7 +3,7 @@ import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore_service.pbgrpc.dart';
 import 'package:hiddify/singbox/model/core_status.dart';
 
-typedef TunnelActivationPreparation = ({String? fallbackConfigPath, String? errorMessage});
+typedef TunnelActivationPreparation = ({String? fallbackConfigPath, String? errorMessage, bool usedIpv4Fallback});
 
 class CoreInterface {
   late CoreClient fgClient;
@@ -38,7 +38,7 @@ class CoreInterface {
   }
 
   Future<TunnelActivationPreparation> prepareTunnelActivation() async {
-    return (fallbackConfigPath: null, errorMessage: null);
+    return (fallbackConfigPath: null, errorMessage: null, usedIpv4Fallback: false);
   }
 
   Future<bool> restart(String path, String name) async {
@@ -72,8 +72,8 @@ class CoreInterface {
 
   bool isInitialized() {
     try {
-      bgClient; // touch it
-      return true;
+      final client = bgClient;
+      return client == bgClient;
     } catch (_) {
       return false;
     }

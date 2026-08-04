@@ -8,11 +8,10 @@ typedef MacOSNetworkCapabilities = ({bool ipv4Available, bool ipv6Available});
 class MacOSNetworkCapabilityProbe {
   MacOSNetworkCapabilityProbe({
     MacOSProxyProbeAttempt? attempt,
-    this.timeout = const Duration(seconds: 3),
-    this.maxAttempts = 5,
-    this.retryDelay = const Duration(seconds: 1),
-  })
-    : _attempt = attempt ?? _attemptThroughHttpProxy;
+    this.timeout = const Duration(seconds: 1),
+    this.maxAttempts = 3,
+    this.retryDelay = const Duration(milliseconds: 300),
+  }) : _attempt = attempt ?? _attemptThroughHttpProxy;
 
   static final ipv4ProbeUri = Uri.parse('https://1.1.1.1/');
   static final ipv6ProbeUri = Uri.parse('https://[2606:4700:4700::1111]/');

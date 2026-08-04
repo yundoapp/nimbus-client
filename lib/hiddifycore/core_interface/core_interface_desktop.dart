@@ -9,10 +9,10 @@ import 'package:grpc/grpc.dart';
 import 'package:hiddify/core/model/directories.dart';
 import 'package:hiddify/gen/hiddify_core_generated_bindings.dart';
 import 'package:hiddify/hiddifycore/core_interface/core_interface.dart';
-import 'package:hiddify/hiddifycore/core_port.dart';
 import 'package:hiddify/hiddifycore/core_interface/macos_network_capability_probe.dart';
 import 'package:hiddify/hiddifycore/core_interface/macos_privileged_helper.dart';
 import 'package:hiddify/hiddifycore/core_interface/macos_tunnel_config.dart';
+import 'package:hiddify/hiddifycore/core_port.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore_service.pbgrpc.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hello/hello.pb.dart';
@@ -40,6 +40,7 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
   String? _preparedSourcePath;
   String? _preparedConfigPath;
   String? _preparedIpv4FallbackConfigPath;
+  String? _preparedIpv4FallbackConfig;
   int? _preparedSocksPort;
   String? _tunnelConfig;
 
@@ -89,7 +90,8 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
   Future<String> setup(Directories directories, bool debug, int mode) async {
     _port = resolveDesktopCorePort(directories.baseDir.path);
     _directories = directories;
-    await discardPreparedConfig();
+    // App resume can re-run setup while a connection is waiting for the
+    // macOS network probe. Do not delete that operation's temporary configs.
     // Generate a random password for the grpc service
     // final errPtr2 = _box.stop();
     // final err = errPtr2.cast<Utf8>().toDartString();
@@ -170,6 +172,7 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
     _preparedSourcePath = null;
     _preparedConfigPath = null;
     _preparedIpv4FallbackConfigPath = null;
+    _preparedIpv4FallbackConfig = null;
     _preparedSocksPort = null;
     for (final preparedPath in preparedPaths.nonNulls) {
       final file = File(preparedPath);
@@ -219,6 +222,7 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
       _preparedSourcePath = path;
       _preparedConfigPath = preparedPath;
       _preparedIpv4FallbackConfigPath = fallbackPath;
+      _preparedIpv4FallbackConfig = fallback.userCoreConfig;
       _preparedSocksPort = prepared.socksPort;
       _tunnelConfig = prepared.tunnelConfig;
       bgClient = fgClient;
@@ -234,11 +238,28 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
 
   @override
   Future<TunnelActivationPreparation> prepareTunnelActivation() async {
-    if (!Platform.isMacOS) return (fallbackConfigPath: null, errorMessage: null);
+    if (!Platform.isMacOS) return (fallbackConfigPath: null, errorMessage: null, usedIpv4Fallback: false);
     final socksPort = _preparedSocksPort;
     final fallbackPath = _preparedIpv4FallbackConfigPath;
     if (socksPort == null || fallbackPath == null) {
-      return (fallbackConfigPath: null, errorMessage: 'macOS adaptive network config is not prepared');
+      return (
+        fallbackConfigPath: null,
+        errorMessage: 'macOS adaptive network config is not prepared',
+        usedIpv4Fallback: false,
+      );
+    }
+    final fallbackFile = File(fallbackPath);
+    if (!await fallbackFile.exists()) {
+      final fallbackConfig = _preparedIpv4FallbackConfig;
+      if (fallbackConfig == null) {
+        return (
+          fallbackConfigPath: null,
+          errorMessage: 'macOS IPv4 fallback config is unavailable',
+          usedIpv4Fallback: false,
+        );
+      }
+      await fallbackFile.writeAsString(fallbackConfig, flush: true);
+      loggy.warning('restored missing macOS IPv4 fallback config before network activation');
     }
     final capabilities = await _macOSNetworkCapabilityProbe.probe(proxyPort: socksPort);
     loggy.info(
@@ -246,9 +267,14 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
       '(ipv4=${capabilities.ipv4Available}, ipv6=${capabilities.ipv6Available})',
     );
     if (!capabilities.ipv4Available) {
-      return (fallbackConfigPath: null, errorMessage: 'accelerated IPv4 probe failed');
+      loggy.warning('macOS IPv4 probe was inconclusive; continuing with the IPv4 fallback config');
+      return (fallbackConfigPath: fallbackPath, errorMessage: null, usedIpv4Fallback: true);
     }
-    return (fallbackConfigPath: capabilities.ipv6Available ? null : fallbackPath, errorMessage: null);
+    return (
+      fallbackConfigPath: capabilities.ipv6Available ? null : fallbackPath,
+      errorMessage: null,
+      usedIpv4Fallback: !capabilities.ipv6Available,
+    );
   }
 
   @override

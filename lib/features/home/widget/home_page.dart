@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -12,6 +13,7 @@ import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_acceleration_diagnostics_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_location_display.dart';
@@ -69,6 +71,10 @@ class HomePage extends HookConsumerWidget {
 
     Future<void> showIssueReport() async {
       await showDialog<void>(context: context, builder: (_) => const NimbusIssueReportDialog());
+    }
+
+    Future<void> showAccelerationDiagnostics() async {
+      await showDialog<void>(context: context, builder: (_) => const NimbusAccelerationDiagnosticsDialog());
     }
 
     Future<void> showNoPlanDialog() async {
@@ -192,6 +198,10 @@ class HomePage extends HookConsumerWidget {
                             onTap: showNoPlanDialog,
                           ),
                         const Gap(16),
+                        if (kDebugMode) ...[
+                          NimbusAccelerationDiagnosticsEntry(onPressed: showAccelerationDiagnostics),
+                          const Gap(8),
+                        ],
                         if (connectionState.errorMessage != null) ...[
                           _ConnectionNoticeBanner(
                             message: connectionState.errorMessage!,
@@ -206,7 +216,10 @@ class HomePage extends HookConsumerWidget {
                           ),
                           const Gap(12),
                         ],
-                        _HomeQuickControls(rulesVersion: authState.me?.rules.publicRulesVersion),
+                        _HomeQuickControls(
+                          rulesVersion: authState.me?.rules.publicRulesVersion,
+                          isSwitching: connectionState.isPreparing || connectionState.isDisconnecting,
+                        ),
                         Gap(sectionGap),
                         _NimbusStatusPanel(
                           theme: theme,
@@ -828,9 +841,10 @@ class _StatusIcon extends StatelessWidget {
 }
 
 class _HomeQuickControls extends HookConsumerWidget {
-  const _HomeQuickControls({required this.rulesVersion});
+  const _HomeQuickControls({required this.rulesVersion, required this.isSwitching});
 
   final String? rulesVersion;
+  final bool isSwitching;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -838,9 +852,9 @@ class _HomeQuickControls extends HookConsumerWidget {
     final selectedLocation = _selectedLocation(authState);
     final rulesText = _formatRulesVersionForDisplay(rulesVersion);
 
-    Widget proxyCard() => _ProxyModeControlCard(rulesVersion: rulesText);
+    Widget proxyCard() => _ProxyModeControlCard(rulesVersion: rulesText, isSwitching: isSwitching);
 
-    Widget locationCard() => _LocationControlCard(selectedLocation: selectedLocation);
+    Widget locationCard() => _LocationControlCard(selectedLocation: selectedLocation, isSwitching: isSwitching);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -870,17 +884,16 @@ class _HomeQuickControls extends HookConsumerWidget {
 }
 
 class _ProxyModeControlCard extends HookConsumerWidget {
-  const _ProxyModeControlCard({required this.rulesVersion});
+  const _ProxyModeControlCard({required this.rulesVersion, required this.isSwitching});
 
   final String rulesVersion;
+  final bool isSwitching;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final t = ref.watch(translationsProvider).requireValue;
     final selectedMode = ref.watch(Preferences.nimbusProxyMode);
-    final connection = ref.watch(nimbusOwnedConnectionStatusProvider).valueOrNull;
-    final isSwitching = connection?.isSwitching ?? false;
     final isApplying = useState(false);
     final disabled = isApplying.value || isSwitching;
 
@@ -960,9 +973,10 @@ class _ProxyModeControlCard extends HookConsumerWidget {
 }
 
 class _LocationControlCard extends HookConsumerWidget {
-  const _LocationControlCard({required this.selectedLocation});
+  const _LocationControlCard({required this.selectedLocation, required this.isSwitching});
 
   final NimbusLocation selectedLocation;
+  final bool isSwitching;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -970,8 +984,6 @@ class _LocationControlCard extends HookConsumerWidget {
     final t = ref.watch(translationsProvider).requireValue;
     final locale = ref.watch(localePreferencesProvider);
     final locations = authState.locations?.items ?? [selectedLocation];
-    final connection = ref.watch(nimbusOwnedConnectionStatusProvider).valueOrNull;
-    final isSwitching = connection?.isSwitching ?? false;
     final isLoadingLocations = useState(false);
     final theme = Theme.of(context);
 
