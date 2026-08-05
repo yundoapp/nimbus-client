@@ -31,6 +31,7 @@ protected_prefixes=(
 # 规则入口只能传入 route.rules/rule_set，不能接管 DNS、TUN、系统代理和最终路由。
 allowed_boundary_files=(
   'lib/hiddifycore/core_port.dart'
+  'lib/hiddifycore/core_interface/core_interface.dart'
   'lib/hiddifycore/core_interface/core_interface_desktop.dart'
   'lib/hiddifycore/core_interface/core_interface_mobile.dart'
   'lib/hiddifycore/hiddify_core_service.dart'
