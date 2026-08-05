@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/features/about/widget/about_page.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_acceleration_diagnostics_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_change_password_dialog.dart';
@@ -35,16 +36,6 @@ class SettingsPage extends HookConsumerWidget {
                     _SettingsGroup(
                       children: [
                         ListTile(
-                          title: Text(t.nimbus.diagnostics.menuTitle),
-                          leading: const Icon(Icons.monitor_heart_rounded),
-                          trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
-                          onTap: () => _openAdaptiveSettingsMenu(
-                            context,
-                            dialog: const NimbusAccelerationDiagnosticsDialog(),
-                            page: const NimbusAccelerationDiagnosticsPage(),
-                          ),
-                        ),
-                        ListTile(
                           title: Text(t.nimbus.settings.deviceManagement),
                           leading: const Icon(Icons.devices_rounded),
                           trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
@@ -64,19 +55,20 @@ class SettingsPage extends HookConsumerWidget {
                             page: const NimbusChangePasswordPage(),
                           ),
                         ),
-                        ListTile(
-                          title: Text(t.nimbus.settings.logout),
-                          leading: Icon(Icons.logout_rounded, color: Theme.of(context).colorScheme.error),
-                          textColor: Theme.of(context).colorScheme.error,
-                          onTap: () async {
-                            await ref.read(nimbusAuthControllerProvider.notifier).logout();
-                            if (context.mounted) context.go('/auth/login');
-                          },
-                        ),
                       ],
                     ),
                     _SettingsGroup(
                       children: [
+                        ListTile(
+                          title: Text(t.nimbus.diagnostics.menuTitle),
+                          leading: const Icon(Icons.monitor_heart_rounded),
+                          trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
+                          onTap: () => _openAdaptiveSettingsMenu(
+                            context,
+                            dialog: const NimbusAccelerationDiagnosticsDialog(),
+                            page: const NimbusAccelerationDiagnosticsPage(),
+                          ),
+                        ),
                         ListTile(
                           title: Text(t.nimbus.settings.issueReport),
                           leading: const Icon(Icons.outlined_flag_rounded),
@@ -87,7 +79,21 @@ class SettingsPage extends HookConsumerWidget {
                             page: const NimbusIssueReportPage(),
                           ),
                         ),
-                        if (PlatformUtils.isIOS || PlatformUtils.isWindows)
+                        ListTile(
+                          title: Text(t.pages.about.title),
+                          leading: const Icon(Icons.info_rounded),
+                          trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
+                          onTap: () => _openAdaptiveSettingsMenu(
+                            context,
+                            dialog: const NimbusAboutDialog(),
+                            page: const AboutPage(),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (PlatformUtils.isIOS || PlatformUtils.isWindows)
+                      _SettingsGroup(
+                        children: [
                           ListTile(
                             title: Text(t.pages.settings.resetTunnel),
                             leading: const Icon(Icons.autorenew_rounded),
@@ -95,11 +101,18 @@ class SettingsPage extends HookConsumerWidget {
                               await ref.read(resetTunnelNotifierProvider.notifier).run();
                             },
                           ),
+                        ],
+                      ),
+                    _SettingsGroup(
+                      children: [
                         ListTile(
-                          title: Text(t.pages.about.title),
-                          leading: const Icon(Icons.info_rounded),
-                          trailing: const Icon(Icons.chevron_right_rounded),
-                          onTap: () => context.pushNamed('about'),
+                          title: Text(t.nimbus.settings.logout),
+                          leading: Icon(Icons.logout_rounded, color: Theme.of(context).colorScheme.error),
+                          textColor: Theme.of(context).colorScheme.error,
+                          onTap: () async {
+                            await ref.read(nimbusAuthControllerProvider.notifier).logout();
+                            if (context.mounted) context.go('/auth/login');
+                          },
                         ),
                       ],
                     ),

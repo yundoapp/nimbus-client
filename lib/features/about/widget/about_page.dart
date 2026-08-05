@@ -21,6 +21,33 @@ class AboutPage extends HookConsumerWidget {
   const AboutPage({super.key});
 
   @override
+  Widget build(BuildContext context, WidgetRef ref) => _AboutSurface(
+    asDialog: false,
+    onClose: () {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.goNamed('settings');
+      }
+    },
+  );
+}
+
+class NimbusAboutDialog extends HookConsumerWidget {
+  const NimbusAboutDialog({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      _AboutSurface(asDialog: true, onClose: () => Navigator.of(context).pop());
+}
+
+class _AboutSurface extends HookConsumerWidget {
+  const _AboutSurface({required this.asDialog, required this.onClose});
+
+  final bool asDialog;
+  final VoidCallback onClose;
+
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
     final appInfo = ref.watch(appInfoProvider).requireValue;
@@ -65,92 +92,113 @@ class AboutPage extends HookConsumerWidget {
         ),
     ];
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.goNamed('settings');
-            }
-          },
-        ),
-        title: Text(t.pages.about.title),
-        actions: [
-          PopupMenuButton(
-            icon: Icon(AdaptiveIcon(context).more),
-            itemBuilder: (context) {
-              return [
-                PopupMenuItem(
-                  child: Text(t.common.addToClipboard),
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: appInfo.format()));
-                  },
-                ),
-              ];
+    final overflowMenu = PopupMenuButton(
+      icon: Icon(AdaptiveIcon(context).more),
+      itemBuilder: (context) {
+        return [
+          PopupMenuItem(
+            child: Text(t.common.addToClipboard),
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: appInfo.format()));
             },
           ),
-          const Gap(8),
-        ],
-      ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+        ];
+      },
+    );
+
+    final content = CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Assets.images.logo.svg(width: 64, height: 64),
+                const Gap(16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(appTitle, style: Theme.of(context).textTheme.titleLarge),
+                    const Gap(4),
+                    Text("${t.common.version} ${appInfo.presentVersion}"),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        SliverList(
+          delegate: SliverChildListDelegate([
+            ...conditionalTiles,
+            if (conditionalTiles.isNotEmpty) const Divider(),
+            ListTile(
+              title: Text(t.pages.about.sourceCode),
+              trailing: const Icon(FluentIcons.open_24_regular),
+              onTap: () async {
+                await UriUtils.tryLaunch(Uri.parse(Constants.githubUrl));
+              },
+            ),
+            ListTile(
+              title: Text(t.pages.about.telegramChannel),
+              trailing: const Icon(FluentIcons.open_24_regular),
+              onTap: () async {
+                await UriUtils.tryLaunch(Uri.parse(Constants.telegramChannelUrl));
+              },
+            ),
+            ListTile(
+              title: Text(t.pages.about.termsAndConditions),
+              trailing: const Icon(FluentIcons.open_24_regular),
+              onTap: () async {
+                await UriUtils.tryLaunch(Uri.parse(Constants.termsAndConditionsUrl));
+              },
+            ),
+            ListTile(
+              title: Text(t.pages.about.privacyPolicy),
+              trailing: const Icon(FluentIcons.open_24_regular),
+              onTap: () async {
+                await UriUtils.tryLaunch(Uri.parse(Constants.privacyPolicyUrl));
+              },
+            ),
+          ]),
+        ),
+      ],
+    );
+
+    if (!asDialog) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: BackButton(onPressed: onClose),
+          title: Text(t.pages.about.title),
+          actions: [overflowMenu, const Gap(8)],
+        ),
+        body: content,
+      );
+    }
+
+    return Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640, maxHeight: 720),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 8, 0),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Assets.images.logo.svg(width: 64, height: 64),
-                  const Gap(16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(appTitle, style: Theme.of(context).textTheme.titleLarge),
-                      const Gap(4),
-                      Text("${t.common.version} ${appInfo.presentVersion}"),
-                    ],
+                  Expanded(child: Text(t.pages.about.title, style: Theme.of(context).textTheme.headlineSmall)),
+                  overflowMenu,
+                  IconButton(
+                    onPressed: onClose,
+                    icon: const Icon(Icons.close_rounded),
+                    tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                   ),
                 ],
               ),
             ),
-          ),
-          SliverList(
-            delegate: SliverChildListDelegate([
-              ...conditionalTiles,
-              if (conditionalTiles.isNotEmpty) const Divider(),
-              ListTile(
-                title: Text(t.pages.about.sourceCode),
-                trailing: const Icon(FluentIcons.open_24_regular),
-                onTap: () async {
-                  await UriUtils.tryLaunch(Uri.parse(Constants.githubUrl));
-                },
-              ),
-              ListTile(
-                title: Text(t.pages.about.telegramChannel),
-                trailing: const Icon(FluentIcons.open_24_regular),
-                onTap: () async {
-                  await UriUtils.tryLaunch(Uri.parse(Constants.telegramChannelUrl));
-                },
-              ),
-              ListTile(
-                title: Text(t.pages.about.termsAndConditions),
-                trailing: const Icon(FluentIcons.open_24_regular),
-                onTap: () async {
-                  await UriUtils.tryLaunch(Uri.parse(Constants.termsAndConditionsUrl));
-                },
-              ),
-              ListTile(
-                title: Text(t.pages.about.privacyPolicy),
-                trailing: const Icon(FluentIcons.open_24_regular),
-                onTap: () async {
-                  await UriUtils.tryLaunch(Uri.parse(Constants.privacyPolicyUrl));
-                },
-              ),
-            ]),
-          ),
-        ],
+            Flexible(child: content),
+          ],
+        ),
       ),
     );
   }
