@@ -19,6 +19,27 @@ enum NimbusAccelerationStepId {
   cleanup,
 }
 
+const nimbusAccelerationStartStepIds = <NimbusAccelerationStepId>[
+  NimbusAccelerationStepId.connectionState,
+  NimbusAccelerationStepId.account,
+  NimbusAccelerationStepId.subscription,
+  NimbusAccelerationStepId.rules,
+  NimbusAccelerationStepId.connectionPlan,
+  NimbusAccelerationStepId.core,
+  NimbusAccelerationStepId.network,
+  NimbusAccelerationStepId.tunnel,
+  NimbusAccelerationStepId.routing,
+  NimbusAccelerationStepId.cleanup,
+];
+
+const nimbusAccelerationStopStepIds = <NimbusAccelerationStepId>[
+  NimbusAccelerationStepId.connectionState,
+  NimbusAccelerationStepId.core,
+  NimbusAccelerationStepId.tunnel,
+  NimbusAccelerationStepId.routing,
+  NimbusAccelerationStepId.cleanup,
+];
+
 class NimbusAccelerationStepSnapshot {
   const NimbusAccelerationStepSnapshot({
     required this.id,

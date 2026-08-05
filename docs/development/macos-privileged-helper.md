@@ -228,7 +228,7 @@ env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
 
 2026-08-05 排查反复启停的间歇性失败：发现 App 恢复前台时会重新执行 core setup，旧逻辑会删除正在等待网络探测的 `yundo-user-core-ipv4-fallback.json`，随后用户 core 重启收到 `no such file or directory`。现已取消 setup 阶段对活动临时配置的清理，并在探测前校验、必要时从内存恢复 IPv4 兜底配置。IPv4 探测默认最多 3 次，每次 1 秒，间隔 300ms；短时探测失败会继续使用 IPv4 兜底配置，避免把探测抖动误判为无法加速。开发版首页增加“加速过程”诊断，可逐步查看账号、套餐、规则、连接方案、core、网络探测、系统通道、路由和清理阶段；诊断结果只保存脱敏状态、时间和错误码，不保存节点密钥或访问内容。构建 `202608508` 完成双版本签名覆盖安装后，连续两轮停止/开启均在约 5.1 秒内完成，`utun7` 路由、Google/X CLI 请求和 Chrome Google 页面均通过。
 
-2026-08-05 构建 `202608514` 复查启动收尾：为普通 core、临时配置清理、连接仓库返回和云渡连接状态提升增加边界日志；发现并修复首页加速按钮与模式/地区卡片重复监听聚合连接状态导致的 Flutter `markNeedsBuild during build` 竞态，并清理相关静态分析问题。最终启动日志完整经过 `core start flow completed`、`managed connection repository returned: success`、`managed connection state promoted to connected` 和 `acceleration start diagnostics completed`，未再出现该 UI 异常。开发版与正式版均完成 Apple Development 签名、helper 校验、覆盖安装和原运行状态恢复；开发版保持加速，路由为 `utun7 / 172.20.0.1`。CLI 的 Google、X、百度请求以及 Chrome Google 首页均通过。
+2026-08-05 构建 `202608515` 细化加速诊断：启动流程固定展示连接状态、账号、套餐、规则、连接方案、核心服务、网络、系统通道、路由和清理共十个可定位阶段；成功阶段使用绿色勾选，失败阶段使用红色叉号，异常回收也会记录清理结果。开发版与正式版均完成 Apple Development 签名、helper 校验、覆盖安装和原运行状态恢复；开发版保持加速，路由为 `utun7 / 172.20.0.1`。
 
 ## 版本边界
 

@@ -111,7 +111,7 @@ class _AttemptHeader extends StatelessWidget {
         ? theme.colorScheme.primary
         : failed
         ? theme.colorScheme.error
-        : theme.colorScheme.tertiary;
+        : _diagnosticsSuccessColor(theme);
     final seconds = ((attempt.completedAt ?? DateTime.now()).difference(attempt.startedAt).inMilliseconds / 1000)
         .toStringAsFixed(1);
     return Row(
@@ -121,7 +121,7 @@ class _AttemptHeader extends StatelessWidget {
           running
               ? Icons.sync_rounded
               : failed
-              ? Icons.error_outline_rounded
+              ? Icons.close_rounded
               : Icons.check_circle_outline_rounded,
           color: color,
         ),
@@ -164,7 +164,7 @@ class _StepTile extends StatelessWidget {
     final color = isFailure
         ? colors.error
         : isSuccess
-        ? colors.tertiary
+        ? _diagnosticsSuccessColor(theme)
         : isRunning
         ? colors.primary
         : colors.onSurfaceVariant;
@@ -177,7 +177,7 @@ class _StepTile extends StatelessWidget {
             width: 24,
             child: Icon(
               isFailure
-                  ? Icons.error_outline_rounded
+                  ? Icons.close_rounded
                   : isSuccess
                   ? Icons.check_circle_rounded
                   : isRunning
@@ -240,7 +240,7 @@ class _HistoryTile extends StatelessWidget {
       dense: true,
       contentPadding: EdgeInsets.zero,
       leading: Icon(
-        attempt.status == NimbusAccelerationAttemptStatus.failure ? Icons.error_outline_rounded : Icons.history_rounded,
+        attempt.status == NimbusAccelerationAttemptStatus.failure ? Icons.close_rounded : Icons.history_rounded,
         color: attempt.status == NimbusAccelerationAttemptStatus.failure ? Theme.of(context).colorScheme.error : null,
       ),
       title: Text('$operation · $status'),
@@ -248,6 +248,9 @@ class _HistoryTile extends StatelessWidget {
     );
   }
 }
+
+Color _diagnosticsSuccessColor(ThemeData theme) =>
+    theme.brightness == Brightness.dark ? Colors.green.shade400 : Colors.green.shade700;
 
 String _stepLabel(Translations t, NimbusAccelerationStepId id) => switch (id) {
   NimbusAccelerationStepId.account => t.nimbus.diagnostics.account,

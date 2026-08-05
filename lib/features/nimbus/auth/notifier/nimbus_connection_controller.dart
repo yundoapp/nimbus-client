@@ -440,8 +440,8 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       final validatedProfileContent = await _installStandardProfile(profileContent);
       diagnostics.startStep(NimbusAccelerationStepId.core, detail: _t.nimbus.diagnostics.core);
       if (_shutdownRequested) {
-        diagnostics.fail(errorCode: 'CANCELED', detail: _t.nimbus.diagnostics.detailStopRequested);
         await _cleanupFailedConnectionAttempt();
+        diagnostics.fail(errorCode: 'CANCELED', detail: _t.nimbus.diagnostics.detailStopRequested);
         return;
       }
       final profile = await ref.read(activeProfileProvider.future);
@@ -459,8 +459,8 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       loggy.info('managed connection repository returned: ${result.isRight() ? 'success' : 'failure'}');
       result.match((failure) => throw failure, (_) => null);
       if (_shutdownRequested) {
-        diagnostics.fail(errorCode: 'CANCELED', detail: _t.nimbus.diagnostics.detailStopRequested);
         await _cleanupFailedConnectionAttempt();
+        diagnostics.fail(errorCode: 'CANCELED', detail: _t.nimbus.diagnostics.detailStopRequested);
         return;
       }
       loggy.info('persisting managed connection state');
@@ -468,6 +468,8 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       loggy.info('managed connection state persisted');
       _markConnectionEstablished();
       loggy.info('managed connection state promoted to connected');
+      diagnostics.startStep(NimbusAccelerationStepId.cleanup, detail: _t.nimbus.diagnostics.cleanup);
+      diagnostics.completeStep(NimbusAccelerationStepId.cleanup, detail: _t.nimbus.diagnostics.detailCleanupDone);
       diagnostics.complete(detail: _t.nimbus.diagnostics.detailAccelerationStarted);
       loggy.info('acceleration start diagnostics completed');
     } on ConnectionFailure catch (error) {
@@ -505,9 +507,22 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   }
 
   Future<void> _cleanupFailedConnectionAttempt() async {
-    await ref.read(connectionNotifierProvider.notifier).abortConnection();
-    _clearManagedRouteOptions();
-    await _removeManagedProfile();
+    final diagnostics = ref.read(nimbusAccelerationDiagnosticsProvider.notifier);
+    final shouldRecord = diagnostics.isOperationRunning(NimbusAccelerationOperation.start);
+    if (shouldRecord) diagnostics.startStep(NimbusAccelerationStepId.cleanup, detail: _t.nimbus.diagnostics.cleanup);
+    try {
+      await ref.read(connectionNotifierProvider.notifier).abortConnection();
+      _clearManagedRouteOptions();
+      await _removeManagedProfile();
+      if (shouldRecord) {
+        diagnostics.completeStep(NimbusAccelerationStepId.cleanup, detail: _t.nimbus.diagnostics.detailCleanupDone);
+      }
+    } catch (error) {
+      if (shouldRecord) {
+        diagnostics.failStep(NimbusAccelerationStepId.cleanup, detail: error.toString(), errorCode: 'CLEANUP_FAILED');
+      }
+      rethrow;
+    }
   }
 
   Future<void> _disconnectInternal({required String reason, required bool reportToServer}) async {

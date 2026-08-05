@@ -26,24 +26,8 @@ class NimbusAccelerationDiagnosticsController extends Notifier<NimbusAcceleratio
 
   void begin(NimbusAccelerationOperation operation) {
     final stepIds = operation == NimbusAccelerationOperation.start
-        ? const [
-            NimbusAccelerationStepId.connectionState,
-            NimbusAccelerationStepId.account,
-            NimbusAccelerationStepId.subscription,
-            NimbusAccelerationStepId.rules,
-            NimbusAccelerationStepId.connectionPlan,
-            NimbusAccelerationStepId.core,
-            NimbusAccelerationStepId.network,
-            NimbusAccelerationStepId.tunnel,
-            NimbusAccelerationStepId.routing,
-          ]
-        : const [
-            NimbusAccelerationStepId.connectionState,
-            NimbusAccelerationStepId.core,
-            NimbusAccelerationStepId.tunnel,
-            NimbusAccelerationStepId.routing,
-            NimbusAccelerationStepId.cleanup,
-          ];
+        ? nimbusAccelerationStartStepIds
+        : nimbusAccelerationStopStepIds;
     state = state.copyWith(
       current: NimbusAccelerationAttempt(
         operation: operation,

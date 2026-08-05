@@ -2,6 +2,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_acceleration_diagnostic.dart';
 
 void main() {
+  test('start diagnostics expose every acceleration lifecycle stage in order', () {
+    expect(
+      nimbusAccelerationStartStepIds,
+      equals([
+        NimbusAccelerationStepId.connectionState,
+        NimbusAccelerationStepId.account,
+        NimbusAccelerationStepId.subscription,
+        NimbusAccelerationStepId.rules,
+        NimbusAccelerationStepId.connectionPlan,
+        NimbusAccelerationStepId.core,
+        NimbusAccelerationStepId.network,
+        NimbusAccelerationStepId.tunnel,
+        NimbusAccelerationStepId.routing,
+        NimbusAccelerationStepId.cleanup,
+      ]),
+    );
+  });
+
   test('round trips a completed acceleration attempt without sensitive data', () {
     final startedAt = DateTime.utc(2026, 8, 5, 1, 30);
     final attempt = NimbusAccelerationAttempt(
