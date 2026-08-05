@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_acceleration_diagnostics_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_change_password_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_devices_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.dart';
@@ -30,9 +31,19 @@ class SettingsPage extends HookConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _SettingsGroup(children: const [GeneralSettingsTiles(showDividers: true)]),
+                    const _SettingsGroup(children: [GeneralSettingsTiles(showDividers: true)]),
                     _SettingsGroup(
                       children: [
+                        ListTile(
+                          title: Text(t.nimbus.diagnostics.menuTitle),
+                          leading: const Icon(Icons.monitor_heart_rounded),
+                          trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
+                          onTap: () => _openAdaptiveSettingsMenu(
+                            context,
+                            dialog: const NimbusAccelerationDiagnosticsDialog(),
+                            page: const NimbusAccelerationDiagnosticsPage(),
+                          ),
+                        ),
                         ListTile(
                           title: Text(t.nimbus.settings.deviceManagement),
                           leading: const Icon(Icons.devices_rounded),

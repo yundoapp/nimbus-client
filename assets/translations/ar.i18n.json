@@ -745,6 +745,11 @@
       "requestFailed": "فشل الطلب. حاول لاحقًا.",
       "operationFailed": "فشلت العملية. حاول لاحقًا."
     },
+    "diagnostics": {
+      "menuTitle": "سجل التشخيص",
+      "detailRulesLoaded": "القواعد العامة: ${publicCount} (${publicVersion})\nقواعدي: ${userCount} (${userVersion})",
+      "detailNetworkReady": "شبكة العقدة جاهزة"
+    },
     "home": {
       "noPlanTitle": "لا توجد خطة نشطة",
       "noPlanMessage": "فعّل خطة قبل بدء التسريع.",

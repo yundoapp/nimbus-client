@@ -742,6 +742,7 @@
     "diagnostics": {
       "title": "Acceleration process",
       "view": "View acceleration process",
+      "menuTitle": "Diagnostic log",
       "start": "Start acceleration",
       "stop": "Stop acceleration",
       "running": "In progress",
@@ -754,6 +755,7 @@
       "subscription": "Check plan and allowance",
       "connectionState": "Check current connection state",
       "rules": "Prepare rules",
+      "detailRulesLoaded": "Common rules: ${publicCount} (${publicVersion})\nMy rules: ${userCount} (${userVersion})",
       "connectionPlan": "Get connection plan",
       "core": "Start core service",
       "network": "Check node network",
@@ -773,6 +775,7 @@
       "detailAllowanceAvailable": "Plan allowance is available",
       "detailPlanReceived": "Connection plan received",
       "detailCoreStarted": "Core service started",
+      "detailNetworkReady": "Node network is ready",
       "detailNetworkFallback": "IPv4 fallback is active",
       "detailNetworkDualStack": "IPv4 and IPv6 are available",
       "detailTunnelActive": "System acceleration tunnel is active",

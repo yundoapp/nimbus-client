@@ -739,6 +739,11 @@
       "requestFailed": "İstek başarısız oldu. Lütfen daha sonra tekrar deneyin.",
       "operationFailed": "İşlem başarısız oldu. Lütfen daha sonra tekrar deneyin."
     },
+    "diagnostics": {
+      "menuTitle": "Tanılama günlüğü",
+      "detailRulesLoaded": "Genel kurallar: ${publicCount} (${publicVersion})\nKurallarım: ${userCount} (${userVersion})",
+      "detailNetworkReady": "Düğüm ağı hazır"
+    },
     "home": {
       "noPlanTitle": "Aktif plan yok",
       "noPlanMessage": "Hızlandırmadan önce bir plan etkinleştirin.",

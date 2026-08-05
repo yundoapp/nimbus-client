@@ -739,6 +739,11 @@
       "requestFailed": "Permintaan gagal. Coba lagi nanti.",
       "operationFailed": "Operasi gagal. Coba lagi nanti."
     },
+    "diagnostics": {
+      "menuTitle": "Log diagnostik",
+      "detailRulesLoaded": "Aturan umum: ${publicCount} (${publicVersion})\nAturan saya: ${userCount} (${userVersion})",
+      "detailNetworkReady": "Jaringan node siap"
+    },
     "home": {
       "noPlanTitle": "Tidak ada paket aktif",
       "noPlanMessage": "Aktifkan paket sebelum mempercepat.",

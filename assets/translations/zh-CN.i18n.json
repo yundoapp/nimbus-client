@@ -742,6 +742,7 @@
     "diagnostics": {
       "title": "加速过程",
       "view": "查看加速过程",
+      "menuTitle": "诊断日志",
       "start": "启动加速",
       "stop": "停止加速",
       "running": "进行中",
@@ -754,6 +755,7 @@
       "subscription": "检查套餐与额度",
       "connectionState": "检查当前连接状态",
       "rules": "准备规则文件",
+      "detailRulesLoaded": "通用规则 ${publicCount} 条（${publicVersion}）\n我的规则 ${userCount} 条（${userVersion}）",
       "connectionPlan": "获取连接方案",
       "core": "启动核心服务",
       "network": "检测节点网络",
@@ -773,6 +775,7 @@
       "detailAllowanceAvailable": "套餐额度可用",
       "detailPlanReceived": "连接方案已获取",
       "detailCoreStarted": "核心服务已启动",
+      "detailNetworkReady": "节点网络已建立",
       "detailNetworkFallback": "已启用 IPv4 兜底",
       "detailNetworkDualStack": "IPv4 和 IPv6 均可用",
       "detailTunnelActive": "系统加速通道已开启",

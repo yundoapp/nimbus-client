@@ -102,6 +102,16 @@ class NimbusAccelerationDiagnosticsController extends Notifier<NimbusAcceleratio
     _persist();
   }
 
+  /// Attributes an uncaught connection error to the stage that was actually
+  /// running instead of guessing that every failure belongs to Core.
+  void failRunningStep({required String detail, String? errorCode}) {
+    final current = state.current;
+    if (current == null || current.status != NimbusAccelerationAttemptStatus.running) return;
+    final runningStep = runningNimbusAccelerationStepId(current.steps);
+    if (runningStep == null) return;
+    failStep(runningStep, detail: detail, errorCode: errorCode);
+  }
+
   void complete({String? detail}) {
     final current = state.current;
     if (current == null || current.status != NimbusAccelerationAttemptStatus.running) return;

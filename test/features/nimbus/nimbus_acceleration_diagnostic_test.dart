@@ -58,6 +58,35 @@ void main() {
     expect(decoded.single.steps[1].errorCode, 'NETWORK_PROBE_FAILED');
   });
 
+  test('finds the last running stage for uncaught failures', () {
+    expect(
+      runningNimbusAccelerationStepId([
+        const NimbusAccelerationStepSnapshot(
+          id: NimbusAccelerationStepId.rules,
+          status: NimbusAccelerationStepStatus.success,
+        ),
+        const NimbusAccelerationStepSnapshot(
+          id: NimbusAccelerationStepId.connectionPlan,
+          status: NimbusAccelerationStepStatus.running,
+        ),
+        const NimbusAccelerationStepSnapshot(
+          id: NimbusAccelerationStepId.core,
+          status: NimbusAccelerationStepStatus.running,
+        ),
+      ]),
+      NimbusAccelerationStepId.core,
+    );
+    expect(
+      runningNimbusAccelerationStepId([
+        const NimbusAccelerationStepSnapshot(
+          id: NimbusAccelerationStepId.rules,
+          status: NimbusAccelerationStepStatus.success,
+        ),
+      ]),
+      isNull,
+    );
+  });
+
   test('ignores malformed persisted history instead of blocking app startup', () {
     expect(decodeNimbusAccelerationHistory('{bad json'), isEmpty);
     expect(decodeNimbusAccelerationHistory('[{"operation":"unknown"}]'), isEmpty);

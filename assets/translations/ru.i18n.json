@@ -743,6 +743,11 @@
       "requestFailed": "Запрос не выполнен. Попробуйте позже.",
       "operationFailed": "Операция не выполнена. Попробуйте позже."
     },
+    "diagnostics": {
+      "menuTitle": "Журнал диагностики",
+      "detailRulesLoaded": "Общие правила: ${publicCount} (${publicVersion})\nМои правила: ${userCount} (${userVersion})",
+      "detailNetworkReady": "Сеть узла готова"
+    },
     "home": {
       "noPlanTitle": "Нет активного плана",
       "noPlanMessage": "Активируйте план перед включением ускорения.",

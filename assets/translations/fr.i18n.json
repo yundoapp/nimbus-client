@@ -731,6 +731,11 @@
       "requestFailed": "La requête a échoué. Réessayez plus tard.",
       "operationFailed": "L’opération a échoué. Réessayez plus tard."
     },
+    "diagnostics": {
+      "menuTitle": "Journal de diagnostic",
+      "detailRulesLoaded": "Règles communes : ${publicCount} (${publicVersion})\nMes règles : ${userCount} (${userVersion})",
+      "detailNetworkReady": "Le réseau du nœud est prêt"
+    },
     "home": {
       "noPlanTitle": "Aucun forfait actif",
       "noPlanMessage": "Activez un forfait avant de lancer l’accélération.",

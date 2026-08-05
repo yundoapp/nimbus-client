@@ -739,6 +739,11 @@
       "requestFailed": "請求失敗，請稍後再試",
       "operationFailed": "操作失敗，請稍後再試"
     },
+    "diagnostics": {
+      "menuTitle": "診斷記錄",
+      "detailRulesLoaded": "通用規則 ${publicCount} 條（${publicVersion}）\n我的規則 ${userCount} 條（${userVersion}）",
+      "detailNetworkReady": "節點網路已建立"
+    },
     "home": {
       "noPlanTitle": "暫無可用套餐",
       "noPlanMessage": "請先啟用套餐後再加速。",

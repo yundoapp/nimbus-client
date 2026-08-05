@@ -739,6 +739,11 @@
       "requestFailed": "A solicitação falhou. Tente novamente mais tarde.",
       "operationFailed": "A operação falhou. Tente novamente mais tarde."
     },
+    "diagnostics": {
+      "menuTitle": "Registro de diagnóstico",
+      "detailRulesLoaded": "Regras comuns: ${publicCount} (${publicVersion})\nMinhas regras: ${userCount} (${userVersion})",
+      "detailNetworkReady": "A rede do nó está pronta"
+    },
     "home": {
       "noPlanTitle": "Nenhum plano ativo",
       "noPlanMessage": "Ative um plano antes de acelerar.",

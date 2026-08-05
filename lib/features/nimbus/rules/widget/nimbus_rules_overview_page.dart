@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_route_preferences_provider.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_access_icons.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_route_preferences_dialog.dart';
 import 'package:hiddify/features/nimbus/rules/notifier/nimbus_rules_state.dart';
 import 'package:hiddify/features/nimbus/widget/nimbus_page_layout.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
 
 class NimbusRulesOverviewPage extends ConsumerStatefulWidget {
   const NimbusRulesOverviewPage({super.key});
@@ -29,6 +30,7 @@ class _NimbusRulesOverviewPageState extends ConsumerState<NimbusRulesOverviewPag
     if (changed == true && mounted) {
       ref.invalidate(nimbusRoutePreferencesProvider);
       ref.invalidate(nimbusCachedRulesPackageProvider);
+      ref.invalidate(nimbusRulesPackageProvider);
     }
   }
 
@@ -36,33 +38,24 @@ class _NimbusRulesOverviewPageState extends ConsumerState<NimbusRulesOverviewPag
   Widget build(BuildContext context) {
     final t = ref.watch(translationsProvider).requireValue;
     final localeTag = ref.watch(localePreferencesProvider).flutterLocale.toString();
-    final package = ref.watch(nimbusCachedRulesPackageProvider);
+    final authState = ref.watch(nimbusAuthControllerProvider);
+    final packageAsync = ref.watch(nimbusRulesPackageProvider);
+    final package = packageAsync.valueOrNull ?? ref.watch(nimbusCachedRulesPackageProvider);
     final preferences = ref.watch(nimbusRoutePreferencesProvider);
-    final publicItems = _sortRuleItems([
-      for (final item in package?.publicRules ?? const <NimbusRulePackageItem>[])
-        if (item.pattern.trim().isNotEmpty)
-          _RuleItem(
-            pattern: item.pattern,
-            patternType: item.patternType,
-            action: _ruleAction(item.action),
-            updatedAt: package?.cachedAt,
-          ),
-    ]);
-    final userItems = preferences.when(
-      data: (value) => _sortRuleItems([
-        for (final item in value?.items ?? const <NimbusRoutePreference>[])
-          if (item.value.trim().isNotEmpty)
-            _RuleItem(
-              pattern: item.value,
-              patternType: item.targetType,
-              action: _ruleAction(item.type),
-              updatedAt: item.updatedAt ?? item.createdAt,
-              preference: item,
-            ),
-      ]),
-      loading: () => null,
-      error: (_, _) => const <_RuleItem>[],
-    );
+    final publicItems = package == null
+        ? null
+        : _sortRuleItems([
+            for (final item in package.publicRules)
+              if (item.pattern.trim().isNotEmpty)
+                _RuleItem(
+                  pattern: item.pattern,
+                  patternType: item.patternType,
+                  action: _ruleAction(item.action),
+                  updatedAt: package.cachedAt,
+                ),
+          ]);
+    final userItems = _buildUserRuleItems(package: package, preferences: preferences.valueOrNull);
+    final userItemsLoading = package == null && (authState.isRestoring || preferences.isLoading);
     return Scaffold(
       appBar: AppBar(
         title: Text(t.nimbus.rules.title),
@@ -84,13 +77,13 @@ class _NimbusRulesOverviewPageState extends ConsumerState<NimbusRulesOverviewPag
               children: [
                 _RuleGroupCard(
                   title: t.nimbus.rules.commonRules,
-                  count: publicItems.length,
+                  count: publicItems?.length ?? 0,
                   caption: t.nimbus.rules.commonVersion(version: package?.manifest.publicRulesVersion ?? '--'),
                   items: publicItems,
                   localeTag: localeTag,
                   previewLimit: _commonRulesPreviewLimit,
                   expanded: _publicExpanded,
-                  onToggle: publicItems.length > _commonRulesPreviewLimit
+                  onToggle: (publicItems?.length ?? 0) > _commonRulesPreviewLimit
                       ? () => setState(() => _publicExpanded = !_publicExpanded)
                       : null,
                   translations: t,
@@ -100,7 +93,7 @@ class _NimbusRulesOverviewPageState extends ConsumerState<NimbusRulesOverviewPag
                   title: t.nimbus.rules.myRules,
                   count: userItems?.length ?? 0,
                   caption: t.nimbus.rules.myRulesPriorityHint,
-                  items: userItems,
+                  items: userItemsLoading ? null : userItems,
                   localeTag: localeTag,
                   previewLimit: _myRulesPreviewLimit,
                   expanded: _userExpanded,
@@ -398,6 +391,47 @@ List<_RuleItem> _sortRuleItems(Iterable<_RuleItem> items) {
     return a.pattern.toLowerCase().compareTo(b.pattern.toLowerCase());
   });
   return sorted;
+}
+
+List<_RuleItem>? _buildUserRuleItems({
+  required NimbusRulesPackage? package,
+  required NimbusRoutePreferencesList? preferences,
+}) {
+  if (package == null && preferences == null) return null;
+
+  final preferencesByPattern = <String, NimbusRoutePreference>{
+    for (final preference in preferences?.items ?? const <NimbusRoutePreference>[])
+      if (preference.value.trim().isNotEmpty) preference.value.trim().toLowerCase(): preference,
+  };
+  final itemsByPattern = <String, _RuleItem>{};
+
+  void addItem({required String pattern, required String patternType, required String action, DateTime? updatedAt}) {
+    final normalized = pattern.trim();
+    if (normalized.isEmpty) return;
+    final key = normalized.toLowerCase();
+    final preference = preferencesByPattern[key];
+    itemsByPattern[key] = _RuleItem(
+      pattern: normalized,
+      patternType: patternType,
+      action: _ruleAction(action),
+      updatedAt: preference?.updatedAt ?? preference?.createdAt ?? updatedAt,
+      preference: preference,
+    );
+  }
+
+  for (final item in package?.userRules ?? const <NimbusRulePackageItem>[]) {
+    addItem(pattern: item.pattern, patternType: item.patternType, action: item.action, updatedAt: package?.cachedAt);
+  }
+  for (final preference in preferences?.items ?? const <NimbusRoutePreference>[]) {
+    addItem(
+      pattern: preference.value,
+      patternType: preference.targetType,
+      action: preference.type,
+      updatedAt: preference.updatedAt ?? preference.createdAt,
+    );
+  }
+
+  return _sortRuleItems(itemsByPattern.values);
 }
 
 int _actionSortOrder(_RuleAction action) => switch (action) {

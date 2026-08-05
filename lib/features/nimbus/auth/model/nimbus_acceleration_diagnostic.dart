@@ -97,6 +97,13 @@ class NimbusAccelerationStepSnapshot {
   }
 }
 
+NimbusAccelerationStepId? runningNimbusAccelerationStepId(Iterable<NimbusAccelerationStepSnapshot> steps) {
+  for (final step in steps.toList(growable: false).reversed) {
+    if (step.status == NimbusAccelerationStepStatus.running) return step.id;
+  }
+  return null;
+}
+
 class NimbusAccelerationAttempt {
   const NimbusAccelerationAttempt({
     required this.operation,

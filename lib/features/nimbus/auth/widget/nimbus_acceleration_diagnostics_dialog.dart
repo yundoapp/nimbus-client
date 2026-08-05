@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_acceleration_diagnostic.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_acceleration_diagnostics_controller.dart';
+import 'package:hiddify/features/nimbus/widget/nimbus_page_layout.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class NimbusAccelerationDiagnosticsDialog extends ConsumerWidget {
@@ -13,59 +14,110 @@ class NimbusAccelerationDiagnosticsDialog extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
     final state = ref.watch(nimbusAccelerationDiagnosticsProvider);
-    final theme = Theme.of(context);
-    final current = state.current;
-    final history = current == null
-        ? state.history
-        : state.history.where((item) => item != current).toList(growable: false);
-
-    Future<void> copy() async {
-      await Clipboard.setData(ClipboardData(text: _diagnosticsText(state)));
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.nimbus.errors.diagnosticsCopied)));
-    }
 
     return AlertDialog(
       title: Row(
         children: [
           Expanded(child: Text(t.nimbus.diagnostics.title)),
-          IconButton(onPressed: copy, icon: const Icon(Icons.copy_rounded), tooltip: t.nimbus.errors.copyDiagnostics),
+          IconButton(
+            onPressed: () => _copyDiagnostics(context, ref, t),
+            icon: const Icon(Icons.copy_rounded),
+            tooltip: t.nimbus.errors.copyDiagnostics,
+          ),
         ],
       ),
       content: SizedBox(
         width: 560,
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .64),
-          child: Scrollbar(
-            thumbVisibility: true,
-            child: ListView(
-              children: [
-                if (current != null) ...[
-                  _AttemptHeader(attempt: current, t: t),
-                  const Gap(12),
-                  ...current.steps.map((step) => _StepTile(step: step, t: t)),
-                ] else
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Center(child: Text(t.nimbus.diagnostics.emptyHistory)),
-                  ),
-                if (history.isNotEmpty) ...[
-                  const Gap(16),
-                  Text(
-                    t.nimbus.diagnostics.history,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  const Gap(8),
-                  ...history.take(8).map((attempt) => _HistoryTile(attempt: attempt, t: t)),
-                ],
-              ],
-            ),
-          ),
+          child: _DiagnosticsContent(state: state, t: t),
         ),
       ),
       actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.common.close))],
     );
   }
+}
+
+class NimbusAccelerationDiagnosticsPage extends ConsumerWidget {
+  const NimbusAccelerationDiagnosticsPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = ref.watch(translationsProvider).requireValue;
+    final state = ref.watch(nimbusAccelerationDiagnosticsProvider);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(t.nimbus.diagnostics.title),
+        actions: [
+          IconButton(
+            onPressed: () => _copyDiagnostics(context, ref, t),
+            icon: const Icon(Icons.copy_rounded),
+            tooltip: t.nimbus.errors.copyDiagnostics,
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: nimbusPageContentMaxWidth),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              child: _DiagnosticsContent(state: state, t: t),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DiagnosticsContent extends StatelessWidget {
+  const _DiagnosticsContent({required this.state, required this.t});
+
+  final NimbusAccelerationDiagnosticsState state;
+  final Translations t;
+
+  @override
+  Widget build(BuildContext context) {
+    final current = state.current;
+    final history = current == null
+        ? state.history
+        : state.history.where((item) => item != current).toList(growable: false);
+    final theme = Theme.of(context);
+    return Scrollbar(
+      thumbVisibility: true,
+      child: ListView(
+        children: [
+          if (current != null) ...[
+            _AttemptHeader(attempt: current, t: t),
+            const Gap(12),
+            ...current.steps.map((step) => _StepTile(step: step, t: t)),
+          ] else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: Text(t.nimbus.diagnostics.emptyHistory)),
+            ),
+          if (history.isNotEmpty) ...[
+            const Gap(16),
+            Text(
+              t.nimbus.diagnostics.history,
+              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const Gap(8),
+            ...history.take(8).map((attempt) => _HistoryTile(attempt: attempt, t: t)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+Future<void> _copyDiagnostics(BuildContext context, WidgetRef ref, Translations t) async {
+  final state = ref.read(nimbusAccelerationDiagnosticsProvider);
+  await Clipboard.setData(ClipboardData(text: _diagnosticsText(state)));
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.nimbus.errors.diagnosticsCopied)));
 }
 
 class NimbusAccelerationDiagnosticsEntry extends ConsumerWidget {

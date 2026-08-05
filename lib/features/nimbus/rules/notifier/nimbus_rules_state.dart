@@ -20,6 +20,33 @@ final nimbusCachedRulesPackageProvider = Provider<NimbusRulesPackage?>((ref) {
   return ref.read(nimbusAuthRepositoryProvider).readRulesPackage(userId);
 });
 
+/// Refreshes the package shown by the rules center while retaining the last
+/// validated package when the account API is temporarily unavailable.
+///
+/// The connection path remains the authority for starting acceleration. This
+/// provider only keeps the rules page aligned with that same package and
+/// prevents a route-preferences request failure from looking like zero rules.
+final nimbusRulesPackageProvider = FutureProvider.autoDispose<NimbusRulesPackage?>((ref) async {
+  final authState = ref.watch(nimbusAuthControllerProvider);
+  if (authState.isRestoring) return null;
+
+  final session = authState.session;
+  if (session == null) return null;
+
+  final repository = ref.read(nimbusAuthRepositoryProvider);
+  final cached = repository.readRulesPackage(session.user.id);
+  try {
+    final package = await repository.fetchRulesPackage(session);
+    if (package.manifest.configVersion != nimbusRulesConfigVersion) {
+      throw FormatException('unsupported rules config version: ${package.manifest.configVersion}');
+    }
+    await repository.saveRulesPackage(session.user.id, package);
+    return repository.readRulesPackage(session.user.id) ?? package;
+  } catch (_) {
+    return cached;
+  }
+});
+
 /// Reads only the effective Core route section from the existing diagnostic
 /// snapshot. Node credentials and the rest of the runtime configuration stay
 /// out of the UI.

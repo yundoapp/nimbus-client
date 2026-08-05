@@ -389,14 +389,6 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       final appInfo = ref.read(appInfoProvider).requireValue;
       diagnostics.startStep(NimbusAccelerationStepId.rules);
       var rulesPackage = await _prepareRulesPackage(session);
-      diagnostics.completeStep(
-        NimbusAccelerationStepId.rules,
-        detail: [
-          rulesPackage.manifest.publicRulesVersion,
-          rulesPackage.manifest.userRulesVersion,
-          rulesPackage.manifest.configVersion,
-        ].whereType<String>().where((version) => version.isNotEmpty).join(' / '),
-      );
       diagnostics.startStep(NimbusAccelerationStepId.connectionPlan);
       final plan = await _repository.createConnectPlan(
         session: session,
@@ -405,14 +397,17 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         rulesManifest: rulesPackage.manifest,
       );
       if (plan.rulesManifest.requiresUpdate || !plan.rulesManifest.sameVersions(rulesPackage.manifest)) {
+        diagnostics.startStep(NimbusAccelerationStepId.rules, detail: _t.nimbus.diagnostics.rules);
         rulesPackage = await _repository.fetchRulesPackage(session);
         assertSupportedNimbusRulesPackage(rulesPackage);
         await _repository.saveRulesPackage(session.user.id, rulesPackage);
         ref.invalidate(nimbusCachedRulesPackageProvider);
+        ref.invalidate(nimbusRulesPackageProvider);
       }
       if (!plan.rulesManifest.sameVersions(rulesPackage.manifest)) {
         throw const FormatException('rules package changed while preparing connection');
       }
+      diagnostics.completeStep(NimbusAccelerationStepId.rules, detail: _rulesLoadedDiagnostic(rulesPackage));
       diagnostics.completeStep(
         NimbusAccelerationStepId.connectionPlan,
         detail: _t.nimbus.diagnostics.detailPlanReceived,
@@ -425,6 +420,11 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
 
       final profileContent = plan.profileContent?.trim();
       if (profileContent == null || profileContent.isEmpty) {
+        diagnostics.failStep(
+          NimbusAccelerationStepId.core,
+          detail: _t.nimbus.errors.configurationUnavailable,
+          errorCode: 'STANDARD_PROFILE_MISSING',
+        );
         diagnostics.fail(errorCode: 'Y-CONFIG-001', detail: _t.nimbus.errors.configurationUnavailable);
         _fail(
           _t.nimbus.errors.configurationUnavailable,
@@ -435,10 +435,12 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         await _safeReportResult(session, plan, 'failed', 'STANDARD_PROFILE_MISSING');
         return;
       }
-      _validateStandardProfileContent(profileContent);
+      diagnostics.startStep(NimbusAccelerationStepId.rules, detail: _t.nimbus.diagnostics.rules);
       _applyManagedRouteOptions(rulesPackage);
-      final validatedProfileContent = await _installStandardProfile(profileContent);
+      diagnostics.completeStep(NimbusAccelerationStepId.rules, detail: _rulesLoadedDiagnostic(rulesPackage));
       diagnostics.startStep(NimbusAccelerationStepId.core, detail: _t.nimbus.diagnostics.core);
+      _validateStandardProfileContent(profileContent);
+      final validatedProfileContent = await _installStandardProfile(profileContent);
       if (_shutdownRequested) {
         await _cleanupFailedConnectionAttempt();
         diagnostics.fail(errorCode: 'CANCELED', detail: _t.nimbus.diagnostics.detailStopRequested);
@@ -458,6 +460,13 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
           .run();
       loggy.info('managed connection repository returned: ${result.isRight() ? 'success' : 'failure'}');
       result.match((failure) => throw failure, (_) => null);
+      diagnostics.completeStep(NimbusAccelerationStepId.core, detail: _t.nimbus.diagnostics.detailCoreStarted);
+      diagnostics.startStep(NimbusAccelerationStepId.network);
+      diagnostics.completeStep(NimbusAccelerationStepId.network, detail: _t.nimbus.diagnostics.detailNetworkReady);
+      diagnostics.startStep(NimbusAccelerationStepId.tunnel);
+      diagnostics.completeStep(NimbusAccelerationStepId.tunnel, detail: _t.nimbus.diagnostics.detailTunnelActive);
+      diagnostics.startStep(NimbusAccelerationStepId.routing);
+      diagnostics.completeStep(NimbusAccelerationStepId.routing, detail: _t.nimbus.diagnostics.detailRoutingActive);
       if (_shutdownRequested) {
         await _cleanupFailedConnectionAttempt();
         diagnostics.fail(errorCode: 'CANCELED', detail: _t.nimbus.diagnostics.detailStopRequested);
@@ -481,11 +490,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         failureCode: error.runtimeType.toString(),
         stage: 'start',
       );
-      diagnostics.failStep(
-        NimbusAccelerationStepId.core,
-        detail: error.toString(),
-        errorCode: error.runtimeType.toString(),
-      );
+      diagnostics.failRunningStep(detail: error.toString(), errorCode: error.runtimeType.toString());
       diagnostics.fail(errorCode: 'Y-CONNECTION-002', detail: error.toString());
     } catch (error, stackTrace) {
       loggy.warning('failed to prepare standard Hiddify profile', error, stackTrace);
@@ -497,13 +502,20 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         failureCode: apiErrorCode ?? 'PROFILE_INVALID',
         stage: 'prepare',
       );
-      diagnostics.failStep(
-        NimbusAccelerationStepId.core,
-        detail: error.toString(),
-        errorCode: apiErrorCode ?? 'PROFILE_INVALID',
-      );
+      diagnostics.failRunningStep(detail: error.toString(), errorCode: apiErrorCode ?? 'PROFILE_INVALID');
       diagnostics.fail(errorCode: apiErrorCode ?? 'Y-CONFIG-002', detail: error.toString());
     }
+  }
+
+  String _rulesLoadedDiagnostic(NimbusRulesPackage package) {
+    final publicVersion = package.manifest.publicRulesVersion?.trim();
+    final userVersion = package.manifest.userRulesVersion.trim();
+    return _t.nimbus.diagnostics.detailRulesLoaded(
+      publicCount: package.publicRules.length.toString(),
+      publicVersion: publicVersion == null || publicVersion.isEmpty ? '--' : publicVersion,
+      userCount: package.userRules.length.toString(),
+      userVersion: userVersion.isEmpty ? '--' : userVersion,
+    );
   }
 
   Future<void> _cleanupFailedConnectionAttempt() async {
@@ -536,8 +548,14 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     final plan = state.plan;
     final session = ref.read(nimbusAuthControllerProvider).session;
     state = state.copyWith(isPreparing: false, isDisconnecting: true, connectedReported: false);
+    diagnostics.startStep(NimbusAccelerationStepId.core, detail: _t.nimbus.diagnostics.core);
     await ref.read(connectionNotifierProvider.notifier).abortConnection();
+    diagnostics.completeStep(NimbusAccelerationStepId.core, detail: _t.nimbus.diagnostics.detailCoreStopped);
+    diagnostics.startStep(NimbusAccelerationStepId.tunnel);
+    diagnostics.completeStep(NimbusAccelerationStepId.tunnel, detail: _t.nimbus.diagnostics.detailTunnelReleased);
+    diagnostics.startStep(NimbusAccelerationStepId.routing);
     _clearManagedRouteOptions();
+    diagnostics.completeStep(NimbusAccelerationStepId.routing, detail: _t.nimbus.diagnostics.detailRoutingRestored);
     await ref.read(Preferences.startedByUser.notifier).update(false);
     if (reportToServer && plan != null && session != null) {
       unawaited(_safeReportDisconnect(session, plan, reason));

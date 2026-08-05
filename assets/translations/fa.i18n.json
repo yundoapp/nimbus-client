@@ -739,6 +739,11 @@
       "requestFailed": "درخواست ناموفق بود. بعداً دوباره تلاش کنید.",
       "operationFailed": "عملیات ناموفق بود. بعداً دوباره تلاش کنید."
     },
+    "diagnostics": {
+      "menuTitle": "گزارش عیب‌یابی",
+      "detailRulesLoaded": "قوانین عمومی: ${publicCount} (${publicVersion})\nقوانین من: ${userCount} (${userVersion})",
+      "detailNetworkReady": "شبکه گره آماده است"
+    },
     "home": {
       "noPlanTitle": "طرح فعالی وجود ندارد",
       "noPlanMessage": "پیش از شتاب‌دهی، یک طرح را فعال کنید.",
