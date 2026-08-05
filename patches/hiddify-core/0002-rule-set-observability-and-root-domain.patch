@@ -1,0 +1,102 @@
+diff --git a/route/rule/rule_set_remote.go b/route/rule/rule_set_remote.go
+index a214a582..76149f17 100644
+--- a/route/rule/rule_set_remote.go
++++ b/route/rule/rule_set_remote.go
+@@ -28,6 +28,7 @@ import (
+ 	"github.com/sagernet/sing/common/x/list"
+ 	"github.com/sagernet/sing/service"
+ 	"github.com/sagernet/sing/service/pause"
++	"golang.org/x/net/publicsuffix"
+ 
+ 	"go4.org/netipx"
+ )
+@@ -103,15 +104,17 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.HTTPStartContext) error {
+ 			}
+ 			s.lastUpdated = savedSet.LastUpdated
+ 			s.lastEtag = savedSet.LastEtag
++			s.logger.Info("rule-set ", s.options.Tag, ": loaded from cache")
++		}
++	}
++	if s.lastUpdated.IsZero() {
++		s.logger.Info("rule-set ", s.options.Tag, ": download started")
++		err := s.fetch(ctx, startContext)
++		if err != nil {
++			s.logger.Error("rule-set ", s.options.Tag, ": download failed: ", err)
++			return E.Cause(err, "initial rule-set: ", s.options.Tag)
+ 		}
+ 	}
+-	// if s.lastUpdated.IsZero() {
+-	// 	err := s.fetch(ctx, startContext)
+-	// 	if err != nil {
+-	// 		// 	return E.Cause(err, "initial rule-set: ", s.options.Tag)
+-	// 		s.logger.Error(E.Cause(err, "initial rule-set: ", s.options.Tag))
+-	// 	}
+-	// }
+ 	s.startupTicker = time.NewTicker(10 * time.Second)
+ 	s.updateTicker = time.NewTicker(s.updateInterval)
+ 	return nil
+@@ -231,9 +234,10 @@ func (s *RemoteRuleSet) loopUpdate() {
+ }
+ 
+ func (s *RemoteRuleSet) updateOnce() {
++	s.logger.Info("rule-set ", s.options.Tag, ": download started")
+ 	err := s.fetch(s.ctx, nil)
+ 	if err != nil {
+-		s.logger.Error("fetch rule-set ", s.options.Tag, ": ", err)
++		s.logger.Error("rule-set ", s.options.Tag, ": download failed: ", err)
+ 	} else if s.refs.Load() == 0 {
+ 		s.rules = nil
+ 	}
+@@ -333,10 +337,52 @@ func (s *RemoteRuleSet) Close() error {
+ }
+ 
+ func (s *RemoteRuleSet) Match(metadata *adapter.InboundContext) bool {
++	if s.matchRules(metadata) {
++		return true
++	}
++
++	// Some geosite sources store a registrable domain as an exact domain.
++	// Retry explicit root and parent-domain entries after the normal match
++	// fails; this never invents a rule or changes an unlisted domain.
++	host := metadata.Domain
++	if host == "" {
++		host = metadata.Destination.Fqdn
++	}
++	host = strings.TrimSuffix(strings.ToLower(host), ".")
++	root, err := publicsuffix.EffectiveTLDPlusOne(host)
++	if err != nil || root == "" || root == host {
++		return false
++	}
++
++	originalDomain := metadata.Domain
++	defer func() { metadata.Domain = originalDomain }()
++	publicSuffix, _ := publicsuffix.PublicSuffix(host)
++	candidate := host
++	for {
++		separator := strings.IndexByte(candidate, '.')
++		if separator < 0 {
++			break
++		}
++		candidate = candidate[separator+1:]
++		if candidate == "" || candidate == publicSuffix {
++			break
++		}
++		metadata.Domain = candidate
++		if s.matchRules(metadata) {
++			return true
++		}
++		if candidate == root {
++			break
++		}
++	}
++	return false
++}
++
++func (s *RemoteRuleSet) matchRules(metadata *adapter.InboundContext) bool {
+ 	for _, rule := range s.rules {
+ 		if rule.Match(metadata) {
+ 			return true
+ 		}
+ 	}
+ 	return false
+ }

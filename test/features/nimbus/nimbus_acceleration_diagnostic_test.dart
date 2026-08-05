@@ -15,6 +15,7 @@ void main() {
         NimbusAccelerationStepId.corePrepare,
         NimbusAccelerationStepId.coreStart,
         NimbusAccelerationStepId.coreVerify,
+        NimbusAccelerationStepId.ruleSets,
         NimbusAccelerationStepId.network,
         NimbusAccelerationStepId.tunnel,
         NimbusAccelerationStepId.routing,

@@ -246,4 +246,13 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 
 - 关于页直接复用 `assets/images/app_icon.png`，与 macOS AppIcon 使用同一品牌资源，不再同时维护一份独立的 SVG Logo。
 - macOS AppIcon 在图标画布内增加透明安全边距，降低 Dock 中视觉尺寸偏大的问题；Flutter 页面内的品牌图标不缩放、不改色。
-- `ci.yml` 的日常 push/PR 默认只执行共享测试和云渡/Hiddify 边界检查，不再等待 Windows/Android Core 或安装包构建。需要验收 Windows 或 Android 时，在 GitHub Actions 手动运行 CI 并分别勾选 `build_windows`、`build_android`；两个端仍保留完整同源构建链路和 artifact 上传。构建号 `202608104` 用于本轮 macOS/iOS 本地验证。
+- `ci.yml` 的日常 push/PR 默认只执行共享测试和云渡/Hiddify 边界检查，不再等待 Windows/Android Core 或安装包构建。需要验收 Windows 或 Android 时，在 GitHub Actions 手动运行 CI 并分别勾选 `build_windows`、`build_android`；两个端仍保留完整同源构建链路和 artifact 上传。构建号 `202608105` 用于本轮 macOS/iOS 本地验证。
+
+### 4.19 SRS 规则库可观测性与根域匹配（2026-08-05）
+
+- 远程 SRS 规则库现在记录“从缓存加载、开始下载、下载失败、更新完成/未修改”完整生命周期；四端构建脚本统一应用 `0002-rule-set-observability-and-root-domain.patch`，构建退出时自动还原 Core 子模块源码。
+- 没有可用缓存且首轮 SRS 下载失败时，Core 启动失败并在诊断日志中保留具体规则库标签和错误详情，客户端不会再把规则未加载的状态报告成“已加速”。已有缓存时允许继续使用缓存；后台更新失败会在“加载规则库”阶段显示为告警并留下 Core 日志，但不会因一次更新失败立即中断已有连接。
+- 诊断日志增加独立“加载规则库”阶段，列出规则库加载成功、失败或状态未确认；规则库失败会使用 `RULE_SET_DOWNLOAD_FAILED` 或 `RULE_SET_STATUS_UNKNOWN` 错误码，并阻断后续网络、隧道和路由阶段。
+- macOS 诊断读取配置准备完成后生成的最终 Core 配置，而不是配置生成前的原始 profile，确保公共规则库和账号规则库不会被错误统计为 0 个。
+- 远程规则库匹配先执行原始域名匹配；原始匹配失败时，按可注册根域及其父域逐级回退，例如 `support.weixin.qq.com` 会依次检查 `weixin.qq.com`、`qq.com`，直到公开后缀为止。每一级都只会命中规则库中明确存在的条目，不会因为域名属于 `qq.com` 就自动改变路由。用户自定义的 `qq.com` 已通过 `domain_suffix` 覆盖其子域名，不依赖 Core 的根域回退。
+- 本轮 macOS Debug/Release 已基于构建号 `202608105` 完成编译、签名、覆盖安装和启动；iOS Core 与 Simulator Debug App 的本地构建因 Go 模块冷缓存下载中断尚未完成，Windows/Android 继续保留同源脚本和远程按需构建入口。

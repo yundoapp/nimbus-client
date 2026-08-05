@@ -314,6 +314,7 @@ String _stepLabel(Translations t, NimbusAccelerationStepId id) => switch (id) {
   NimbusAccelerationStepId.corePrepare => t.nimbus.diagnostics.corePrepare,
   NimbusAccelerationStepId.coreStart => t.nimbus.diagnostics.coreStart,
   NimbusAccelerationStepId.coreVerify => t.nimbus.diagnostics.coreVerify,
+  NimbusAccelerationStepId.ruleSets => t.nimbus.diagnostics.ruleSets,
   NimbusAccelerationStepId.coreStop => t.nimbus.diagnostics.coreStop,
   NimbusAccelerationStepId.coreStopVerify => t.nimbus.diagnostics.coreStopVerify,
   NimbusAccelerationStepId.network => t.nimbus.diagnostics.network,
@@ -353,6 +354,7 @@ String _localizedStepDetail(Translations t, NimbusAccelerationStepSnapshot step)
     NimbusAccelerationStepId.corePrepare => t.nimbus.diagnostics.detailCorePrepared,
     NimbusAccelerationStepId.coreStart => t.nimbus.diagnostics.detailCoreProcessStarted,
     NimbusAccelerationStepId.coreVerify => t.nimbus.diagnostics.detailCoreStatusStarted,
+    NimbusAccelerationStepId.ruleSets => t.nimbus.diagnostics.detailRuleSetsLoaded(count: _ruleSetCount(storedDetail)),
     NimbusAccelerationStepId.coreStop => t.nimbus.diagnostics.detailCoreStopped,
     NimbusAccelerationStepId.coreStopVerify => t.nimbus.diagnostics.detailCoreStatusStopped,
     NimbusAccelerationStepId.network =>
@@ -371,6 +373,11 @@ String _localizedStepDetail(Translations t, NimbusAccelerationStepSnapshot step)
           : t.nimbus.diagnostics.detailRoutingActive,
     NimbusAccelerationStepId.cleanup => t.nimbus.diagnostics.detailCleanupDone,
   };
+}
+
+String _ruleSetCount(String detail) {
+  final count = RegExp(r'\d+').firstMatch(detail)?.group(0);
+  return count ?? '--';
 }
 
 String? _localizedRulesDetail(Translations t, String detail) {

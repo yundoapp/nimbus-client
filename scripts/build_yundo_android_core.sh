@@ -10,6 +10,7 @@ if [[ "${output_aar}" != /* ]]; then
   output_aar="${repo_root}/${output_aar}"
 fi
 patch_file="${repo_root}/patches/hiddify-core/0001-managed-route-options.patch"
+rule_set_patch_file="${repo_root}/patches/hiddify-core/0002-rule-set-observability-and-root-domain.patch"
 go_bin="${GO_BIN:-$(command -v go || true)}"
 work_dir=""
 
@@ -20,6 +21,9 @@ fail() {
 
 cleanup() {
   [[ -z "${work_dir}" || ! -d "${work_dir}" ]] || rm -rf "${work_dir}"
+  if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${rule_set_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}/hiddify-sing-box" apply --reverse "${rule_set_patch_file}"
+  fi
   if git -C "${core_dir}" apply --reverse --check "${patch_file}" >/dev/null 2>&1; then
     git -C "${core_dir}" apply --reverse "${patch_file}"
   fi

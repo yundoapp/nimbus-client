@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:fpdart/fpdart.dart';
 import 'package:grpc/grpc.dart';
@@ -11,6 +12,7 @@ import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/log/model/log_level.dart' as config_log_level;
 import 'package:hiddify/features/nimbus/auth/model/nimbus_acceleration_diagnostic.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_diagnostics_localization.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_rule_set_diagnostic.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_acceleration_diagnostics_controller.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/hiddifycore/core_interface/core_interface_wrapper_stub.dart'
@@ -146,12 +148,20 @@ class HiddifyCoreService with InfraLogger {
     return TaskEither(() async {
       final diagnostics = ref.read(nimbusAccelerationDiagnosticsProvider.notifier);
       final t = nimbusDiagnosticsTranslations(ref.read(translationsProvider).requireValue);
+      final ruleSetLogOffset = logBuffer.length;
+      var ruleSetTags = _remoteRuleSetTags(path);
       statusController.add(currentState = const CoreStatus.starting());
       diagnostics.startStep(NimbusAccelerationStepId.corePrepare, detail: t.nimbus.diagnostics.corePrepare);
       loggy.debug("starting");
       final background = await core.setupBackground(path, name);
+      // macOS prepares a derived user-core config after adding the managed
+      // public and account rule sets. Read tags from that effective config so
+      // diagnostics describe what the core actually loads.
+      ruleSetTags = _remoteRuleSetTags(core.backgroundConfigPath(path));
       loggy.info('core background preparation response: $background');
       if (background != const CoreStatus.started()) {
+        _recordRuleSetFailureFromLogs(ruleSetTags, ruleSetLogOffset, diagnostics, t);
+        _recordRuleSetFailureIfPresent(background.toString(), diagnostics, t);
         diagnostics.failStep(
           NimbusAccelerationStepId.corePrepare,
           detail: background.toString(),
@@ -184,6 +194,8 @@ class HiddifyCoreService with InfraLogger {
         );
         loggy.info('core start response: state=${res.coreState}, type=${res.messageType}, message=${res.message}');
         if (res.messageType != MessageType.ALREADY_STARTED && res.messageType != MessageType.EMPTY) {
+          _recordRuleSetFailureFromLogs(ruleSetTags, ruleSetLogOffset, diagnostics, t);
+          _recordRuleSetFailureIfPresent(res.message, diagnostics, t);
           diagnostics.failStep(NimbusAccelerationStepId.coreStart, detail: res.message, errorCode: 'CORE_START_FAILED');
           diagnostics.fail(errorCode: 'Y-CORE-002', detail: res.message);
           final alert = _isSystemPermissionError(res.message) ? CoreAlert.requestVPNPermission : CoreAlert.startFailed;
@@ -222,6 +234,36 @@ class HiddifyCoreService with InfraLogger {
         diagnostics.completeStep(
           NimbusAccelerationStepId.coreVerify,
           detail: t.nimbus.diagnostics.detailCoreStatusStarted,
+        );
+
+        diagnostics.startStep(NimbusAccelerationStepId.ruleSets, detail: t.nimbus.diagnostics.ruleSets);
+        final ruleSetDiagnostics = await _waitForRuleSetDiagnostics(tags: ruleSetTags, logOffset: ruleSetLogOffset);
+        if (ruleSetDiagnostics.hasFailure || !ruleSetDiagnostics.allResolved) {
+          final detail =
+              ruleSetDiagnostics.firstFailure?.detail ??
+              t.nimbus.diagnostics.detailRuleSetsPending(
+                tags: ruleSetDiagnostics.items.map((item) => item.tag).join(', '),
+              );
+          diagnostics.failStep(
+            NimbusAccelerationStepId.ruleSets,
+            detail: detail,
+            errorCode: ruleSetDiagnostics.hasFailure ? 'RULE_SET_DOWNLOAD_FAILED' : 'RULE_SET_STATUS_UNKNOWN',
+          );
+          diagnostics.fail(errorCode: 'Y-RULE-001', detail: detail);
+          await core.bgClient.stop(Empty());
+          await core.stop();
+          statusController.add(currentState = const CoreStatus.stopped());
+          return left(ConnectionFailure.unexpected(detail));
+        }
+        final ruleSetDetail = ruleSetDiagnostics.firstUpdateFailure?.detail;
+        diagnostics.completeStep(
+          NimbusAccelerationStepId.ruleSets,
+          detail: ruleSetDetail == null
+              ? t.nimbus.diagnostics.detailRuleSetsLoaded(count: ruleSetDiagnostics.items.length)
+              : t.nimbus.diagnostics.detailRuleSetsLoadedWithFailure(
+                  count: ruleSetDiagnostics.items.length,
+                  detail: ruleSetDetail,
+                ),
         );
 
         diagnostics.startStep(NimbusAccelerationStepId.network, detail: t.nimbus.diagnostics.network);
@@ -271,6 +313,8 @@ class HiddifyCoreService with InfraLogger {
         diagnostics.completeStep(NimbusAccelerationStepId.routing, detail: t.nimbus.diagnostics.detailRoutingActive);
         loggy.info('macOS tunnel activation flow completed; releasing prepared config');
       } on GrpcError catch (e) {
+        _recordRuleSetFailureFromLogs(ruleSetTags, ruleSetLogOffset, diagnostics, t);
+        _recordRuleSetFailureIfPresent(e.message ?? e.toString(), diagnostics, t);
         diagnostics.failRunningStep(detail: e.message ?? e.toString(), errorCode: 'GRPC_ERROR');
         diagnostics.fail(errorCode: 'Y-CORE-003', detail: e.message ?? e.toString());
         loggy.error("failed to start bg core: $e");
@@ -294,6 +338,67 @@ class HiddifyCoreService with InfraLogger {
 
       return right(unit);
     });
+  }
+
+  Set<String> _remoteRuleSetTags(String path) {
+    try {
+      final decoded = jsonDecode(File(path).readAsStringSync());
+      if (decoded is! Map) return const {};
+      return nimbusRemoteRuleSetTagsFromConfig(Map<String, dynamic>.from(decoded));
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  Future<NimbusRuleSetDiagnosticsResult> _waitForRuleSetDiagnostics({
+    required Set<String> tags,
+    required int logOffset,
+  }) async {
+    if (tags.isEmpty) return const NimbusRuleSetDiagnosticsResult([]);
+    final deadline = DateTime.now().add(const Duration(seconds: 12));
+    NimbusRuleSetDiagnosticsResult result = parseNimbusRuleSetDiagnostics(logMessages: const [], tags: tags);
+    while (DateTime.now().isBefore(deadline)) {
+      final start = logOffset.clamp(0, logBuffer.length);
+      result = parseNimbusRuleSetDiagnostics(
+        logMessages: logBuffer.skip(start).map((message) => message.message),
+        tags: tags,
+      );
+      if (result.hasFailure || result.allResolved) return result;
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+    return result;
+  }
+
+  void _recordRuleSetFailureIfPresent(
+    String detail,
+    NimbusAccelerationDiagnosticsController diagnostics,
+    Translations t,
+  ) {
+    if (!detail.toLowerCase().contains('rule-set')) return;
+    diagnostics.startStep(NimbusAccelerationStepId.ruleSets, detail: t.nimbus.diagnostics.ruleSets);
+    diagnostics.failStep(NimbusAccelerationStepId.ruleSets, detail: detail, errorCode: 'RULE_SET_DOWNLOAD_FAILED');
+  }
+
+  void _recordRuleSetFailureFromLogs(
+    Set<String> tags,
+    int logOffset,
+    NimbusAccelerationDiagnosticsController diagnostics,
+    Translations t,
+  ) {
+    if (tags.isEmpty) return;
+    final start = logOffset.clamp(0, logBuffer.length);
+    final result = parseNimbusRuleSetDiagnostics(
+      logMessages: logBuffer.skip(start).map((message) => message.message),
+      tags: tags,
+    );
+    final failure = result.firstFailure;
+    if (failure == null) return;
+    diagnostics.startStep(NimbusAccelerationStepId.ruleSets, detail: t.nimbus.diagnostics.ruleSets);
+    diagnostics.failStep(
+      NimbusAccelerationStepId.ruleSets,
+      detail: failure.detail ?? failure.tag,
+      errorCode: 'RULE_SET_DOWNLOAD_FAILED',
+    );
   }
 
   Future<void> _refreshCoreListeners() async {

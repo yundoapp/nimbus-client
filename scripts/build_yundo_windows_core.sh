@@ -12,6 +12,7 @@ fi
 makefile="${core_dir}/Makefile"
 icon_file="${repo_root}/windows/runner/resources/app_icon.ico"
 patch_file="${repo_root}/patches/hiddify-core/0001-managed-route-options.patch"
+rule_set_patch_file="${repo_root}/patches/hiddify-core/0002-rule-set-observability-and-root-domain.patch"
 go_bin="${GO_BIN:-$(command -v go || true)}"
 backup_dir=""
 strings_file=""
@@ -27,6 +28,9 @@ cleanup() {
     cp "${backup_dir}/Makefile" "${makefile}"
     cp "${backup_dir}/hiddify-cli.ico" "${core_dir}/assets/hiddify-cli.ico"
     rm -rf "${backup_dir}"
+  fi
+  if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${rule_set_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}/hiddify-sing-box" apply --reverse "${rule_set_patch_file}"
   fi
   if git -C "${core_dir}" apply --reverse --check "${patch_file}" >/dev/null 2>&1; then
     git -C "${core_dir}" apply --reverse "${patch_file}"
@@ -96,4 +100,5 @@ mkdir -p "${output_dir}"
 cp "${core_dll}" "${core_exe}" "${cronet_dll}" "${output_dir}/"
 printf 'coreCommit=%s\n' "$(git -C "${core_dir}" rev-parse HEAD)" >"${output_dir}/build-metadata.txt"
 printf 'patchSha256=%s\n' "$(sha256sum "${repo_root}/patches/hiddify-core/0001-managed-route-options.patch" | awk '{print $1}')" >>"${output_dir}/build-metadata.txt"
+printf 'ruleSetPatchSha256=%s\n' "$(sha256sum "${rule_set_patch_file}" | awk '{print $1}')" >>"${output_dir}/build-metadata.txt"
 sha256sum "${output_dir}/YundoCore.dll" "${output_dir}/YundoCore.exe" "${output_dir}/libcronet.dll"
