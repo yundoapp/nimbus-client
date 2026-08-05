@@ -740,6 +740,7 @@
       "operationFailed": "操作失敗，請稍後再試"
     },
     "diagnostics": {
+      "title": "診斷記錄",
       "menuTitle": "診斷記錄",
       "coreConfig": "驗證加速設定",
       "corePrepare": "準備核心服務",

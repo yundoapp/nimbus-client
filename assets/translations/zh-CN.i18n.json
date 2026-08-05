@@ -740,7 +740,7 @@
       "operationFailed": "操作失败，请稍后重试"
     },
     "diagnostics": {
-      "title": "加速过程",
+      "title": "诊断日志",
       "menuTitle": "诊断日志",
       "start": "启动加速",
       "stop": "停止加速",

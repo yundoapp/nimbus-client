@@ -740,7 +740,7 @@
       "operationFailed": "Operation failed. Please try again later."
     },
     "diagnostics": {
-      "title": "Acceleration process",
+      "title": "Diagnostic log",
       "menuTitle": "Diagnostic log",
       "start": "Start acceleration",
       "stop": "Stop acceleration",

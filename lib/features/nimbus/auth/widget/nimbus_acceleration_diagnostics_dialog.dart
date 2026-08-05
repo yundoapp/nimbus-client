@@ -84,6 +84,7 @@ class _DiagnosticsContent extends StatelessWidget {
     final history = current == null
         ? state.history
         : state.history.where((item) => item != current).toList(growable: false);
+    final visibleHistoryLimit = current == null ? 10 : 9;
     final theme = Theme.of(context);
     return Scrollbar(
       thumbVisibility: true,
@@ -105,7 +106,7 @@ class _DiagnosticsContent extends StatelessWidget {
               style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
             const Gap(8),
-            ...history.take(8).map((attempt) => _HistoryTile(attempt: attempt, t: t)),
+            ...history.take(visibleHistoryLimit).map((attempt) => _HistoryTile(attempt: attempt, t: t)),
           ],
         ],
       ),
@@ -165,7 +166,7 @@ class _AttemptHeader extends StatelessWidget {
               Text('$label · $status', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               const Gap(3),
               Text(t.nimbus.diagnostics.completedIn(seconds: seconds), style: theme.textTheme.bodySmall),
-              if (attempt.errorCode != null || attempt.errorDetail != null) ...[
+              if (failed && (attempt.errorCode != null || attempt.errorDetail != null)) ...[
                 const Gap(3),
                 Text(
                   [attempt.errorCode, attempt.errorDetail].whereType<String>().join(' · '),
