@@ -741,7 +741,7 @@
     },
     "diagnostics": {
       "menuTitle": "گزارش عیب‌یابی",
-      "detailRulesLoaded": "قوانین عمومی: ${publicCount} (${publicVersion})\nقوانین من: ${userCount} (${userVersion})",
+      "detailRulesLoaded": "قوانین عمومی: ${publicCount} (${publicVersion})\nقوانین من: ${userCount}",
       "detailNetworkReady": "شبکه گره آماده است"
     },
     "home": {

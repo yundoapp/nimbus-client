@@ -733,7 +733,7 @@
     },
     "diagnostics": {
       "menuTitle": "Journal de diagnostic",
-      "detailRulesLoaded": "Règles communes : ${publicCount} (${publicVersion})\nMes règles : ${userCount} (${userVersion})",
+      "detailRulesLoaded": "Règles communes : ${publicCount} (${publicVersion})\nMes règles : ${userCount}",
       "detailNetworkReady": "Le réseau du nœud est prêt"
     },
     "home": {

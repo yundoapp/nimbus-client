@@ -146,7 +146,6 @@ class _AttemptHeader extends StatelessWidget {
         : _diagnosticsSuccessColor(theme);
     final seconds = ((attempt.completedAt ?? DateTime.now()).difference(attempt.startedAt).inMilliseconds / 1000)
         .toStringAsFixed(1);
-    final progress = _stepProgress(attempt);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -166,12 +165,6 @@ class _AttemptHeader extends StatelessWidget {
               Text('$label · $status', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               const Gap(3),
               Text(t.nimbus.diagnostics.completedIn(seconds: seconds), style: theme.textTheme.bodySmall),
-              const Gap(3),
-              Text(
-                t.nimbus.diagnostics.stepProgress(current: progress, total: attempt.steps.length),
-                style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              Text(t.nimbus.diagnostics.sequenceHint, style: theme.textTheme.bodySmall),
               if (attempt.errorCode != null || attempt.errorDetail != null) ...[
                 const Gap(3),
                 Text(
@@ -318,16 +311,6 @@ String _stepLabel(Translations t, NimbusAccelerationStepId id) => switch (id) {
   NimbusAccelerationStepId.routing => t.nimbus.diagnostics.routing,
   NimbusAccelerationStepId.cleanup => t.nimbus.diagnostics.cleanup,
 };
-
-int _stepProgress(NimbusAccelerationAttempt attempt) {
-  final runningIndex = attempt.steps.lastIndexWhere((step) => step.status == NimbusAccelerationStepStatus.running);
-  if (runningIndex >= 0) return runningIndex + 1;
-  final settledIndex = attempt.steps.lastIndexWhere(
-    (step) =>
-        step.status == NimbusAccelerationStepStatus.success || step.status == NimbusAccelerationStepStatus.failure,
-  );
-  return settledIndex >= 0 ? settledIndex + 1 : 0;
-}
 
 String _diagnosticsText(NimbusAccelerationDiagnosticsState state) {
   return state.history.map((attempt) => attempt.toJson().toString()).join('\n');

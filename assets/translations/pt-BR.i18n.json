@@ -741,7 +741,7 @@
     },
     "diagnostics": {
       "menuTitle": "Registro de diagnóstico",
-      "detailRulesLoaded": "Regras comuns: ${publicCount} (${publicVersion})\nMinhas regras: ${userCount} (${userVersion})",
+      "detailRulesLoaded": "Regras comuns: ${publicCount} (${publicVersion})\nMinhas regras: ${userCount}",
       "detailNetworkReady": "A rede do nó está pronta"
     },
     "home": {

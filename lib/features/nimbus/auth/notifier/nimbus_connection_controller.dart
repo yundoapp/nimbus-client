@@ -507,12 +507,10 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
 
   String _rulesLoadedDiagnostic(NimbusRulesPackage package) {
     final publicVersion = package.manifest.publicRulesVersion?.trim();
-    final userVersion = package.manifest.userRulesVersion.trim();
     return _t.nimbus.diagnostics.detailRulesLoaded(
       publicCount: package.publicRules.length.toString(),
       publicVersion: publicVersion == null || publicVersion.isEmpty ? '--' : publicVersion,
       userCount: package.userRules.length.toString(),
-      userVersion: userVersion.isEmpty ? '--' : userVersion,
     );
   }
 

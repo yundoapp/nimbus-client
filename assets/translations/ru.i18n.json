@@ -745,7 +745,7 @@
     },
     "diagnostics": {
       "menuTitle": "Журнал диагностики",
-      "detailRulesLoaded": "Общие правила: ${publicCount} (${publicVersion})\nМои правила: ${userCount} (${userVersion})",
+      "detailRulesLoaded": "Общие правила: ${publicCount} (${publicVersion})\nМои правила: ${userCount}",
       "detailNetworkReady": "Сеть узла готова"
     },
     "home": {

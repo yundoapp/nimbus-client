@@ -747,7 +747,7 @@
     },
     "diagnostics": {
       "menuTitle": "سجل التشخيص",
-      "detailRulesLoaded": "القواعد العامة: ${publicCount} (${publicVersion})\nقواعدي: ${userCount} (${userVersion})",
+      "detailRulesLoaded": "القواعد العامة: ${publicCount} (${publicVersion})\nقواعدي: ${userCount}",
       "detailNetworkReady": "شبكة العقدة جاهزة"
     },
     "home": {

@@ -741,7 +741,7 @@
     },
     "diagnostics": {
       "menuTitle": "Registro de diagnóstico",
-      "detailRulesLoaded": "Reglas comunes: ${publicCount} (${publicVersion})\nMis reglas: ${userCount} (${userVersion})",
+      "detailRulesLoaded": "Reglas comunes: ${publicCount} (${publicVersion})\nMis reglas: ${userCount}",
       "detailNetworkReady": "La red del nodo está lista"
     },
     "home": {

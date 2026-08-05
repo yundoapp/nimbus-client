@@ -741,7 +741,7 @@
     },
     "diagnostics": {
       "menuTitle": "Log diagnostik",
-      "detailRulesLoaded": "Aturan umum: ${publicCount} (${publicVersion})\nAturan saya: ${userCount} (${userVersion})",
+      "detailRulesLoaded": "Aturan umum: ${publicCount} (${publicVersion})\nAturan saya: ${userCount}",
       "detailNetworkReady": "Jaringan node siap"
     },
     "home": {

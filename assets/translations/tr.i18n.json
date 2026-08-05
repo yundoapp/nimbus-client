@@ -741,7 +741,7 @@
     },
     "diagnostics": {
       "menuTitle": "Tanılama günlüğü",
-      "detailRulesLoaded": "Genel kurallar: ${publicCount} (${publicVersion})\nKurallarım: ${userCount} (${userVersion})",
+      "detailRulesLoaded": "Genel kurallar: ${publicCount} (${publicVersion})\nKurallarım: ${userCount}",
       "detailNetworkReady": "Düğüm ağı hazır"
     },
     "home": {
