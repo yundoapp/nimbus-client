@@ -120,26 +120,6 @@ Future<void> _copyDiagnostics(BuildContext context, WidgetRef ref, Translations 
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.nimbus.errors.diagnosticsCopied)));
 }
 
-class NimbusAccelerationDiagnosticsEntry extends ConsumerWidget {
-  const NimbusAccelerationDiagnosticsEntry({required this.onPressed, super.key});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final t = ref.watch(translationsProvider).requireValue;
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: TextButton.icon(
-        key: const Key('home-open-acceleration-diagnostics'),
-        onPressed: onPressed,
-        icon: const Icon(Icons.timeline_rounded, size: 18),
-        label: Text(t.nimbus.diagnostics.view),
-      ),
-    );
-  }
-}
-
 class _AttemptHeader extends StatelessWidget {
   const _AttemptHeader({required this.attempt, required this.t});
 

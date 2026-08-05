@@ -741,7 +741,6 @@
     },
     "diagnostics": {
       "title": "Acceleration process",
-      "view": "View acceleration process",
       "menuTitle": "Diagnostic log",
       "start": "Start acceleration",
       "stop": "Stop acceleration",

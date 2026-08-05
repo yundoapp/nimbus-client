@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -13,9 +12,7 @@ import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
-import 'package:hiddify/features/nimbus/auth/widget/nimbus_acceleration_diagnostics_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
-import 'package:hiddify/features/nimbus/auth/widget/nimbus_issue_report_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_location_display.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -61,20 +58,6 @@ class HomePage extends HookConsumerWidget {
 
     Future<void> showActivationDialog() async {
       await showDialog<void>(context: context, builder: (_) => const _ActivationDialog());
-    }
-
-    Future<void> copyConnectionDiagnostic(NimbusConnectionDiagnostic diagnostic) async {
-      await Clipboard.setData(ClipboardData(text: diagnostic.summary));
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.nimbus.errors.diagnosticsCopied)));
-    }
-
-    Future<void> showIssueReport() async {
-      await showDialog<void>(context: context, builder: (_) => const NimbusIssueReportDialog());
-    }
-
-    Future<void> showAccelerationDiagnostics() async {
-      await showDialog<void>(context: context, builder: (_) => const NimbusAccelerationDiagnosticsDialog());
     }
 
     Future<void> showNoPlanDialog() async {
@@ -198,24 +181,6 @@ class HomePage extends HookConsumerWidget {
                             onTap: showNoPlanDialog,
                           ),
                         const Gap(16),
-                        if (kDebugMode) ...[
-                          NimbusAccelerationDiagnosticsEntry(onPressed: showAccelerationDiagnostics),
-                          const Gap(8),
-                        ],
-                        if (connectionState.errorMessage != null) ...[
-                          _ConnectionNoticeBanner(
-                            message: connectionState.errorMessage!,
-                            diagnostic: connectionState.diagnostic,
-                            copyLabel: t.nimbus.errors.copyDiagnostics,
-                            reportLabel: t.nimbus.settings.issueReport,
-                            onCopy: connectionState.diagnostic == null
-                                ? null
-                                : () => copyConnectionDiagnostic(connectionState.diagnostic!),
-                            onReport: showIssueReport,
-                            onDismiss: () => ref.read(nimbusConnectionControllerProvider.notifier).clearNotice(),
-                          ),
-                          const Gap(12),
-                        ],
                         _HomeQuickControls(
                           rulesVersion: authState.me?.rules.publicRulesVersion,
                           isSwitching: connectionState.isPreparing || connectionState.isDisconnecting,
@@ -236,118 +201,6 @@ class HomePage extends HookConsumerWidget {
               );
             },
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ConnectionNoticeBanner extends StatelessWidget {
-  const _ConnectionNoticeBanner({
-    required this.message,
-    required this.diagnostic,
-    required this.copyLabel,
-    required this.reportLabel,
-    required this.onCopy,
-    required this.onReport,
-    required this.onDismiss,
-  });
-
-  final String message;
-  final NimbusConnectionDiagnostic? diagnostic;
-  final String copyLabel;
-  final String reportLabel;
-  final VoidCallback? onCopy;
-  final VoidCallback onReport;
-  final VoidCallback onDismiss;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return Material(
-      key: const Key('home-connection-notice'),
-      color: colors.errorContainer.withValues(alpha: theme.brightness == Brightness.dark ? 0.48 : 0.64),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: colors.error.withValues(alpha: theme.brightness == Brightness.dark ? 0.32 : 0.18)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 6, 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Icon(Icons.error_outline_rounded, size: 21, color: colors.error),
-            ),
-            const Gap(12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    message,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.error,
-                      height: 1.45,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  if (diagnostic != null) ...[
-                    const Gap(6),
-                    Text(
-                      diagnostic!.code,
-                      key: const Key('home-connection-diagnostic-code'),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colors.error.withValues(alpha: 0.82),
-                        fontFamily: 'monospace',
-                        letterSpacing: 0.4,
-                      ),
-                    ),
-                    const Gap(2),
-                    Wrap(
-                      spacing: 4,
-                      children: [
-                        TextButton.icon(
-                          key: const Key('home-copy-connection-diagnostic'),
-                          onPressed: onCopy,
-                          icon: const Icon(Icons.copy_rounded, size: 16),
-                          label: Text(copyLabel),
-                          style: TextButton.styleFrom(
-                            foregroundColor: colors.error,
-                            minimumSize: const Size(0, 36),
-                            padding: const EdgeInsetsDirectional.only(end: 10),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                        TextButton.icon(
-                          key: const Key('home-report-connection-problem'),
-                          onPressed: onReport,
-                          icon: const Icon(Icons.outlined_flag_rounded, size: 16),
-                          label: Text(reportLabel),
-                          style: TextButton.styleFrom(
-                            foregroundColor: colors.error,
-                            minimumSize: const Size(0, 36),
-                            padding: const EdgeInsetsDirectional.only(end: 10),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            IconButton(
-              onPressed: onDismiss,
-              icon: Icon(Icons.close_rounded, size: 19, color: colors.error),
-              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            ),
-          ],
         ),
       ),
     );

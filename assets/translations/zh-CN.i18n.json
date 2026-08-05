@@ -741,7 +741,6 @@
     },
     "diagnostics": {
       "title": "加速过程",
-      "view": "查看加速过程",
       "menuTitle": "诊断日志",
       "start": "启动加速",
       "stop": "停止加速",
