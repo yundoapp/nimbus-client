@@ -80,21 +80,24 @@ if find "${built_app}" -iname '*hiddify*' -print -quit | grep -q .; then
   fail "构建产物仍包含 Hiddify 可见文件名"
 fi
 
-app_entitlements="$(mktemp "${TMPDIR:-/tmp}/yundo-macos-entitlements.XXXXXX.plist")"
-trap 'rm -f "${app_entitlements}"' EXIT
-codesign -d --entitlements :- "${built_app}" >"${app_entitlements}" 2>/dev/null \
-  || fail "无法读取 macOS App entitlement；请确认远端已导入 Apple 证书"
-plutil -lint "${app_entitlements}" >/dev/null || fail "macOS App entitlement 格式无效"
-
-codesign --force --sign "${codesign_identity}" "${branded_core}"
-login_item="${built_app}/Contents/Library/LoginItems/LaunchAtLoginHelper.app"
-if [[ -d "${login_item}" ]]; then
+if [[ "${channel}" == prod ]]; then
+  "${script_dir}/sign_macos_distribution_app.sh" "${built_app}" "${codesign_identity}"
+else
+  app_entitlements="$(mktemp "${TMPDIR:-/tmp}/yundo-macos-entitlements.XXXXXX.plist")"
+  trap 'rm -f "${app_entitlements}"' EXIT
+  codesign -d --entitlements :- "${built_app}" >"${app_entitlements}" 2>/dev/null \
+    || fail "无法读取 macOS App entitlement；请确认远端已导入 Apple 证书"
+  plutil -lint "${app_entitlements}" >/dev/null || fail "macOS App entitlement 格式无效"
+  codesign --force --sign "${codesign_identity}" "${branded_core}"
+  login_item="${built_app}/Contents/Library/LoginItems/LaunchAtLoginHelper.app"
+  if [[ -d "${login_item}" ]]; then
+    codesign --force --sign "${codesign_identity}" \
+      --preserve-metadata=identifier,entitlements,requirements,runtime "${login_item}"
+  fi
   codesign --force --sign "${codesign_identity}" \
-    --preserve-metadata=identifier,entitlements,requirements,runtime "${login_item}"
+    --identifier "${bundle_id}" \
+    --entitlements "${app_entitlements}" "${built_app}"
 fi
-codesign --force --sign "${codesign_identity}" \
-  --identifier "${bundle_id}" \
-  --entitlements "${app_entitlements}" "${built_app}"
 codesign --verify --deep --strict "${built_app}"
 
 artifact="${output_dir}/Yundo-macOS-${pubspec_version}-build${build_number}-${channel}-signed.zip"

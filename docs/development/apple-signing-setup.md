@@ -20,7 +20,7 @@
 
 正式版 App ID 需要启用应用当前使用的 App Groups 与 Network Extension 能力；App Groups 应包含 `group.app.yundo.client`。如果需要远程签名开发版，再额外创建开发版的两个 Bundle ID，并启用对应的 `group.app.yundo.client.rebuild.dev`。
 
-远程 iOS IPA 使用 App Store 分发签名，因此需要导出包含私钥的 `Apple Distribution` `.p12`。macOS 产物直接在 App 外分发，使用单独的 `Developer ID Application` `.p12`；本工作流负责签名和校验，暂不自动公证。
+远程 iOS IPA 使用 App Store 分发签名，因此需要导出包含私钥的 `Apple Distribution` `.p12`。macOS 产物直接在 App 外分发，使用单独的 `Developer ID Application` `.p12`。对外版本必须启用 hardened runtime，并完成 Apple 公证和 stapling；本地开发版仍可以使用 Apple Development 身份，不得把它发给朋友。
 
 ## GitHub Secrets
 
@@ -46,7 +46,7 @@
 - macOS 正式版 ZIP
 - iOS 正式版 IPA
 
-工作流只上传 Actions artifact，不自动覆盖本机、不自动发布 GitHub Release、不自动上传 TestFlight。构建完成后从同一个 workflow run 下载产物即可。
+工作流只上传 Actions artifact，不自动覆盖本机、不自动发布 GitHub Release、不自动上传 TestFlight。构建完成后从同一个 workflow run 下载产物即可。当前远程 macOS 产物先以签名 ZIP 作为基线，DMG 公证链路通过下方脚本执行；正式发布前应把 DMG 作为唯一朋友分发包。
 
 本地开发仍使用本机工具链，避免为每次调试等待远端：
 
@@ -54,6 +54,35 @@
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   scripts/build_install_run_macos_dev.sh
 ```
+
+## 本地正式版与朋友分发
+
+先把归档目录中的 `macos-developer-id.p12` 导入当前登录用户的钥匙串，并设置身份变量。正式版构建会使用 `Developer ID Application`、hardened runtime 和不含 `get-task-allow` 的分发 entitlement：
+
+```bash
+export YUNDO_DEVELOPER_ID_APPLICATION='Developer ID Application: Shanghai Yunshang Wanwei Technology Co., Ltd. (W684N2R45F)'
+scripts/build_macos_distribution.sh
+```
+
+脚本会构建并覆盖安装 `/Applications/Yundo.app`，然后在 `client-builds/<version>-build<build>-<commit>/` 生成 DMG 和 `SHA256SUMS`。如已配置本机公证凭据，可执行：
+
+```bash
+export YUNDO_NOTARY_PROFILE='Yundo GitHub Actions'
+YUNDO_NOTARIZE=1 scripts/build_macos_distribution.sh
+```
+
+公证完成后，朋友的安装方式是：双击 DMG，把 `Yundo.app` 拖到 `/Applications`，推出 DMG，再从 `/Applications/Yundo.app` 启动。不要让朋友直接从 DMG 内运行，也不要把带有“无法验证开发者”提示的未公证包作为正式版本发送。升级时用新 DMG 覆盖 `/Applications/Yundo.app` 即可；首次启动或加速时仍可能需要用户批准云渡的后台辅助项目。
+
+发行前只读检查：
+
+```bash
+scripts/check_macos_distribution_readiness.sh --strict \
+  'build/macos/Build/Products/Release/Yundo.app'
+```
+
+## 正式版验收
+
+正式版至少需要在一台干净 macOS 用户环境和本机升级环境各验证一次：DMG 拖拽安装、首次启动、登录、启动/停止加速、浏览器访问、终端 `curl`、规则模式、全局模式、直连/拦截规则、退出后网络恢复、再次打开、诊断日志、语言切换、深色模式、后台辅助项目授权和升级覆盖。开发版与正式版都必须能在设置中打开诊断日志，且诊断内容遵循中文显示中文、其他语言显示英文的策略。
 
 iOS Simulator 可以使用 Xcode 登录的本机账号直接构建；真机/IPA 则需要本机已有相应 profile，或改用上面的远程签名流程。远程流程在无签名归档后，通过 `-allowProvisioningUpdates` 绑定 API Key 完成导出签名，profile 不需要进入仓库。
 

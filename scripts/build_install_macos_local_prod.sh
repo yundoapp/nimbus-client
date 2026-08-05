@@ -71,13 +71,19 @@ if find "${built_app}" -iname '*hiddify*' -print -quit | grep -q .; then
   fail "正式版构建产物仍包含 Hiddify 可见文件名"
 fi
 
+distribution_build="${YUNDO_DISTRIBUTION:-0}"
 codesign_identity="${MACOS_CODESIGN_IDENTITY:-}"
 if [[ -z "${codesign_identity}" ]]; then
-  codesign_identity="$(security find-identity -v -p codesigning \
-    | awk '/\"Apple Development:/ { print $2; exit }')"
+  if [[ "${distribution_build}" == 1 ]]; then
+    codesign_identity="$(security find-identity -v -p codesigning \
+      | awk '/\"Developer ID Application:/ { print $2; exit }')"
+  else
+    codesign_identity="$(security find-identity -v -p codesigning \
+      | awk '/\"Apple Development:/ { print $2; exit }')"
+  fi
 fi
 [[ -n "${codesign_identity}" ]] \
-  || fail "安装正式版需要有效的 Apple Development 签名身份"
+  || fail "安装正式版需要有效的 macOS 签名身份"
 
 app_entitlements="$(mktemp "${TMPDIR:-/tmp}/yundo-prod-entitlements.XXXXXX.plist")"
 backup_root=""
@@ -107,25 +113,28 @@ cleanup() {
 }
 trap cleanup EXIT
 
-codesign -d --entitlements :- "${built_app}" >"${app_entitlements}" 2>/dev/null \
-  || fail "无法读取正式版 App entitlement"
-plutil -lint "${app_entitlements}" >/dev/null \
-  || fail "正式版 App entitlement 格式无效"
-
-codesign --force --sign "${codesign_identity}" "${branded_core}"
 helper_path="${built_app}/Contents/Library/HelperTools/YundoPrivilegedHelper"
 [[ -x "${helper_path}" ]] || fail "构建产物缺少特权辅助进程：${helper_path}"
-codesign --force --sign "${codesign_identity}" \
-  --identifier "${expected_bundle_id}.privileged-helper" \
-  "${helper_path}"
-login_item="${built_app}/Contents/Library/LoginItems/LaunchAtLoginHelper.app"
-if [[ -d "${login_item}" ]]; then
+if [[ "${distribution_build}" == 1 ]]; then
+  "${script_dir}/sign_macos_distribution_app.sh" "${built_app}" "${codesign_identity}"
+else
+  codesign -d --entitlements :- "${built_app}" >"${app_entitlements}" 2>/dev/null \
+    || fail "无法读取正式版 App entitlement"
+  plutil -lint "${app_entitlements}" >/dev/null \
+    || fail "正式版 App entitlement 格式无效"
+  codesign --force --sign "${codesign_identity}" "${branded_core}"
   codesign --force --sign "${codesign_identity}" \
-    --preserve-metadata=identifier,entitlements,requirements,runtime "${login_item}"
+    --identifier "${expected_bundle_id}.privileged-helper" \
+    "${helper_path}"
+  login_item="${built_app}/Contents/Library/LoginItems/LaunchAtLoginHelper.app"
+  if [[ -d "${login_item}" ]]; then
+    codesign --force --sign "${codesign_identity}" \
+      --preserve-metadata=identifier,entitlements,requirements,runtime "${login_item}"
+  fi
+  codesign --force --sign "${codesign_identity}" \
+    --identifier "${expected_bundle_id}" \
+    --entitlements "${app_entitlements}" "${built_app}"
 fi
-codesign --force --sign "${codesign_identity}" \
-  --identifier "${expected_bundle_id}" \
-  --entitlements "${app_entitlements}" "${built_app}"
 codesign --verify --deep --strict "${built_app}"
 
 if [[ "${was_running}" == true ]]; then
