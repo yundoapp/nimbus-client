@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_acceleration_diagnostic.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_diagnostics_localization.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_acceleration_diagnostics_controller.dart';
 import 'package:hiddify/features/nimbus/widget/nimbus_page_layout.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -13,12 +14,13 @@ class NimbusAccelerationDiagnosticsDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
+    final diagnosticsT = nimbusDiagnosticsTranslations(t);
     final state = ref.watch(nimbusAccelerationDiagnosticsProvider);
 
     return AlertDialog(
       title: Row(
         children: [
-          Expanded(child: Text(t.nimbus.diagnostics.title)),
+          Expanded(child: Text(diagnosticsT.nimbus.diagnostics.title)),
           IconButton(
             onPressed: () => _copyDiagnostics(context, ref, t),
             icon: const Icon(Icons.copy_rounded),
@@ -30,7 +32,7 @@ class NimbusAccelerationDiagnosticsDialog extends ConsumerWidget {
         width: 560,
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .64),
-          child: _DiagnosticsContent(state: state, t: t),
+          child: _DiagnosticsContent(state: state, t: diagnosticsT),
         ),
       ),
       actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.common.close))],
@@ -44,10 +46,11 @@ class NimbusAccelerationDiagnosticsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
+    final diagnosticsT = nimbusDiagnosticsTranslations(t);
     final state = ref.watch(nimbusAccelerationDiagnosticsProvider);
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.nimbus.diagnostics.title),
+        title: Text(diagnosticsT.nimbus.diagnostics.title),
         actions: [
           IconButton(
             onPressed: () => _copyDiagnostics(context, ref, t),
@@ -63,7 +66,7 @@ class NimbusAccelerationDiagnosticsPage extends ConsumerWidget {
             constraints: const BoxConstraints(maxWidth: nimbusPageContentMaxWidth),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              child: _DiagnosticsContent(state: state, t: t),
+              child: _DiagnosticsContent(state: state, t: diagnosticsT),
             ),
           ),
         ),

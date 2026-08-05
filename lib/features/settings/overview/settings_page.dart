@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/about/widget/about_page.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_diagnostics_localization.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_acceleration_diagnostics_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_change_password_dialog.dart';
@@ -19,6 +20,7 @@ class SettingsPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
+    final diagnosticsT = nimbusDiagnosticsTranslations(t);
     final settingsMenuOpensPage = shouldOpenNimbusMenuAsPage(isMobilePlatform: PlatformUtils.isMobile);
     return Scaffold(
       appBar: AppBar(title: Text(t.pages.settings.title), centerTitle: false, titleSpacing: 16),
@@ -60,7 +62,7 @@ class SettingsPage extends HookConsumerWidget {
                     _SettingsGroup(
                       children: [
                         ListTile(
-                          title: Text(t.nimbus.diagnostics.menuTitle),
+                          title: Text(diagnosticsT.nimbus.diagnostics.menuTitle),
                           leading: const Icon(Icons.monitor_heart_rounded),
                           trailing: settingsMenuOpensPage ? const Icon(Icons.chevron_right_rounded) : null,
                           onTap: () => _openAdaptiveSettingsMenu(

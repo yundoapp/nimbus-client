@@ -10,6 +10,7 @@ import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/log/model/log_level.dart' as config_log_level;
 import 'package:hiddify/features/nimbus/auth/model/nimbus_acceleration_diagnostic.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_diagnostics_localization.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_acceleration_diagnostics_controller.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/hiddifycore/core_interface/core_interface_wrapper_stub.dart'
@@ -144,7 +145,7 @@ class HiddifyCoreService with InfraLogger {
   }) {
     return TaskEither(() async {
       final diagnostics = ref.read(nimbusAccelerationDiagnosticsProvider.notifier);
-      final t = ref.read(translationsProvider).requireValue;
+      final t = nimbusDiagnosticsTranslations(ref.read(translationsProvider).requireValue);
       statusController.add(currentState = const CoreStatus.starting());
       diagnostics.startStep(NimbusAccelerationStepId.corePrepare, detail: t.nimbus.diagnostics.corePrepare);
       loggy.debug("starting");
