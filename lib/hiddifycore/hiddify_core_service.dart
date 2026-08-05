@@ -27,6 +27,7 @@ import 'package:hiddify/utils/custom_loggers.dart';
 import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:loggy/loggy.dart' as loggyl;
+import 'package:path/path.dart' as p;
 import 'package:rxdart/rxdart.dart';
 
 class HiddifyCoreService with InfraLogger {
@@ -181,6 +182,7 @@ class HiddifyCoreService with InfraLogger {
       await _refreshCoreListeners();
       final backgroundConfigPath = core.backgroundConfigPath(path);
       final useRawConfig = enableRawConfig || backgroundConfigPath != path;
+      final coreRuleSetLogOffset = await _coreRuleSetLogLength();
       loggy.info('core start prepared (raw=$useRawConfig, macosPathRewritten=${backgroundConfigPath != path})');
       try {
         diagnostics.startStep(NimbusAccelerationStepId.coreStart, detail: t.nimbus.diagnostics.coreStart);
@@ -213,7 +215,10 @@ class HiddifyCoreService with InfraLogger {
                 ConnectionFailure.unexpected("failed to start core ${res.messageType} ${res.message}"),
           );
         }
-        await _refreshCoreListeners();
+        // Keep the log subscription created before start(). Core emits the
+        // rule-set lifecycle markers during the start response; rebuilding
+        // this stream here can discard those events before diagnostics reads them.
+        await startListeningStatus('bg', core.bgClient);
         diagnostics.completeStep(
           NimbusAccelerationStepId.coreStart,
           detail: t.nimbus.diagnostics.detailCoreProcessStarted,
@@ -237,7 +242,11 @@ class HiddifyCoreService with InfraLogger {
         );
 
         diagnostics.startStep(NimbusAccelerationStepId.ruleSets, detail: t.nimbus.diagnostics.ruleSets);
-        final ruleSetDiagnostics = await _waitForRuleSetDiagnostics(tags: ruleSetTags, logOffset: ruleSetLogOffset);
+        final ruleSetDiagnostics = await _waitForRuleSetDiagnostics(
+          tags: ruleSetTags,
+          logOffset: ruleSetLogOffset,
+          coreLogOffset: coreRuleSetLogOffset,
+        );
         if (ruleSetDiagnostics.hasFailure || !ruleSetDiagnostics.allResolved) {
           final detail =
               ruleSetDiagnostics.firstFailure?.detail ??
@@ -353,20 +362,50 @@ class HiddifyCoreService with InfraLogger {
   Future<NimbusRuleSetDiagnosticsResult> _waitForRuleSetDiagnostics({
     required Set<String> tags,
     required int logOffset,
+    required int coreLogOffset,
   }) async {
     if (tags.isEmpty) return const NimbusRuleSetDiagnosticsResult([]);
     final deadline = DateTime.now().add(const Duration(seconds: 12));
     NimbusRuleSetDiagnosticsResult result = parseNimbusRuleSetDiagnostics(logMessages: const [], tags: tags);
     while (DateTime.now().isBefore(deadline)) {
       final start = logOffset.clamp(0, logBuffer.length);
+      final coreMessages = await _readCoreRuleSetLogMessages(coreLogOffset);
       result = parseNimbusRuleSetDiagnostics(
-        logMessages: logBuffer.skip(start).map((message) => message.message),
+        logMessages: [...logBuffer.skip(start).map((message) => message.message), ...coreMessages],
         tags: tags,
       );
       if (result.hasFailure || result.allResolved) return result;
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
     return result;
+  }
+
+  Future<int> _coreRuleSetLogLength() async {
+    try {
+      final workingDir = ref.read(appDirectoriesProvider).requireValue.workingDir;
+      final file = File(p.join(workingDir.path, 'data', 'box.log'));
+      return await file.exists() ? await file.length() : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Future<List<String>> _readCoreRuleSetLogMessages(int offset) async {
+    try {
+      final workingDir = ref.read(appDirectoriesProvider).requireValue.workingDir;
+      final file = File(p.join(workingDir.path, 'data', 'box.log'));
+      if (!await file.exists()) return const [];
+      final bytes = await file.readAsBytes();
+      final start = offset.clamp(0, bytes.length);
+      if (start >= bytes.length) return const [];
+      return const Utf8Decoder(allowMalformed: true)
+          .convert(bytes.sublist(start))
+          .split(RegExp(r'\r?\n'))
+          .where((line) => line.trim().isNotEmpty)
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
   }
 
   void _recordRuleSetFailureIfPresent(

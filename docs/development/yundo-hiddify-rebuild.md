@@ -256,3 +256,4 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - macOS 诊断读取配置准备完成后生成的最终 Core 配置，而不是配置生成前的原始 profile，确保公共规则库和账号规则库不会被错误统计为 0 个。
 - 远程规则库匹配先执行原始域名匹配；原始匹配失败时，按可注册根域及其父域逐级回退，例如 `support.weixin.qq.com` 会依次检查 `weixin.qq.com`、`qq.com`，直到公开后缀为止。每一级都只会命中规则库中明确存在的条目，不会因为域名属于 `qq.com` 就自动改变路由。用户自定义的 `qq.com` 已通过 `domain_suffix` 覆盖其子域名，不依赖 Core 的根域回退。
 - 本轮 macOS Debug/Release 已基于构建号 `202608105` 完成编译、签名、覆盖安装和启动；iOS Core 与 Simulator Debug App 的本地构建因 Go 模块冷缓存下载中断尚未完成，Windows/Android 继续保留同源脚本和远程按需构建入口。
+- 同日修复 macOS 正式版规则库状态误判：Core 已将 12 个规则库写入 `data/box.log`，但 App 重建 gRPC 日志监听后仍可能收不到实时事件，导致诊断错误地以 `Y-RULE-001 / RULE_SET_STATUS_UNKNOWN` 中止加速。现在启动前记录 Core 日志文件偏移，启动后把本次新增日志与实时流合并解析；只有本次启动明确出现规则库下载失败才阻断。正式版构建 `202608105` 复测 14 个阶段全部完成，耗时 6.9 秒，Google、X 和百度的 CLI 请求均返回成功。
