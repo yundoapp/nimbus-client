@@ -114,7 +114,12 @@ class _AboutSurface extends HookConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Assets.images.logo.svg(width: 64, height: 64),
+                Assets.images.appIcon.image(
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
                 const Gap(16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

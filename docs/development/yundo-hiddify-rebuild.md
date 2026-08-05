@@ -241,3 +241,9 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - 成功的加速或停止诊断不再把“加速已开启/已停止”作为红色错误详情显示；只有失败过程显示错误码和错误详情。诊断日志界面最多展示当前过程和最近 9 次历史记录，共 10 次。
 - 历史诊断记录支持展开查看完整步骤；已知的成功阶段详情在展示时按当前语言重新渲染，避免用户切换语言后标题是英文、详情仍是旧语言。
 - 诊断日志只维护简体中文、繁体中文和英文三套文案：简体中文与繁体中文使用对应中文，其他应用语言统一使用英文；诊断过程写入历史记录时也使用同一策略，避免新旧记录混用语言。
+
+### 4.18 品牌图标与按需跨端构建（2026-08-05）
+
+- 关于页直接复用 `assets/images/app_icon.png`，与 macOS AppIcon 使用同一品牌资源，不再同时维护一份独立的 SVG Logo。
+- macOS AppIcon 在图标画布内增加透明安全边距，降低 Dock 中视觉尺寸偏大的问题；Flutter 页面内的品牌图标不缩放、不改色。
+- `ci.yml` 的日常 push/PR 默认只执行共享测试和云渡/Hiddify 边界检查，不再等待 Windows/Android Core 或安装包构建。需要验收 Windows 或 Android 时，在 GitHub Actions 手动运行 CI 并分别勾选 `build_windows`、`build_android`；两个端仍保留完整同源构建链路和 artifact 上传。构建号 `202608104` 用于本轮 macOS/iOS 本地验证。
