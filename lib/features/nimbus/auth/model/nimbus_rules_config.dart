@@ -138,10 +138,10 @@ Map<String, dynamic> nimbusFallbackRouteRule({String directTag = 'nimbus-direct'
   'outbound': directTag,
 };
 
-Map<String, dynamic> nimbusGlobalRouteRule({String proxyTag = 'nimbus-proxy'}) => {
-  'action': 'route',
-  'outbound': proxyTag,
-};
+List<Map<String, dynamic>> nimbusGlobalRouteRules({String proxyTag = 'nimbus-proxy'}) => [
+  {'ip_version': 4, 'action': 'route', 'outbound': proxyTag},
+  {'ip_version': 6, 'action': 'route', 'outbound': proxyTag},
+];
 
 NimbusManagedRouteOptions buildNimbusManagedRouteOptions({
   required NimbusRulesPackage rulesPackage,
@@ -151,9 +151,10 @@ NimbusManagedRouteOptions buildNimbusManagedRouteOptions({
 }) {
   if (!isAutomaticMode) {
     // Global mode must also bypass Hiddify's built-in regional rules. The
-    // managed rule is inserted before those rules by the core adapter.
+    // IPv4/IPv6 rules are inserted before those rules by the core adapter and
+    // satisfy the macOS tunnel's requirement that every route rule has a matcher.
     return NimbusManagedRouteOptions(
-      rules: [nimbusGlobalRouteRule(proxyTag: proxyTag)],
+      rules: nimbusGlobalRouteRules(proxyTag: proxyTag),
       ruleSets: const [],
     );
   }

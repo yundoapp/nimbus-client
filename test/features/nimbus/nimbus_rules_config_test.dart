@@ -51,7 +51,8 @@ void main() {
       final options = buildNimbusManagedRouteOptions(rulesPackage: _rulesPackage, isAutomaticMode: false);
 
       expect(options.rules, [
-        {'action': 'route', 'outbound': 'nimbus-proxy'},
+        {'ip_version': 4, 'action': 'route', 'outbound': 'nimbus-proxy'},
+        {'ip_version': 6, 'action': 'route', 'outbound': 'nimbus-proxy'},
       ]);
       expect(options.ruleSets, isEmpty);
     });
