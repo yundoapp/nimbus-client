@@ -13,6 +13,7 @@ import 'package:hiddify/hiddifycore/core_interface/macos_network_capability_prob
 import 'package:hiddify/hiddifycore/core_interface/macos_privileged_helper.dart';
 import 'package:hiddify/hiddifycore/core_interface/macos_tunnel_config.dart';
 import 'package:hiddify/hiddifycore/core_port.dart';
+import 'package:hiddify/hiddifycore/generated/v2/hcommon/common.pb.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore_service.pbgrpc.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hello/hello.pb.dart';
@@ -43,6 +44,7 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
   String? _preparedIpv4FallbackConfig;
   int? _preparedSocksPort;
   String? _tunnelConfig;
+  ClientChannel? _clientChannel;
 
   static HiddifyCoreNativeLibrary _gen() {
     String fullPath = "";
@@ -97,13 +99,12 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
     // final err = errPtr2.cast<Utf8>().toDartString();
     // throw Exception('stop: $err');
     const channelOption = ChannelCredentials.insecure();
-    final helloClient = HelloClient(
-      ClientChannel(
-        '127.0.0.1',
-        port: port,
-        options: const ChannelOptions(credentials: channelOption),
-      ),
+    final helloChannel = ClientChannel(
+      '127.0.0.1',
+      port: port,
+      options: const ChannelOptions(credentials: channelOption),
     );
+    final helloClient = HelloClient(helloChannel);
 
     try {
       await helloClient.sayHello(HelloRequest(name: "test"));
@@ -128,22 +129,50 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
       }
       final res = await helloClient.sayHello(HelloRequest(name: "test"));
       loggy.info(res.toString());
+    } finally {
+      await helloChannel.shutdown();
     }
-    bgClient = fgClient = CoreClient(
-      ClientChannel(
-        'localhost',
-        port: port,
-        options: const ChannelOptions(
-          credentials: ChannelCredentials.insecure(),
-          // credentials: ChannelCredentials.secure(
-          //   password: secret,
-          //   onBadCertificate: (certificate, host) => true,
-          // ),
-        ),
-      ),
-    );
+    await _refreshCoreClients();
 
     return "";
+  }
+
+  Future<void> _refreshCoreClients() async {
+    final previousChannel = _clientChannel;
+    final channel = ClientChannel(
+      'localhost',
+      port: port,
+      options: const ChannelOptions(
+        credentials: ChannelCredentials.insecure(),
+        // credentials: ChannelCredentials.secure(
+        //   password: secret,
+        //   onBadCertificate: (certificate, host) => true,
+        // ),
+      ),
+    );
+    _clientChannel = channel;
+    bgClient = fgClient = CoreClient(channel);
+    await previousChannel?.shutdown();
+  }
+
+  @override
+  Future<void> refreshClients() => _refreshCoreClients();
+
+  @override
+  Future<CoreStates?> waitForCoreState({Duration timeout = const Duration(seconds: 5)}) async {
+    final deadline = DateTime.now().add(timeout);
+    CoreStates? latestState;
+    while (DateTime.now().isBefore(deadline)) {
+      try {
+        final response = await bgClient.coreInfoListener(Empty()).first.timeout(const Duration(milliseconds: 800));
+        latestState = response.coreState;
+        if (latestState == CoreStates.STARTED) return latestState;
+      } catch (error) {
+        loggy.debug('waiting for restarted core status: $error');
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    return latestState;
   }
 
   @override

@@ -163,10 +163,10 @@ class HiddifyCoreService with InfraLogger {
         return left(background.getCoreAlert() ?? const ConnectionFailure.unexpected("failed to start core"));
       }
       diagnostics.completeStep(NimbusAccelerationStepId.corePrepare, detail: t.nimbus.diagnostics.detailCorePrepared);
-      if (!core.isSingleChannel()) {
-        await startListeningLogs("bg", core.bgClient);
-        await startListeningStatus("bg", core.bgClient);
-      }
+      // A previous stop may have left the old local HTTP/2 channel in a
+      // closing state. Rebind before issuing the next start command.
+      await core.refreshClients();
+      await _refreshCoreListeners();
       final backgroundConfigPath = core.backgroundConfigPath(path);
       final useRawConfig = enableRawConfig || backgroundConfigPath != path;
       loggy.info('core start prepared (raw=$useRawConfig, macosPathRewritten=${backgroundConfigPath != path})');
@@ -181,7 +181,6 @@ class HiddifyCoreService with InfraLogger {
           ),
         );
         loggy.info('core start response: state=${res.coreState}, type=${res.messageType}, message=${res.message}');
-        ref.read(coreRestartSignalProvider.notifier).restart();
         if (res.messageType != MessageType.ALREADY_STARTED && res.messageType != MessageType.EMPTY) {
           diagnostics.failStep(NimbusAccelerationStepId.coreStart, detail: res.message, errorCode: 'CORE_START_FAILED');
           diagnostics.fail(errorCode: 'Y-CORE-002', detail: res.message);
@@ -200,6 +199,7 @@ class HiddifyCoreService with InfraLogger {
                 ConnectionFailure.unexpected("failed to start core ${res.messageType} ${res.message}"),
           );
         }
+        await _refreshCoreListeners();
         diagnostics.completeStep(
           NimbusAccelerationStepId.coreStart,
           detail: t.nimbus.diagnostics.detailCoreProcessStarted,
@@ -272,7 +272,6 @@ class HiddifyCoreService with InfraLogger {
         diagnostics.failRunningStep(detail: e.message ?? e.toString(), errorCode: 'GRPC_ERROR');
         diagnostics.fail(errorCode: 'Y-CORE-003', detail: e.message ?? e.toString());
         loggy.error("failed to start bg core: $e");
-        ref.read(coreRestartSignalProvider.notifier).restart();
         if (e.code == StatusCode.unavailable) {
           await core.stop();
           return left(const ConnectionFailure.unexpected("background core is not started yet!"));
@@ -295,6 +294,15 @@ class HiddifyCoreService with InfraLogger {
     });
   }
 
+  Future<void> _refreshCoreListeners() async {
+    await startListeningLogs('fg', core.fgClient);
+    await startListeningStatus('bg', core.bgClient);
+    if (!core.isSingleChannel()) {
+      await startListeningLogs('bg', core.bgClient);
+      await startListeningStatus('bg', core.bgClient);
+    }
+  }
+
   bool _isSystemPermissionError(String? message) {
     final normalized = message?.toLowerCase() ?? '';
     return normalized.contains('permission denied') ||
@@ -311,22 +319,48 @@ class HiddifyCoreService with InfraLogger {
     if (preparation.errorMessage case final error?) return (errorMessage: error, usedIpv4Fallback: false);
     if (preparation.fallbackConfigPath case final fallbackPath?) {
       loggy.info('restarting macOS user core with the IPv4 fallback config');
-      final response = await core.bgClient.restart(
-        StartRequest(
-          configPath: fallbackPath,
-          configName: name,
-          disableMemoryLimit: disableMemoryLimit,
-          enableRawConfig: enableRawConfig,
-        ),
-      );
-      if (response.messageType != MessageType.EMPTY && response.messageType != MessageType.ALREADY_STARTED) {
+      await stopListenSingle('fg');
+      await stopListenSingle('bg');
+      CoreInfoResponse? response;
+      try {
+        response = await core.bgClient.restart(
+          StartRequest(
+            configPath: fallbackPath,
+            configName: name,
+            disableMemoryLimit: disableMemoryLimit,
+            enableRawConfig: enableRawConfig,
+          ),
+        );
+      } on GrpcError catch (error) {
+        if (!_isExpectedCoreRestartTermination(error)) rethrow;
+        loggy.info('core restart closed the old HTTP/2 stream; waiting for the new core state');
+      }
+      if (response != null &&
+          response.messageType != MessageType.EMPTY &&
+          response.messageType != MessageType.ALREADY_STARTED) {
         return (
           errorMessage: 'failed to apply macOS IPv4 fallback: ${response.messageType} ${response.message}',
           usedIpv4Fallback: true,
         );
       }
+      await core.refreshClients();
+      final coreState = await core.waitForCoreState();
+      if (coreState != CoreStates.STARTED) {
+        return (
+          errorMessage: 'macOS IPv4 fallback core did not reach STARTED: ${coreState?.name ?? 'UNKNOWN'}',
+          usedIpv4Fallback: true,
+        );
+      }
+      await _refreshCoreListeners();
     }
     return (errorMessage: null, usedIpv4Fallback: preparation.usedIpv4Fallback);
+  }
+
+  bool _isExpectedCoreRestartTermination(GrpcError error) {
+    final message = error.message?.toLowerCase() ?? '';
+    return error.code == StatusCode.unknown &&
+        message.contains('http/2 error') &&
+        message.contains('forcefully terminated');
   }
 
   TaskEither<String, Unit> stop() {
@@ -340,6 +374,8 @@ class HiddifyCoreService with InfraLogger {
       loggy.debug("stopping");
       var errMsg = "";
       try {
+        await stopListenSingle('fg');
+        await stopListenSingle('bg');
         await core.bgClient.stop(Empty());
       } on GrpcError catch (e) {
         if (e.code == StatusCode.unknown && !(e.message?.contains("HTTP/2") ?? false)) {

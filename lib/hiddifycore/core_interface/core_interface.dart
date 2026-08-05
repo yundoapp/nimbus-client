@@ -41,6 +41,14 @@ class CoreInterface {
     return (fallbackConfigPath: null, errorMessage: null, usedIpv4Fallback: false);
   }
 
+  /// Rebinds the local gRPC client after the native core has been restarted.
+  /// Desktop core restarts can terminate active HTTP/2 streams by design.
+  Future<void> refreshClients() async {}
+
+  /// Returns the latest core state, or null on platforms without a desktop
+  /// gRPC status stream.
+  Future<CoreStates?> waitForCoreState({Duration timeout = const Duration(seconds: 5)}) async => null;
+
   Future<bool> restart(String path, String name) async {
     return false;
   }

@@ -13,7 +13,6 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dar
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_desktop_behavior_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_location_display.dart';
-import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/window/notifier/window_notifier.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/utils/utils.dart';
@@ -44,21 +43,14 @@ String windowsTrayIconPath(ConnectionStatus connection) => switch (trayConnectio
 
 const _yundoMacosStatusItemChannel = MethodChannel('yundo_macos_status_item');
 
-String trayTooltipText(
-  String appDisplayName,
-  Translations translations,
-  ConnectionStatus connection,
-  int urlTestDelay,
-) {
+String trayTooltipText(String appDisplayName, Translations translations, ConnectionStatus connection) {
   final status = switch (connection) {
     Disconnected() => translations.nimbus.tray.disconnected,
     Connecting() => translations.connection.connecting,
     Connected() => translations.connection.connected,
     Disconnecting() => translations.connection.disconnecting,
   };
-  final tooltip = '$appDisplayName - $status';
-  final hasDelay = connection is Connected && urlTestDelay > 0 && urlTestDelay < 65000;
-  return hasDelay ? '$tooltip : ${urlTestDelay}ms' : tooltip;
+  return '$appDisplayName - $status';
 }
 
 const _trayProxyModeKeyPrefix = 'proxy-mode:';
@@ -161,11 +153,10 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
       _locationsLoadRequestedForUser = userId;
       Future.microtask(() => ref.read(nimbusAuthControllerProvider.notifier).loadLocations());
     }
-    final urlTestDelay = ref.watch(activeProxyNotifierProvider.select((value) => value.valueOrNull?.urlTestDelay ?? 0));
     final connection =
         ref.watch(nimbusOwnedConnectionStatusProvider).valueOrNull ?? const ConnectionStatus.disconnected();
 
-    final tooltip = _trayTooltip(appDisplayName, t, connection, urlTestDelay);
+    final tooltip = _trayTooltip(appDisplayName, t, connection);
     if (PlatformUtils.isMacOS) {
       await _updateMacosStatusItem(t, connection, tooltip, proxyMode, authState, locale.languageCode);
     } else {
@@ -375,10 +366,9 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
     }
   }
 
-  String _trayTooltip(String appDisplayName, Translations t, ConnectionStatus connection, int urlTestDelay) {
-    final hasDelay = connection is Connected && urlTestDelay > 0 && urlTestDelay < 65000;
-    if (Platform.isMacOS) windowManager.setBadgeLabel(hasDelay ? "${urlTestDelay}ms" : "");
-    return trayTooltipText(appDisplayName, t, connection, urlTestDelay);
+  String _trayTooltip(String appDisplayName, Translations t, ConnectionStatus connection) {
+    if (Platform.isMacOS) windowManager.setBadgeLabel('');
+    return trayTooltipText(appDisplayName, t, connection);
   }
 
   @override
