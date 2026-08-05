@@ -36,7 +36,14 @@ jobs:
           channel: stable
           cache: true
       - name: 检查云渡与 Hiddify 边界
-        run: bash scripts/check_yundo_hiddify_boundary.sh main
+        env:
+          BOUNDARY_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          base_ref="${BOUNDARY_BASE_SHA:-}"
+          if [[ -z "$base_ref" || "$base_ref" =~ ^0+$ ]]; then
+            base_ref="HEAD^"
+          fi
+          bash scripts/check_yundo_hiddify_boundary.sh "$base_ref"
       - name: 生成代码并运行共享测试
         run: |
           make common-prepare

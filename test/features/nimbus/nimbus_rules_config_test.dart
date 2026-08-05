@@ -47,10 +47,12 @@ void main() {
       ]);
     });
 
-    test('does not inject product routes in global mode', () {
+    test('routes every destination through acceleration in global mode', () {
       final options = buildNimbusManagedRouteOptions(rulesPackage: _rulesPackage, isAutomaticMode: false);
 
-      expect(options.rules, isEmpty);
+      expect(options.rules, [
+        {'action': 'route', 'outbound': 'nimbus-proxy'},
+      ]);
       expect(options.ruleSets, isEmpty);
     });
 

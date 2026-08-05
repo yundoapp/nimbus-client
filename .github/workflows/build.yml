@@ -49,7 +49,14 @@ jobs:
           cache: true
 
       - name: Check Yundo/Hiddify boundary
-        run: bash scripts/check_yundo_hiddify_boundary.sh main
+        env:
+          BOUNDARY_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          base_ref="${BOUNDARY_BASE_SHA:-}"
+          if [[ -z "$base_ref" || "$base_ref" =~ ^0+$ ]]; then
+            base_ref="HEAD^"
+          fi
+          bash scripts/check_yundo_hiddify_boundary.sh "$base_ref"
           
       - name: Prepare
         run: make linux-amd64-prepare

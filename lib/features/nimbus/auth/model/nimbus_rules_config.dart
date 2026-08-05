@@ -138,13 +138,25 @@ Map<String, dynamic> nimbusFallbackRouteRule({String directTag = 'nimbus-direct'
   'outbound': directTag,
 };
 
+Map<String, dynamic> nimbusGlobalRouteRule({String proxyTag = 'nimbus-proxy'}) => {
+  'action': 'route',
+  'outbound': proxyTag,
+};
+
 NimbusManagedRouteOptions buildNimbusManagedRouteOptions({
   required NimbusRulesPackage rulesPackage,
   required bool isAutomaticMode,
   String proxyTag = 'nimbus-proxy',
   String directTag = nimbusHiddifyDirectTag,
 }) {
-  if (!isAutomaticMode) return const NimbusManagedRouteOptions.empty();
+  if (!isAutomaticMode) {
+    // Global mode must also bypass Hiddify's built-in regional rules. The
+    // managed rule is inserted before those rules by the core adapter.
+    return NimbusManagedRouteOptions(
+      rules: [nimbusGlobalRouteRule(proxyTag: proxyTag)],
+      ruleSets: const [],
+    );
+  }
 
   final activeUserRules = selectActiveNimbusUserRules(
     isAutomaticMode: isAutomaticMode,
