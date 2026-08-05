@@ -10,15 +10,16 @@ index a214a582..76149f17 100644
  
  	"go4.org/netipx"
  )
-@@ -103,15 +104,17 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.HTTPStartContext) error {
+@@ -103,15 +104,18 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.HTTPStartContext) error {
  			}
  			s.lastUpdated = savedSet.LastUpdated
  			s.lastEtag = savedSet.LastEtag
-+			s.logger.Info("rule-set ", s.options.Tag, ": loaded from cache")
++			// Keep lifecycle markers visible with the app's default warn log level.
++			s.logger.Warn("rule-set ", s.options.Tag, ": loaded from cache")
 +		}
 +	}
 +	if s.lastUpdated.IsZero() {
-+		s.logger.Info("rule-set ", s.options.Tag, ": download started")
++		s.logger.Warn("rule-set ", s.options.Tag, ": download started")
 +		err := s.fetch(ctx, startContext)
 +		if err != nil {
 +			s.logger.Error("rule-set ", s.options.Tag, ": download failed: ", err)
@@ -39,7 +40,7 @@ index a214a582..76149f17 100644
  }
  
  func (s *RemoteRuleSet) updateOnce() {
-+	s.logger.Info("rule-set ", s.options.Tag, ": download started")
++	s.logger.Warn("rule-set ", s.options.Tag, ": download started")
  	err := s.fetch(s.ctx, nil)
  	if err != nil {
 -		s.logger.Error("fetch rule-set ", s.options.Tag, ": ", err)
@@ -47,6 +48,15 @@ index a214a582..76149f17 100644
  	} else if s.refs.Load() == 0 {
  		s.rules = nil
  	}
+@@ -316,7 +316,7 @@ func (s *RemoteRuleSet) fetch(ctx context.Context, startContext *adapter.HTTPStartContext) error {
+ 		if err != nil {
+ 			s.logger.Error("save rule-set cache: ", err)
+ 		}
+ 	}
+-	s.logger.Info("updated rule-set ", s.options.Tag)
++	s.logger.Warn("updated rule-set ", s.options.Tag)
+ 	return nil
+ }
 @@ -333,10 +337,52 @@ func (s *RemoteRuleSet) Close() error {
  }
  
