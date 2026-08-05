@@ -1,4 +1,5 @@
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
@@ -87,6 +88,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> with AppLogger {
 
     try {
       final me = await _repository.fetchMe(session.accessToken);
+      await _completeLegacyIntro();
       state = NimbusAuthState.authenticated(
         session: session,
         me: me,
@@ -96,6 +98,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> with AppLogger {
       );
     } catch (error) {
       if (!_repository.isUnauthorized(error)) {
+        await _completeLegacyIntro();
         state = NimbusAuthState.authenticated(
           session: session,
           devices: state.devices,
@@ -540,6 +543,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> with AppLogger {
     } catch (error) {
       errorMessage ??= _describeError(error);
     }
+    await _completeLegacyIntro();
     state = NimbusAuthState.authenticated(
       session: session,
       me: me,
@@ -548,5 +552,11 @@ class NimbusAuthController extends Notifier<NimbusAuthState> with AppLogger {
       selectedLocationCode: state.selectedLocationCode,
       errorMessage: errorMessage,
     );
+  }
+
+  Future<void> _completeLegacyIntro() async {
+    if (!ref.read(Preferences.introCompleted)) {
+      await ref.read(Preferences.introCompleted.notifier).update(true);
+    }
   }
 }

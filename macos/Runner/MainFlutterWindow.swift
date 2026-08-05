@@ -13,6 +13,7 @@ class MainFlutterWindow: NSWindow {
     let windowFrame = self.frame
     self.contentViewController = flutterViewController
     self.setFrame(windowFrame, display: true)
+    setYundoApplicationIcon()
 
     let lifecycleChannel = FlutterMethodChannel(
       name: "yundo.application.lifecycle",
@@ -86,6 +87,16 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     super.awakeFromNib()
+  }
+
+  private func setYundoApplicationIcon() {
+    guard
+      let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+      let icon = NSImage(contentsOf: iconURL)
+    else {
+      return
+    }
+    NSApp.applicationIconImage = icon
   }
 
   // window manager hidden at launch

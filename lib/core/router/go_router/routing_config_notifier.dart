@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
-import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/core/router/adaptive_layout/my_adaptive_layout.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
@@ -10,7 +9,6 @@ import 'package:hiddify/core/router/go_router/helper/custom_transition.dart';
 import 'package:hiddify/core/router/go_router/refresh_listenable.dart';
 import 'package:hiddify/features/about/widget/about_page.dart';
 import 'package:hiddify/features/home/widget/home_page.dart';
-import 'package:hiddify/features/intro/widget/intro_page.dart';
 import 'package:hiddify/features/log/overview/logs_page.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_auth_page.dart';
@@ -89,20 +87,7 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
           url = state.uri.queryParameters['url'];
         }
 
-        if (!ref.read(Preferences.introCompleted)) {
-          // Intro is not completed
-          return url != null ? '/intro?url=$url' : '/intro';
-        } else if (state.matchedLocation == '/intro') {
-          // Intro is completed
-          // Current page in '/intro'
-          if (url != null && Uri.parse(url).host == 'import') {
-            WidgetsBinding.instance.addPostFrameCallback(
-              (_) =>
-                  ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile(url: url, triggeredByDeepLink: true),
-            );
-          }
-          return '/home';
-        } else if (url != null && Uri.parse(url).host == 'import') {
+        if (url != null && Uri.parse(url).host == 'import') {
           // Auto import profile from url
           WidgetsBinding.instance.addPostFrameCallback(
             (_) => ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile(url: url, triggeredByDeepLink: true),
@@ -320,7 +305,6 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
           GoRoute(name: 'logs', path: '/logs', builder: (_, _) => const LogsPage()),
           GoRoute(name: 'about', path: '/about', builder: (_, _) => const AboutPage()),
         ],
-        GoRoute(name: 'intro', path: '/intro', builder: (_, _) => const IntroPage()),
       ],
     );
   }

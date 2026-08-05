@@ -21,7 +21,9 @@ enum NimbusProxyMode { auto, global }
 abstract class Preferences {
   static final introCompleted = PreferencesNotifier.create(
     "intro_completed",
-    false,
+    // Kept as a compatibility flag for profile update scheduling. The old
+    // first-run page is no longer part of the authenticated app flow.
+    true,
     overrideValue: _debugIntroPage && kDebugMode ? false : null,
   );
 

@@ -7,6 +7,7 @@ import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_input_validation.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -90,7 +91,7 @@ class NimbusAuthPage extends HookConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Image.asset('assets/images/app_icon.png', width: 56, height: 56),
+                    Assets.images.logo.svg(width: 56, height: 56),
                     const Gap(16),
                     Text(
                       isRegister

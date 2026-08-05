@@ -46,6 +46,15 @@ void main() {
     expect(settingsIndex, greaterThan(rulesIndex));
   });
 
+  test('authenticated users skip the legacy intro page', () {
+    final routingConfig = File('lib/core/router/go_router/routing_config_notifier.dart').readAsStringSync();
+    final authPage = File('lib/features/nimbus/auth/widget/nimbus_auth_page.dart').readAsStringSync();
+
+    expect(routingConfig, isNot(contains("name: 'intro'")));
+    expect(routingConfig, isNot(contains("'/intro")));
+    expect(authPage, contains("context.go('/home')"));
+  });
+
   test('settings no longer exposes the acceleration and access group', () {
     final settingsPage = File('lib/features/settings/overview/settings_page.dart').readAsStringSync();
 
