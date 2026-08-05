@@ -165,6 +165,8 @@ class HiddifyCoreService with InfraLogger {
       diagnostics.completeStep(NimbusAccelerationStepId.corePrepare, detail: t.nimbus.diagnostics.detailCorePrepared);
       // A previous stop may have left the old local HTTP/2 channel in a
       // closing state. Rebind before issuing the next start command.
+      await stopListenSingle('fg');
+      await stopListenSingle('bg');
       await core.refreshClients();
       await _refreshCoreListeners();
       final backgroundConfigPath = core.backgroundConfigPath(path);

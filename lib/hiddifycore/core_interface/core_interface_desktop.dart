@@ -152,7 +152,7 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
     );
     _clientChannel = channel;
     bgClient = fgClient = CoreClient(channel);
-    await previousChannel?.shutdown();
+    await previousChannel?.shutdown().timeout(const Duration(seconds: 1), onTimeout: () {});
   }
 
   @override
