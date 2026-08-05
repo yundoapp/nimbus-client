@@ -236,7 +236,7 @@ class _StepTile extends StatelessWidget {
               children: [
                 Text(_stepLabel(t, step.id), style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
                 Text(
-                  step.detail ?? t.nimbus.diagnostics.pending,
+                  _localizedStepDetail(t, step),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(color: isFailure ? colors.error : colors.onSurfaceVariant),
@@ -278,15 +278,21 @@ class _HistoryTile extends StatelessWidget {
       attempt.errorCode,
       if (attempt.status == NimbusAccelerationAttemptStatus.success) completedDetail else attempt.errorDetail,
     ].whereType<String>().where((value) => value.isNotEmpty).join(' · ');
-    return ListTile(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
+    final failure = attempt.status == NimbusAccelerationAttemptStatus.failure;
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(left: 34, right: 8, bottom: 8),
+      shape: const Border(),
+      collapsedShape: const Border(),
       leading: Icon(
-        attempt.status == NimbusAccelerationAttemptStatus.failure ? Icons.close_rounded : Icons.history_rounded,
-        color: attempt.status == NimbusAccelerationAttemptStatus.failure ? Theme.of(context).colorScheme.error : null,
+        failure ? Icons.close_rounded : Icons.history_rounded,
+        color: failure ? Theme.of(context).colorScheme.error : null,
       ),
       title: Text('$operation · $status'),
       subtitle: Text(detail),
+      children: [
+        ...attempt.steps.asMap().entries.map((entry) => _StepTile(index: entry.key + 1, step: entry.value, t: t)),
+      ],
     );
   }
 }
@@ -312,6 +318,70 @@ String _stepLabel(Translations t, NimbusAccelerationStepId id) => switch (id) {
   NimbusAccelerationStepId.routing => t.nimbus.diagnostics.routing,
   NimbusAccelerationStepId.cleanup => t.nimbus.diagnostics.cleanup,
 };
+
+String _localizedStepDetail(Translations t, NimbusAccelerationStepSnapshot step) {
+  final storedDetail = step.detail;
+  if (storedDetail == null || storedDetail.isEmpty) return t.nimbus.diagnostics.pending;
+  if (step.status == NimbusAccelerationStepStatus.failure) return storedDetail;
+
+  final normalized = storedDetail.toLowerCase();
+  final isRunning = step.status == NimbusAccelerationStepStatus.running;
+  return switch (step.id) {
+    NimbusAccelerationStepId.connectionState => t.nimbus.diagnostics.detailNoActiveConnection,
+    NimbusAccelerationStepId.account =>
+      _containsAny(normalized, ['刷新', 'refresh'])
+          ? isRunning
+                ? t.nimbus.diagnostics.detailRefreshingAccount
+                : t.nimbus.diagnostics.detailAccountRefreshed
+          : t.nimbus.diagnostics.detailSessionAvailable,
+    NimbusAccelerationStepId.subscription =>
+      _containsAny(normalized, ['检查', 'checking'])
+          ? t.nimbus.diagnostics.detailCheckingAllowance
+          : _containsAny(normalized, ['额度', 'allowance'])
+          ? t.nimbus.diagnostics.detailAllowanceAvailable
+          : t.nimbus.diagnostics.detailActivePlan,
+    NimbusAccelerationStepId.rules => _localizedRulesDetail(t, storedDetail) ?? t.nimbus.diagnostics.rules,
+    NimbusAccelerationStepId.connectionPlan => t.nimbus.diagnostics.detailPlanReceived,
+    NimbusAccelerationStepId.core =>
+      _containsAny(normalized, ['停止', 'stopped'])
+          ? t.nimbus.diagnostics.detailCoreStopped
+          : t.nimbus.diagnostics.detailCoreStarted,
+    NimbusAccelerationStepId.coreConfig => t.nimbus.diagnostics.detailProfileValidated,
+    NimbusAccelerationStepId.corePrepare => t.nimbus.diagnostics.detailCorePrepared,
+    NimbusAccelerationStepId.coreStart => t.nimbus.diagnostics.detailCoreProcessStarted,
+    NimbusAccelerationStepId.coreVerify => t.nimbus.diagnostics.detailCoreStatusStarted,
+    NimbusAccelerationStepId.coreStop => t.nimbus.diagnostics.detailCoreStopped,
+    NimbusAccelerationStepId.coreStopVerify => t.nimbus.diagnostics.detailCoreStatusStopped,
+    NimbusAccelerationStepId.network =>
+      _containsAny(normalized, ['兜底', 'fallback'])
+          ? t.nimbus.diagnostics.detailNetworkFallback
+          : _containsAny(normalized, ['ipv6', 'dual-stack', 'dual stack'])
+          ? t.nimbus.diagnostics.detailNetworkDualStack
+          : t.nimbus.diagnostics.detailNetworkReady,
+    NimbusAccelerationStepId.tunnel =>
+      _containsAny(normalized, ['释放', 'released'])
+          ? t.nimbus.diagnostics.detailTunnelReleased
+          : t.nimbus.diagnostics.detailTunnelActive,
+    NimbusAccelerationStepId.routing =>
+      _containsAny(normalized, ['恢复', 'restored'])
+          ? t.nimbus.diagnostics.detailRoutingRestored
+          : t.nimbus.diagnostics.detailRoutingActive,
+    NimbusAccelerationStepId.cleanup => t.nimbus.diagnostics.detailCleanupDone,
+  };
+}
+
+String? _localizedRulesDetail(Translations t, String detail) {
+  final lines = detail.split('\n');
+  if (lines.length < 2) return null;
+  final countPattern = RegExp(r'\d+');
+  final publicCount = countPattern.firstMatch(lines.first)?.group(0);
+  final userCount = countPattern.firstMatch(lines[1])?.group(0);
+  if (publicCount == null || userCount == null) return null;
+  final version = RegExp('[（(]([^）)]+)[）)]').firstMatch(lines.first)?.group(1) ?? '--';
+  return t.nimbus.diagnostics.detailRulesLoaded(publicCount: publicCount, publicVersion: version, userCount: userCount);
+}
+
+bool _containsAny(String value, Iterable<String> candidates) => candidates.any(value.contains);
 
 String _diagnosticsText(NimbusAccelerationDiagnosticsState state) {
   return state.history.map((attempt) => attempt.toJson().toString()).join('\n');
