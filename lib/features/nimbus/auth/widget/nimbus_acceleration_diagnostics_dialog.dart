@@ -92,7 +92,7 @@ class _DiagnosticsContent extends StatelessWidget {
           if (current != null) ...[
             _AttemptHeader(attempt: current, t: t),
             const Gap(12),
-            ...current.steps.map((step) => _StepTile(step: step, t: t)),
+            ...current.steps.asMap().entries.map((entry) => _StepTile(index: entry.key + 1, step: entry.value, t: t)),
           ] else
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
@@ -146,6 +146,7 @@ class _AttemptHeader extends StatelessWidget {
         : _diagnosticsSuccessColor(theme);
     final seconds = ((attempt.completedAt ?? DateTime.now()).difference(attempt.startedAt).inMilliseconds / 1000)
         .toStringAsFixed(1);
+    final progress = _stepProgress(attempt);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -165,6 +166,12 @@ class _AttemptHeader extends StatelessWidget {
               Text('$label · $status', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               const Gap(3),
               Text(t.nimbus.diagnostics.completedIn(seconds: seconds), style: theme.textTheme.bodySmall),
+              const Gap(3),
+              Text(
+                t.nimbus.diagnostics.stepProgress(current: progress, total: attempt.steps.length),
+                style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              Text(t.nimbus.diagnostics.sequenceHint, style: theme.textTheme.bodySmall),
               if (attempt.errorCode != null || attempt.errorDetail != null) ...[
                 const Gap(3),
                 Text(
@@ -181,8 +188,9 @@ class _AttemptHeader extends StatelessWidget {
 }
 
 class _StepTile extends StatelessWidget {
-  const _StepTile({required this.step, required this.t});
+  const _StepTile({required this.index, required this.step, required this.t});
 
+  final int index;
   final NimbusAccelerationStepSnapshot step;
   final Translations t;
 
@@ -205,6 +213,14 @@ class _StepTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          SizedBox(
+            width: 30,
+            child: Text(
+              '$index',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: colors.onSurfaceVariant),
+            ),
+          ),
           SizedBox(
             width: 24,
             child: Icon(
@@ -291,11 +307,27 @@ String _stepLabel(Translations t, NimbusAccelerationStepId id) => switch (id) {
   NimbusAccelerationStepId.rules => t.nimbus.diagnostics.rules,
   NimbusAccelerationStepId.connectionPlan => t.nimbus.diagnostics.connectionPlan,
   NimbusAccelerationStepId.core => t.nimbus.diagnostics.core,
+  NimbusAccelerationStepId.coreConfig => t.nimbus.diagnostics.coreConfig,
+  NimbusAccelerationStepId.corePrepare => t.nimbus.diagnostics.corePrepare,
+  NimbusAccelerationStepId.coreStart => t.nimbus.diagnostics.coreStart,
+  NimbusAccelerationStepId.coreVerify => t.nimbus.diagnostics.coreVerify,
+  NimbusAccelerationStepId.coreStop => t.nimbus.diagnostics.coreStop,
+  NimbusAccelerationStepId.coreStopVerify => t.nimbus.diagnostics.coreStopVerify,
   NimbusAccelerationStepId.network => t.nimbus.diagnostics.network,
   NimbusAccelerationStepId.tunnel => t.nimbus.diagnostics.tunnel,
   NimbusAccelerationStepId.routing => t.nimbus.diagnostics.routing,
   NimbusAccelerationStepId.cleanup => t.nimbus.diagnostics.cleanup,
 };
+
+int _stepProgress(NimbusAccelerationAttempt attempt) {
+  final runningIndex = attempt.steps.lastIndexWhere((step) => step.status == NimbusAccelerationStepStatus.running);
+  if (runningIndex >= 0) return runningIndex + 1;
+  final settledIndex = attempt.steps.lastIndexWhere(
+    (step) =>
+        step.status == NimbusAccelerationStepStatus.success || step.status == NimbusAccelerationStepStatus.failure,
+  );
+  return settledIndex >= 0 ? settledIndex + 1 : 0;
+}
 
 String _diagnosticsText(NimbusAccelerationDiagnosticsState state) {
   return state.history.map((attempt) => attempt.toJson().toString()).join('\n');

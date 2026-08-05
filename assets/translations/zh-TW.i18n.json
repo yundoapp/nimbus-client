@@ -741,7 +741,21 @@
     },
     "diagnostics": {
       "menuTitle": "診斷記錄",
+      "sequenceHint": "按編號從上到下執行",
+      "stepProgress": "第 ${current} / ${total} 步",
+      "coreConfig": "驗證加速設定",
+      "corePrepare": "準備核心服務",
+      "coreStart": "啟動核心程序",
+      "coreVerify": "確認核心狀態",
+      "coreStop": "停止核心程序",
+      "coreStopVerify": "確認核心已停止",
       "detailRulesLoaded": "通用規則 ${publicCount} 條（${publicVersion}）\n我的規則 ${userCount} 條（${userVersion}）",
+      "detailProfileValidated": "核心設定已驗證",
+      "detailCorePrepared": "核心服務已準備",
+      "detailCoreProcessStarted": "核心程序已啟動",
+      "detailCoreStatusStarted": "核心狀態：運行中",
+      "detailCoreStatusUnexpected": "核心回傳狀態異常：${state}",
+      "detailCoreStatusStopped": "核心狀態：已停止",
       "detailNetworkReady": "節點網路已建立"
     },
     "home": {

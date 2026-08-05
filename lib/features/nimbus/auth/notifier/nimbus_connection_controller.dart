@@ -421,7 +421,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       final profileContent = plan.profileContent?.trim();
       if (profileContent == null || profileContent.isEmpty) {
         diagnostics.failStep(
-          NimbusAccelerationStepId.core,
+          NimbusAccelerationStepId.coreConfig,
           detail: _t.nimbus.errors.configurationUnavailable,
           errorCode: 'STANDARD_PROFILE_MISSING',
         );
@@ -438,7 +438,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
       diagnostics.startStep(NimbusAccelerationStepId.rules, detail: _t.nimbus.diagnostics.rules);
       _applyManagedRouteOptions(rulesPackage);
       diagnostics.completeStep(NimbusAccelerationStepId.rules, detail: _rulesLoadedDiagnostic(rulesPackage));
-      diagnostics.startStep(NimbusAccelerationStepId.core, detail: _t.nimbus.diagnostics.core);
+      diagnostics.startStep(NimbusAccelerationStepId.coreConfig, detail: _t.nimbus.diagnostics.coreConfig);
       _validateStandardProfileContent(profileContent);
       final validatedProfileContent = await _installStandardProfile(profileContent);
       if (_shutdownRequested) {
@@ -453,6 +453,11 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         await profileFile.parent.create(recursive: true);
         await profileFile.writeAsString(validatedProfileContent);
       }
+      diagnostics.completeStep(
+        NimbusAccelerationStepId.coreConfig,
+        detail: _t.nimbus.diagnostics.detailProfileValidated,
+      );
+      diagnostics.startStep(NimbusAccelerationStepId.corePrepare, detail: _t.nimbus.diagnostics.corePrepare);
       loggy.info('starting managed connection repository');
       final result = await ref
           .read(connectionRepositoryProvider)
@@ -460,13 +465,6 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
           .run();
       loggy.info('managed connection repository returned: ${result.isRight() ? 'success' : 'failure'}');
       result.match((failure) => throw failure, (_) => null);
-      diagnostics.completeStep(NimbusAccelerationStepId.core, detail: _t.nimbus.diagnostics.detailCoreStarted);
-      diagnostics.startStep(NimbusAccelerationStepId.network);
-      diagnostics.completeStep(NimbusAccelerationStepId.network, detail: _t.nimbus.diagnostics.detailNetworkReady);
-      diagnostics.startStep(NimbusAccelerationStepId.tunnel);
-      diagnostics.completeStep(NimbusAccelerationStepId.tunnel, detail: _t.nimbus.diagnostics.detailTunnelActive);
-      diagnostics.startStep(NimbusAccelerationStepId.routing);
-      diagnostics.completeStep(NimbusAccelerationStepId.routing, detail: _t.nimbus.diagnostics.detailRoutingActive);
       if (_shutdownRequested) {
         await _cleanupFailedConnectionAttempt();
         diagnostics.fail(errorCode: 'CANCELED', detail: _t.nimbus.diagnostics.detailStopRequested);
@@ -548,12 +546,11 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     final plan = state.plan;
     final session = ref.read(nimbusAuthControllerProvider).session;
     state = state.copyWith(isPreparing: false, isDisconnecting: true, connectedReported: false);
-    diagnostics.startStep(NimbusAccelerationStepId.core, detail: _t.nimbus.diagnostics.core);
+    diagnostics.startStep(NimbusAccelerationStepId.coreStop, detail: _t.nimbus.diagnostics.coreStop);
     await ref.read(connectionNotifierProvider.notifier).abortConnection();
-    diagnostics.completeStep(NimbusAccelerationStepId.core, detail: _t.nimbus.diagnostics.detailCoreStopped);
-    diagnostics.startStep(NimbusAccelerationStepId.tunnel);
+    diagnostics.startStep(NimbusAccelerationStepId.tunnel, detail: _t.nimbus.diagnostics.tunnel);
     diagnostics.completeStep(NimbusAccelerationStepId.tunnel, detail: _t.nimbus.diagnostics.detailTunnelReleased);
-    diagnostics.startStep(NimbusAccelerationStepId.routing);
+    diagnostics.startStep(NimbusAccelerationStepId.routing, detail: _t.nimbus.diagnostics.routing);
     _clearManagedRouteOptions();
     diagnostics.completeStep(NimbusAccelerationStepId.routing, detail: _t.nimbus.diagnostics.detailRoutingRestored);
     await ref.read(Preferences.startedByUser.notifier).update(false);

@@ -146,13 +146,13 @@ class HiddifyCoreService with InfraLogger {
       final diagnostics = ref.read(nimbusAccelerationDiagnosticsProvider.notifier);
       final t = ref.read(translationsProvider).requireValue;
       statusController.add(currentState = const CoreStatus.starting());
-      diagnostics.startStep(NimbusAccelerationStepId.core, detail: t.nimbus.diagnostics.core);
+      diagnostics.startStep(NimbusAccelerationStepId.corePrepare, detail: t.nimbus.diagnostics.corePrepare);
       loggy.debug("starting");
       final background = await core.setupBackground(path, name);
       loggy.info('core background preparation response: $background');
       if (background != const CoreStatus.started()) {
         diagnostics.failStep(
-          NimbusAccelerationStepId.core,
+          NimbusAccelerationStepId.corePrepare,
           detail: background.toString(),
           errorCode: 'CORE_PREPARE_FAILED',
         );
@@ -161,6 +161,7 @@ class HiddifyCoreService with InfraLogger {
         statusController.add(currentState = const CoreStatus.stopped());
         return left(background.getCoreAlert() ?? const ConnectionFailure.unexpected("failed to start core"));
       }
+      diagnostics.completeStep(NimbusAccelerationStepId.corePrepare, detail: t.nimbus.diagnostics.detailCorePrepared);
       if (!core.isSingleChannel()) {
         await startListeningLogs("bg", core.bgClient);
         await startListeningStatus("bg", core.bgClient);
@@ -169,6 +170,7 @@ class HiddifyCoreService with InfraLogger {
       final useRawConfig = enableRawConfig || backgroundConfigPath != path;
       loggy.info('core start prepared (raw=$useRawConfig, macosPathRewritten=${backgroundConfigPath != path})');
       try {
+        diagnostics.startStep(NimbusAccelerationStepId.coreStart, detail: t.nimbus.diagnostics.coreStart);
         final res = await core.bgClient.start(
           StartRequest(
             configPath: backgroundConfigPath,
@@ -180,7 +182,7 @@ class HiddifyCoreService with InfraLogger {
         loggy.info('core start response: state=${res.coreState}, type=${res.messageType}, message=${res.message}');
         ref.read(coreRestartSignalProvider.notifier).restart();
         if (res.messageType != MessageType.ALREADY_STARTED && res.messageType != MessageType.EMPTY) {
-          diagnostics.failStep(NimbusAccelerationStepId.core, detail: res.message, errorCode: 'CORE_START_FAILED');
+          diagnostics.failStep(NimbusAccelerationStepId.coreStart, detail: res.message, errorCode: 'CORE_START_FAILED');
           diagnostics.fail(errorCode: 'Y-CORE-002', detail: res.message);
           final alert = _isSystemPermissionError(res.message) ? CoreAlert.requestVPNPermission : CoreAlert.startFailed;
           currentState = CoreStatus.stopped(
@@ -197,7 +199,27 @@ class HiddifyCoreService with InfraLogger {
                 ConnectionFailure.unexpected("failed to start core ${res.messageType} ${res.message}"),
           );
         }
-        diagnostics.completeStep(NimbusAccelerationStepId.core, detail: t.nimbus.diagnostics.detailCoreStarted);
+        diagnostics.completeStep(
+          NimbusAccelerationStepId.coreStart,
+          detail: t.nimbus.diagnostics.detailCoreProcessStarted,
+        );
+        diagnostics.startStep(NimbusAccelerationStepId.coreVerify, detail: t.nimbus.diagnostics.coreVerify);
+        if (res.coreState != CoreStates.STARTED) {
+          final detail = t.nimbus.diagnostics.detailCoreStatusUnexpected(state: res.coreState.name);
+          diagnostics.failStep(
+            NimbusAccelerationStepId.coreVerify,
+            detail: detail,
+            errorCode: 'CORE_STATUS_UNEXPECTED',
+          );
+          diagnostics.fail(errorCode: 'Y-CORE-004', detail: detail);
+          await core.stop();
+          statusController.add(currentState = const CoreStatus.stopped());
+          return left(ConnectionFailure.unexpected(detail));
+        }
+        diagnostics.completeStep(
+          NimbusAccelerationStepId.coreVerify,
+          detail: t.nimbus.diagnostics.detailCoreStatusStarted,
+        );
 
         diagnostics.startStep(NimbusAccelerationStepId.network, detail: t.nimbus.diagnostics.network);
         final networkPreparation = await _prepareTunnelNetworkMode(
@@ -246,7 +268,7 @@ class HiddifyCoreService with InfraLogger {
         diagnostics.completeStep(NimbusAccelerationStepId.routing, detail: t.nimbus.diagnostics.detailRoutingActive);
         loggy.info('macOS tunnel activation flow completed; releasing prepared config');
       } on GrpcError catch (e) {
-        diagnostics.failStep(NimbusAccelerationStepId.core, detail: e.message ?? e.toString(), errorCode: 'GRPC_ERROR');
+        diagnostics.failRunningStep(detail: e.message ?? e.toString(), errorCode: 'GRPC_ERROR');
         diagnostics.fail(errorCode: 'Y-CORE-003', detail: e.message ?? e.toString());
         loggy.error("failed to start bg core: $e");
         ref.read(coreRestartSignalProvider.notifier).restart();
@@ -311,7 +333,9 @@ class HiddifyCoreService with InfraLogger {
       final diagnostics = ref.read(nimbusAccelerationDiagnosticsProvider.notifier);
       final t = ref.read(translationsProvider).requireValue;
       final isDiagnosticStop = diagnostics.isOperationRunning(NimbusAccelerationOperation.stop);
-      if (isDiagnosticStop) diagnostics.startStep(NimbusAccelerationStepId.core, detail: t.nimbus.diagnostics.core);
+      if (isDiagnosticStop) {
+        diagnostics.startStep(NimbusAccelerationStepId.coreStop, detail: t.nimbus.diagnostics.coreStop);
+      }
       loggy.debug("stopping");
       var errMsg = "";
       try {
@@ -328,11 +352,16 @@ class HiddifyCoreService with InfraLogger {
       }
       if (!await core.stop()) {}
       if (isDiagnosticStop) {
-        diagnostics.completeStep(NimbusAccelerationStepId.core, detail: t.nimbus.diagnostics.detailCoreStopped);
-        diagnostics.startStep(NimbusAccelerationStepId.tunnel, detail: t.nimbus.diagnostics.tunnel);
-        diagnostics.completeStep(NimbusAccelerationStepId.tunnel, detail: t.nimbus.diagnostics.detailTunnelReleased);
-        diagnostics.startStep(NimbusAccelerationStepId.routing, detail: t.nimbus.diagnostics.routing);
-        diagnostics.completeStep(NimbusAccelerationStepId.routing, detail: t.nimbus.diagnostics.detailRoutingRestored);
+        if (errMsg.isNotEmpty) {
+          diagnostics.failStep(NimbusAccelerationStepId.coreStop, detail: errMsg, errorCode: 'CORE_STOP_FAILED');
+        } else {
+          diagnostics.completeStep(NimbusAccelerationStepId.coreStop, detail: t.nimbus.diagnostics.detailCoreStopped);
+          diagnostics.startStep(NimbusAccelerationStepId.coreStopVerify, detail: t.nimbus.diagnostics.coreStopVerify);
+          diagnostics.completeStep(
+            NimbusAccelerationStepId.coreStopVerify,
+            detail: t.nimbus.diagnostics.detailCoreStatusStopped,
+          );
+        }
       }
       statusController.add(currentState = const CoreStatus.stopped());
       if (errMsg.isNotEmpty) return left(errMsg);

@@ -11,13 +11,44 @@ void main() {
         NimbusAccelerationStepId.subscription,
         NimbusAccelerationStepId.rules,
         NimbusAccelerationStepId.connectionPlan,
-        NimbusAccelerationStepId.core,
+        NimbusAccelerationStepId.coreConfig,
+        NimbusAccelerationStepId.corePrepare,
+        NimbusAccelerationStepId.coreStart,
+        NimbusAccelerationStepId.coreVerify,
         NimbusAccelerationStepId.network,
         NimbusAccelerationStepId.tunnel,
         NimbusAccelerationStepId.routing,
         NimbusAccelerationStepId.cleanup,
       ]),
     );
+  });
+
+  test('stop diagnostics expose core shutdown stages before cleanup', () {
+    expect(
+      nimbusAccelerationStopStepIds,
+      equals([
+        NimbusAccelerationStepId.connectionState,
+        NimbusAccelerationStepId.coreStop,
+        NimbusAccelerationStepId.coreStopVerify,
+        NimbusAccelerationStepId.tunnel,
+        NimbusAccelerationStepId.routing,
+        NimbusAccelerationStepId.cleanup,
+      ]),
+    );
+  });
+
+  test('keeps decoding legacy core steps from persisted history', () {
+    final decoded = decodeNimbusAccelerationHistory('''[
+      {
+        "operation": "start",
+        "status": "failure",
+        "startedAt": "2026-08-05T01:30:00.000Z",
+        "steps": [{"id": "core", "status": "failure", "detail": "legacy failure"}]
+      }
+    ]''');
+
+    expect(decoded.single.steps.single.id, NimbusAccelerationStepId.core);
+    expect(decoded.single.steps.single.status, NimbusAccelerationStepStatus.failure);
   });
 
   test('round trips a completed acceleration attempt without sensitive data', () {
