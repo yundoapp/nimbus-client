@@ -11,6 +11,9 @@ if [[ "${output_aar}" != /* ]]; then
 fi
 patch_file="${repo_root}/patches/hiddify-core/0001-managed-route-options.patch"
 rule_set_patch_file="${repo_root}/patches/hiddify-core/0002-rule-set-observability-and-root-domain.patch"
+observability_patch_file="${repo_root}/patches/hiddify-core/0003-connection-observability-and-actual-outbound.patch"
+exact_history_patch_file="${repo_root}/patches/hiddify-core/0004-exact-route-decision-history.patch"
+bundled_rule_set_patch_file="${repo_root}/patches/hiddify-core/0005-bundled-rule-set-fallback.patch"
 go_bin="${GO_BIN:-$(command -v go || true)}"
 work_dir=""
 
@@ -21,6 +24,15 @@ fail() {
 
 cleanup() {
   [[ -z "${work_dir}" || ! -d "${work_dir}" ]] || rm -rf "${work_dir}"
+  if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${bundled_rule_set_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}/hiddify-sing-box" apply --reverse "${bundled_rule_set_patch_file}"
+  fi
+  if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${exact_history_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}/hiddify-sing-box" apply --reverse "${exact_history_patch_file}"
+  fi
+  if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${observability_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}/hiddify-sing-box" apply --reverse "${observability_patch_file}"
+  fi
   if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${rule_set_patch_file}" >/dev/null 2>&1; then
     git -C "${core_dir}/hiddify-sing-box" apply --reverse "${rule_set_patch_file}"
   fi
@@ -72,6 +84,8 @@ strings_file="${work_dir}/core-strings.txt"
 strings "${work_dir}/aar/jni/arm64-v8a/libYundoCoreLib.so" >"${strings_file}"
 grep -F 'managed-route-rules' "${strings_file}" >/dev/null \
   || fail "Android Core 不包含受控规则入口"
+grep -F 'yundo_exact_history' "${strings_file}" >/dev/null \
+  || fail "Android Core 不包含精确路由记录"
 
 mkdir -p "$(dirname "${output_aar}")"
 (cd "${work_dir}/aar" && zip -q -r "${output_aar}" .)

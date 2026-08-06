@@ -29,18 +29,9 @@ void main() {
     });
 
     test('restores ownership only for a persisted user-started connection', () {
-      expect(
-        shouldRestoreNimbusOwnership(connection: const Connected(), startedByUser: true),
-        isTrue,
-      );
-      expect(
-        shouldRestoreNimbusOwnership(connection: const Connected(), startedByUser: false),
-        isFalse,
-      );
-      expect(
-        shouldRestoreNimbusOwnership(connection: const Disconnected(), startedByUser: true),
-        isFalse,
-      );
+      expect(shouldRestoreNimbusOwnership(connection: const Connected(), startedByUser: true), isTrue);
+      expect(shouldRestoreNimbusOwnership(connection: const Connected(), startedByUser: false), isFalse);
+      expect(shouldRestoreNimbusOwnership(connection: const Disconnected(), startedByUser: true), isFalse);
     });
 
     test('presents preparation as connecting before Nimbus ownership is reported', () {
@@ -119,21 +110,51 @@ void main() {
       expect(saves, 0);
     });
 
-    test('does not overwrite the cache when a replacement download fails', () async {
-      var saves = 0;
-
-      await expectLater(
-        prepareNimbusRulesPackage(
-          cached: _rulesPackage,
-          fetchManifest: (_) async => _changedManifest,
-          fetchPackage: () async => throw const FormatException('truncated response'),
-          savePackage: (_) async {
-            saves += 1;
-          },
-        ),
-        throwsA(isA<FormatException>()),
+    test('uses the supported cache when the manifest request fails', () async {
+      final result = await prepareNimbusRulesPackage(
+        cached: _rulesPackage,
+        fetchManifest: (_) async => throw const FormatException('network unavailable'),
+        fetchPackage: () async => throw StateError('must not download without a manifest'),
+        savePackage: (_) async {},
       );
 
+      expect(result, same(_rulesPackage));
+    });
+
+    test('refreshes the cache when the managed public source changes', () async {
+      var downloads = 0;
+      var saves = 0;
+
+      final result = await prepareNimbusRulesPackage(
+        cached: _rulesPackage,
+        fetchManifest: (_) async => _sourceChangedManifest,
+        fetchPackage: () async {
+          downloads += 1;
+          return _rulesPackage;
+        },
+        savePackage: (_) async {
+          saves += 1;
+        },
+      );
+
+      expect(result, same(_rulesPackage));
+      expect(downloads, 1);
+      expect(saves, 1);
+    });
+
+    test('keeps the old cache when a replacement download fails', () async {
+      var saves = 0;
+
+      final result = await prepareNimbusRulesPackage(
+        cached: _rulesPackage,
+        fetchManifest: (_) async => _changedManifest,
+        fetchPackage: () async => throw const FormatException('truncated response'),
+        savePackage: (_) async {
+          saves += 1;
+        },
+      );
+
+      expect(result, same(_rulesPackage));
       expect(saves, 0);
     });
   });
@@ -141,6 +162,7 @@ void main() {
 
 const _manifest = NimbusRulesManifest(
   publicRulesVersion: '2026.08.03.1',
+  publicRulesSourceVersion: 'sha256:public-source',
   userRulesVersion: 'sha256:user',
   configVersion: nimbusRulesConfigVersion,
   requiresUpdate: false,
@@ -151,6 +173,18 @@ const _manifest = NimbusRulesManifest(
 
 const _changedManifest = NimbusRulesManifest(
   publicRulesVersion: '2026.08.03.2',
+  publicRulesSourceVersion: 'sha256:changed-source',
+  userRulesVersion: 'sha256:user',
+  configVersion: nimbusRulesConfigVersion,
+  requiresUpdate: true,
+  publicRulesChanged: true,
+  userRulesChanged: false,
+  configChanged: false,
+);
+
+const _sourceChangedManifest = NimbusRulesManifest(
+  publicRulesVersion: '2026.08.03.1',
+  publicRulesSourceVersion: 'sha256:changed-source',
   userRulesVersion: 'sha256:user',
   configVersion: nimbusRulesConfigVersion,
   requiresUpdate: true,

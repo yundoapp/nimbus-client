@@ -1,0 +1,860 @@
+diff --git a/adapter/inbound.go b/adapter/inbound.go
+index a0a7a6de..aae285f0 100644
+--- a/adapter/inbound.go
++++ b/adapter/inbound.go
+@@ -3,6 +3,7 @@ package adapter
+ import (
+ 	"context"
+ 	"net/netip"
++	"sync"
+ 	"time"
+ 
+ 	C "github.com/sagernet/sing-box/constant"
+@@ -11,6 +12,11 @@ import (
+ 	M "github.com/sagernet/sing/common/metadata"
+ )
+ 
++type realOutboundState struct {
++	access sync.RWMutex
++	tag    string
++}
++
+ type Inbound interface {
+ 	Lifecycle
+ 	Type() string
+@@ -102,13 +108,35 @@ type InboundContext struct {
+ 	DidMatch                     bool
+ 	IgnoreDestinationIPCIDRMatch bool
+ 
+-	RealOutbound string //H
++	RealOutbound      string //H
++	realOutboundState *realOutboundState
++}
++
++func (c *InboundContext) EnableRealOutboundTracking() {
++	if c.realOutboundState != nil {
++		return
++	}
++	c.realOutboundState = &realOutboundState{tag: c.RealOutbound}
+ }
+ 
+ func (c *InboundContext) SetRealOutbound(tag string) {
+ 	c.RealOutbound = tag
++	if c.realOutboundState != nil {
++		c.realOutboundState.access.Lock()
++		c.realOutboundState.tag = tag
++		c.realOutboundState.access.Unlock()
++	}
+ }
++
+ func (c *InboundContext) GetRealOutbound() string {
++	if c.realOutboundState != nil {
++		c.realOutboundState.access.RLock()
++		tag := c.realOutboundState.tag
++		c.realOutboundState.access.RUnlock()
++		if tag != "" {
++			return tag
++		}
++	}
+ 	return c.RealOutbound
+ }
+ func (c *InboundContext) ResetRuleCache() {
+diff --git a/adapter/inbound_yundo_test.go b/adapter/inbound_yundo_test.go
+new file mode 100644
+index 00000000..f0de381d
+--- /dev/null
++++ b/adapter/inbound_yundo_test.go
+@@ -0,0 +1,16 @@
++package adapter
++
++import "testing"
++
++func TestRealOutboundTrackingSurvivesMetadataCopies(t *testing.T) {
++	metadata := InboundContext{}
++	metadata.EnableRealOutboundTracking()
++	trackerCopy := metadata
++	routeCopy := metadata
++
++	routeCopy.SetRealOutbound("selected-outbound")
++
++	if trackerCopy.GetRealOutbound() != "selected-outbound" {
++		t.Fatalf("expected shared actual outbound, got %q", trackerCopy.GetRealOutbound())
++	}
++}
+diff --git a/adapter/router.go b/adapter/router.go
+index 3d5310c4..f6af73bd 100644
+--- a/adapter/router.go
++++ b/adapter/router.go
+@@ -35,6 +35,12 @@ type ConnectionTracker interface {
+ 	RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata InboundContext, matchedRule Rule, matchOutbound Outbound) N.PacketConn
+ }
+ 
++// RejectedConnectionTracker is optional so upstream trackers keep their
++// original contract when exact route history is disabled.
++type RejectedConnectionTracker interface {
++	RejectedConnection(ctx context.Context, metadata InboundContext, matchedRule Rule)
++}
++
+ // Deprecated: Use ConnectionRouterEx instead.
+ type ConnectionRouter interface {
+ 	RouteConnection(ctx context.Context, conn net.Conn, metadata InboundContext) error
+diff --git a/experimental/clashapi/connections.go b/experimental/clashapi/connections.go
+index 999d5898..39904650 100644
+--- a/experimental/clashapi/connections.go
++++ b/experimental/clashapi/connections.go
+@@ -17,6 +17,8 @@ import (
+ 	"github.com/gofrs/uuid/v5"
+ )
+ 
++const exactRouteHistoryQuery = "yundo_exact_history"
++
+ func connectionRouter(router adapter.Router, trafficManager *trafficontrol.Manager) http.Handler {
+ 	r := chi.NewRouter()
+ 	r.Get("/", getConnections(trafficManager))
+@@ -27,8 +29,12 @@ func connectionRouter(router adapter.Router, trafficManager *trafficontrol.Manag
+ 
+ func getConnections(trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) {
+ 	return func(w http.ResponseWriter, r *http.Request) {
++		exactHistory := r.URL.Query().Get(exactRouteHistoryQuery) == "1"
+ 		if r.Header.Get("Upgrade") != "websocket" {
+-			snapshot := trafficManager.Snapshot()
++			var snapshot any = trafficManager.Snapshot()
++			if exactHistory {
++				snapshot = trafficManager.ExactHistorySnapshot()
++			}
+ 			render.JSON(w, r, snapshot)
+ 			return
+ 		}
+@@ -54,7 +60,10 @@ func getConnections(trafficManager *trafficontrol.Manager) func(w http.ResponseW
+ 		buf := &bytes.Buffer{}
+ 		sendSnapshot := func() error {
+ 			buf.Reset()
+-			snapshot := trafficManager.Snapshot()
++			var snapshot any = trafficManager.Snapshot()
++			if exactHistory {
++				snapshot = trafficManager.ExactHistorySnapshot()
++			}
+ 			if err := json.NewEncoder(buf).Encode(snapshot); err != nil {
+ 				return err
+ 			}
+@@ -67,6 +76,20 @@ func getConnections(trafficManager *trafficontrol.Manager) func(w http.ResponseW
+ 
+ 		tick := time.NewTicker(time.Millisecond * time.Duration(interval))
+ 		defer tick.Stop()
++		if exactHistory {
++			changes, unsubscribe := trafficManager.SubscribeChanges()
++			defer unsubscribe()
++			for {
++				select {
++				case <-changes:
++				case <-tick.C:
++				}
++				if err = sendSnapshot(); err != nil {
++					break
++				}
++			}
++			return
++		}
+ 		for range tick.C {
+ 			if err = sendSnapshot(); err != nil {
+ 				break
+diff --git a/experimental/clashapi/connections_yundo_test.go b/experimental/clashapi/connections_yundo_test.go
+new file mode 100644
+index 00000000..d77b939a
+--- /dev/null
++++ b/experimental/clashapi/connections_yundo_test.go
+@@ -0,0 +1,50 @@
++package clashapi
++
++import (
++	"encoding/json"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/sagernet/sing-box/adapter"
++	"github.com/sagernet/sing-box/experimental/clashapi/trafficontrol"
++	M "github.com/sagernet/sing/common/metadata"
++)
++
++func TestExactRouteHistoryQueryIsOptIn(t *testing.T) {
++	manager := trafficontrol.NewManager()
++	manager.RecordRejected(adapter.InboundContext{
++		Network:     "tcp",
++		Domain:      "blocked.example",
++		Destination: M.ParseSocksaddr("blocked.example:443"),
++	}, nil)
++	handler := getConnections(manager)
++
++	nativeRecorder := httptest.NewRecorder()
++	handler(nativeRecorder, httptest.NewRequest("GET", "/connections", nil))
++	if nativeRecorder.Code != 200 {
++		t.Fatalf("native endpoint returned %d", nativeRecorder.Code)
++	}
++	if countConnections(t, nativeRecorder.Body.Bytes()) != 0 {
++		t.Fatal("native endpoint must remain active-only")
++	}
++
++	exactRecorder := httptest.NewRecorder()
++	handler(exactRecorder, httptest.NewRequest("GET", "/connections?yundo_exact_history=1", nil))
++	if exactRecorder.Code != 200 {
++		t.Fatalf("exact endpoint returned %d", exactRecorder.Code)
++	}
++	if countConnections(t, exactRecorder.Body.Bytes()) != 1 {
++		t.Fatal("exact endpoint must include the rejected request")
++	}
++}
++
++func countConnections(t *testing.T, raw []byte) int {
++	t.Helper()
++	var payload struct {
++		Connections []json.RawMessage `json:"connections"`
++	}
++	if err := json.Unmarshal(raw, &payload); err != nil {
++		t.Fatalf("decode connections response: %v", err)
++	}
++	return len(payload.Connections)
++}
+diff --git a/experimental/clashapi/server.go b/experimental/clashapi/server.go
+index e71031dc..4c683fb9 100644
+--- a/experimental/clashapi/server.go
++++ b/experimental/clashapi/server.go
+@@ -251,6 +251,10 @@ func (s *Server) RoutedPacketConnection(ctx context.Context, conn N.PacketConn,
+ 	return trafficontrol.NewUDPTracker(conn, s.trafficManager, metadata, s.outbound, matchedRule, matchOutbound)
+ }
+ 
++func (s *Server) RejectedConnection(ctx context.Context, metadata adapter.InboundContext, matchedRule adapter.Rule) {
++	s.trafficManager.RecordRejected(metadata, matchedRule)
++}
++
+ func authentication(serverSecret string) func(next http.Handler) http.Handler {
+ 	return func(next http.Handler) http.Handler {
+ 		fn := func(w http.ResponseWriter, r *http.Request) {
+diff --git a/experimental/clashapi/trafficontrol/manager.go b/experimental/clashapi/trafficontrol/manager.go
+index ba9bc362..d464c73d 100644
+--- a/experimental/clashapi/trafficontrol/manager.go
++++ b/experimental/clashapi/trafficontrol/manager.go
+@@ -6,6 +6,7 @@ import (
+ 	"sync/atomic"
+ 	"time"
+ 
++	"github.com/sagernet/sing-box/adapter"
+ 	"github.com/sagernet/sing-box/common/compatible"
+ 	C "github.com/sagernet/sing-box/constant"
+ 	"github.com/sagernet/sing/common"
+@@ -43,13 +44,15 @@ type Manager struct {
+ 	connections             compatible.Map[uuid.UUID, Tracker]
+ 	closedConnectionsAccess sync.Mutex
+ 	closedConnections       list.List[TrackerMetadata]
++	changeListenersAccess   sync.Mutex
++	changeListeners         map[chan struct{}]struct{}
+ 	memory                  uint64
+ 
+ 	eventSubscriber *observable.Subscriber[ConnectionEvent]
+ }
+ 
+ func NewManager() *Manager {
+-	return &Manager{}
++	return &Manager{changeListeners: make(map[chan struct{}]struct{})}
+ }
+ 
+ func (m *Manager) SetEventHook(subscriber *observable.Subscriber[ConnectionEvent]) {
+@@ -59,13 +62,11 @@ func (m *Manager) SetEventHook(subscriber *observable.Subscriber[ConnectionEvent
+ func (m *Manager) Join(c Tracker) {
+ 	metadata := c.Metadata()
+ 	m.connections.Store(metadata.ID, c)
+-	if m.eventSubscriber != nil {
+-		m.eventSubscriber.Emit(ConnectionEvent{
+-			Type:     ConnectionEventNew,
+-			ID:       metadata.ID,
+-			Metadata: metadata,
+-		})
+-	}
++	m.emitEvent(ConnectionEvent{
++		Type:     ConnectionEventNew,
++		ID:       metadata.ID,
++		Metadata: metadata,
++	})
+ }
+ 
+ func (m *Manager) Leave(c Tracker) {
+@@ -74,22 +75,79 @@ func (m *Manager) Leave(c Tracker) {
+ 	if loaded {
+ 		closedAt := time.Now()
+ 		metadata.ClosedAt = closedAt
+-		metadataCopy := *metadata
+-		m.closedConnectionsAccess.Lock()
+-		if m.closedConnections.Len() >= closedConnectionsLimit {
+-			m.closedConnections.PopFront()
+-		}
+-		m.closedConnections.PushBack(metadataCopy)
+-		m.closedConnectionsAccess.Unlock()
+-		if m.eventSubscriber != nil {
+-			m.eventSubscriber.Emit(ConnectionEvent{
+-				Type:     ConnectionEventClosed,
+-				ID:       metadata.ID,
+-				Metadata: &metadataCopy,
+-				ClosedAt: closedAt,
+-			})
++		metadataCopy := m.storeClosed(metadata)
++		m.emitEvent(ConnectionEvent{
++			Type:     ConnectionEventClosed,
++			ID:       metadata.ID,
++			Metadata: &metadataCopy,
++			ClosedAt: closedAt,
++		})
++	}
++}
++
++func (m *Manager) RecordRejected(metadata adapter.InboundContext, matchedRule adapter.Rule) {
++	id, _ := uuid.NewV4()
++	now := time.Now()
++	rejected := TrackerMetadata{
++		ID:           id,
++		Metadata:     metadata,
++		CreatedAt:    now,
++		ClosedAt:     now,
++		Upload:       new(atomic.Int64),
++		Download:     new(atomic.Int64),
++		Rule:         matchedRule,
++		Outbound:     "reject",
++		OutboundType: C.TypeBlock,
++		Decision:     routeDecisionRejected,
++	}
++	metadataCopy := m.storeClosed(&rejected)
++	m.emitEvent(ConnectionEvent{
++		Type:     ConnectionEventClosed,
++		ID:       id,
++		Metadata: &metadataCopy,
++		ClosedAt: now,
++	})
++}
++
++func (m *Manager) storeClosed(metadata *TrackerMetadata) TrackerMetadata {
++	metadataCopy := *metadata
++	m.closedConnectionsAccess.Lock()
++	if m.closedConnections.Len() >= closedConnectionsLimit {
++		m.closedConnections.PopFront()
++	}
++	m.closedConnections.PushBack(metadataCopy)
++	m.closedConnectionsAccess.Unlock()
++	return metadataCopy
++}
++
++func (m *Manager) emitEvent(event ConnectionEvent) {
++	if m.eventSubscriber != nil {
++		m.eventSubscriber.Emit(event)
++	}
++	m.changeListenersAccess.Lock()
++	for listener := range m.changeListeners {
++		select {
++		case listener <- struct{}{}:
++		default:
+ 		}
+ 	}
++	m.changeListenersAccess.Unlock()
++}
++
++func (m *Manager) SubscribeChanges() (<-chan struct{}, func()) {
++	listener := make(chan struct{}, 1)
++	m.changeListenersAccess.Lock()
++	m.changeListeners[listener] = struct{}{}
++	m.changeListenersAccess.Unlock()
++	var once sync.Once
++	return listener, func() {
++		once.Do(func() {
++			m.changeListenersAccess.Lock()
++			delete(m.changeListeners, listener)
++			close(listener)
++			m.changeListenersAccess.Unlock()
++		})
++	}
+ }
+ 
+ func (m *Manager) PushUploaded(outbound string, size int64) {
+@@ -174,6 +232,28 @@ func (m *Manager) Snapshot() *Snapshot {
+ 	}
+ }
+ 
++func (m *Manager) ExactHistorySnapshot() *ExactHistorySnapshot {
++	base := m.Snapshot()
++	connections := make([]*TrackerMetadata, 0, len(base.Connections)+closedConnectionsLimit)
++	for _, tracker := range base.Connections {
++		metadata := tracker.Metadata()
++		if metadata.ExactDecision() != "" {
++			connections = append(connections, metadata)
++		}
++	}
++	for _, metadata := range m.ClosedConnections() {
++		if metadata.OutboundType != C.TypeDNS && metadata.ExactDecision() != "" {
++			connections = append(connections, metadata)
++		}
++	}
++	return &ExactHistorySnapshot{
++		Upload:      base.Upload,
++		Download:    base.Download,
++		Connections: connections,
++		Memory:      base.Memory,
++	}
++}
++
+ func (m *Manager) ResetStatistic() {
+ 	m.uploadTotal.Store(0)
+ 	m.downloadTotal.Store(0)
+@@ -194,6 +274,13 @@ type Snapshot struct {
+ 	Memory      uint64
+ }
+ 
++type ExactHistorySnapshot struct {
++	Download    int64
++	Upload      int64
++	Connections []*TrackerMetadata
++	Memory      uint64
++}
++
+ func (s *Snapshot) MarshalJSON() ([]byte, error) {
+ 	return json.Marshal(map[string]any{
+ 		"downloadTotal": s.Download,
+@@ -202,3 +289,12 @@ func (s *Snapshot) MarshalJSON() ([]byte, error) {
+ 		"memory":        s.Memory,
+ 	})
+ }
++
++func (s *ExactHistorySnapshot) MarshalJSON() ([]byte, error) {
++	return json.Marshal(map[string]any{
++		"downloadTotal": s.Download,
++		"uploadTotal":   s.Upload,
++		"connections":   s.Connections,
++		"memory":        s.Memory,
++	})
++}
+diff --git a/experimental/clashapi/trafficontrol/manager_yundo_test.go b/experimental/clashapi/trafficontrol/manager_yundo_test.go
+new file mode 100644
+index 00000000..0b15a8f5
+--- /dev/null
++++ b/experimental/clashapi/trafficontrol/manager_yundo_test.go
+@@ -0,0 +1,31 @@
++package trafficontrol
++
++import (
++	"testing"
++
++	"github.com/sagernet/sing-box/adapter"
++	M "github.com/sagernet/sing/common/metadata"
++)
++
++func TestExactHistoryIncludesRejectedRequestsWithoutChangingNativeSnapshot(t *testing.T) {
++	manager := NewManager()
++	manager.RecordRejected(adapter.InboundContext{
++		Network:     "tcp",
++		Domain:      "blocked.example",
++		Destination: M.ParseSocksaddr("blocked.example:443"),
++	}, nil)
++
++	if len(manager.Snapshot().Connections) != 0 {
++		t.Fatal("native active snapshot must remain unchanged")
++	}
++	exact := manager.ExactHistorySnapshot()
++	if len(exact.Connections) != 1 {
++		t.Fatalf("expected one rejected history record, got %d", len(exact.Connections))
++	}
++	if exact.Connections[0].ExactDecision() != routeDecisionRejected {
++		t.Fatalf("expected rejected decision, got %q", exact.Connections[0].ExactDecision())
++	}
++	if exact.Connections[0].ClosedAt.IsZero() {
++		t.Fatal("rejected request must be completed immediately")
++	}
++}
+diff --git a/experimental/clashapi/trafficontrol/tracker.go b/experimental/clashapi/trafficontrol/tracker.go
+index ec97b5a1..10dfa23d 100644
+--- a/experimental/clashapi/trafficontrol/tracker.go
++++ b/experimental/clashapi/trafficontrol/tracker.go
+@@ -16,16 +16,63 @@ import (
+ )
+ 
+ type TrackerMetadata struct {
+-	ID           uuid.UUID
+-	Metadata     adapter.InboundContext
+-	CreatedAt    time.Time
+-	ClosedAt     time.Time
+-	Upload       *atomic.Int64
+-	Download     *atomic.Int64
+-	Chain        []string
+-	Rule         adapter.Rule
+-	Outbound     string
+-	OutboundType string
++	ID              uuid.UUID
++	Metadata        adapter.InboundContext
++	CreatedAt       time.Time
++	ClosedAt        time.Time
++	Upload          *atomic.Int64
++	Download        *atomic.Int64
++	Chain           []string
++	Rule            adapter.Rule
++	Outbound        string
++	OutboundType    string
++	OutboundManager adapter.OutboundManager
++	Decision        string
++}
++
++const (
++	routeDecisionDirect      = "direct"
++	routeDecisionAccelerated = "accelerated"
++	routeDecisionRejected    = "rejected"
++)
++
++func routeDecisionForOutboundType(outboundType string) string {
++	switch outboundType {
++	case C.TypeDirect:
++		return routeDecisionDirect
++	case C.TypeBlock:
++		return routeDecisionRejected
++	case "", C.TypeDNS, C.TypeSelector, C.TypeURLTest, C.TypeBalancer:
++		return ""
++	default:
++		return routeDecisionAccelerated
++	}
++}
++
++func (t TrackerMetadata) exactRoute() (outbound string, outboundType string, decision string) {
++	outbound = t.Outbound
++	outboundType = t.OutboundType
++	if realOutbound := t.Metadata.GetRealOutbound(); realOutbound != "" {
++		outbound = realOutbound
++	}
++	terminalOutbound := true
++	if t.OutboundManager != nil && outbound != "" {
++		if resolvedOutbound, loaded := t.OutboundManager.Outbound(outbound); loaded {
++			outboundType = resolvedOutbound.Type()
++			_, isGroup := resolvedOutbound.(adapter.OutboundGroup)
++			terminalOutbound = !isGroup
++		}
++	}
++	decision = t.Decision
++	if decision == "" && terminalOutbound {
++		decision = routeDecisionForOutboundType(outboundType)
++	}
++	return
++}
++
++func (t TrackerMetadata) ExactDecision() string {
++	_, _, decision := t.exactRoute()
++	return decision
+ }
+ 
+ func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
+@@ -65,16 +112,17 @@ func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
+ 		rule = "final"
+ 	}
+ 	chains := t.Chain
+-	outbound := t.Outbound
++	outbound, outboundType, decision := t.exactRoute()
+ 	if t.OutboundType == C.TypeBalancer {
+ 		if realOutbound := t.Metadata.GetRealOutbound(); realOutbound != "" {
+-			chains = make([]string, len(t.Chain)+1)
+-			chains[0] = realOutbound
+-			copy(chains[1:], t.Chain)
+-			outbound = realOutbound
++			if len(chains) == 0 || chains[0] != realOutbound {
++				chains = make([]string, len(t.Chain)+1)
++				chains[0] = realOutbound
++				copy(chains[1:], t.Chain)
++			}
+ 		}
+ 	}
+-	return json.Marshal(map[string]any{
++	payload := map[string]any{
+ 		"id": t.ID,
+ 		"metadata": map[string]any{
+ 			"network":         t.Metadata.Network,
+@@ -87,14 +135,20 @@ func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
+ 			"dnsMode":         "normal",
+ 			"processPath":     processPath,
+ 		},
+-		"upload":      t.Upload.Load(),
+-		"download":    t.Download.Load(),
+-		"start":       t.CreatedAt,
+-		"chains":      chains,
+-		"outbound":    outbound,
+-		"rule":        rule,
+-		"rulePayload": "",
+-	})
++		"upload":       t.Upload.Load(),
++		"download":     t.Download.Load(),
++		"start":        t.CreatedAt,
++		"chains":       chains,
++		"outbound":     outbound,
++		"outboundType": outboundType,
++		"decision":     decision,
++		"rule":         rule,
++		"rulePayload":  "",
++	}
++	if !t.ClosedAt.IsZero() {
++		payload["closedAt"] = t.ClosedAt
++	}
++	return json.Marshal(payload)
+ }
+ 
+ type Tracker interface {
+@@ -169,15 +223,16 @@ func NewTCPTracker(conn net.Conn, manager *Manager, metadata adapter.InboundCont
+ 			manager.PushDownloaded(outbound, n)
+ 		}}),
+ 		metadata: TrackerMetadata{
+-			ID:           id,
+-			Metadata:     metadata,
+-			CreatedAt:    time.Now(),
+-			Upload:       upload,
+-			Download:     download,
+-			Chain:        common.Reverse(chain),
+-			Rule:         matchRule,
+-			Outbound:     outbound,
+-			OutboundType: outboundType,
++			ID:              id,
++			Metadata:        metadata,
++			CreatedAt:       time.Now(),
++			Upload:          upload,
++			Download:        download,
++			Chain:           common.Reverse(chain),
++			Rule:            matchRule,
++			Outbound:        outbound,
++			OutboundType:    outboundType,
++			OutboundManager: outboundManager,
+ 		},
+ 		manager: manager,
+ 	}
+@@ -250,15 +305,16 @@ func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata adapter.Inbound
+ 			manager.PushDownloaded(outbound, n)
+ 		}}),
+ 		metadata: TrackerMetadata{
+-			ID:           id,
+-			Metadata:     metadata,
+-			CreatedAt:    time.Now(),
+-			Upload:       upload,
+-			Download:     download,
+-			Chain:        common.Reverse(chain),
+-			Rule:         matchRule,
+-			Outbound:     outbound,
+-			OutboundType: outboundType,
++			ID:              id,
++			Metadata:        metadata,
++			CreatedAt:       time.Now(),
++			Upload:          upload,
++			Download:        download,
++			Chain:           common.Reverse(chain),
++			Rule:            matchRule,
++			Outbound:        outbound,
++			OutboundType:    outboundType,
++			OutboundManager: outboundManager,
+ 		},
+ 		manager: manager,
+ 	}
+diff --git a/experimental/clashapi/trafficontrol/tracker_test.go b/experimental/clashapi/trafficontrol/tracker_test.go
+index c0456f1a..3f0fe0da 100644
+--- a/experimental/clashapi/trafficontrol/tracker_test.go
++++ b/experimental/clashapi/trafficontrol/tracker_test.go
+@@ -12,10 +12,12 @@ import (
+ 
+ func TestMarshalJSONExposesRealBalancerOutbound(t *testing.T) {
+ 	metadata := adapter.InboundContext{}
++	metadata.EnableRealOutboundTracking()
++	trackerMetadata := metadata
+ 	metadata.SetRealOutbound("nimbus-proxy")
+ 	tracker := TrackerMetadata{
+ 		ID:           uuid.Nil,
+-		Metadata:     metadata,
++		Metadata:     trackerMetadata,
+ 		Upload:       new(atomic.Int64),
+ 		Download:     new(atomic.Int64),
+ 		Chain:        []string{"balance", "select"},
+@@ -30,6 +32,7 @@ func TestMarshalJSONExposesRealBalancerOutbound(t *testing.T) {
+ 	var payload struct {
+ 		Chains   []string `json:"chains"`
+ 		Outbound string   `json:"outbound"`
++		Decision string   `json:"decision"`
+ 	}
+ 	if err := json.Unmarshal(raw, &payload); err != nil {
+ 		t.Fatalf("decode tracker: %v", err)
+@@ -40,4 +43,24 @@ func TestMarshalJSONExposesRealBalancerOutbound(t *testing.T) {
+ 	if len(payload.Chains) != 3 || payload.Chains[0] != "nimbus-proxy" {
+ 		t.Fatalf("expected real outbound at the head of chains, got %v", payload.Chains)
+ 	}
++	if payload.Decision != "" {
++		t.Fatalf("expected no decision before the terminal outbound type is resolved, got %q", payload.Decision)
++	}
++}
++
++func TestRouteDecisionForTerminalOutboundType(t *testing.T) {
++	tests := map[string]string{
++		C.TypeDirect:   routeDecisionDirect,
++		C.TypeBlock:    routeDecisionRejected,
++		"socks":        routeDecisionAccelerated,
++		C.TypeDNS:      "",
++		C.TypeSelector: "",
++		C.TypeURLTest:  "",
++		C.TypeBalancer: "",
++	}
++	for outboundType, expected := range tests {
++		if actual := routeDecisionForOutboundType(outboundType); actual != expected {
++			t.Fatalf("type %q: expected %q, got %q", outboundType, expected, actual)
++		}
++	}
+ }
+diff --git a/protocol/group/balancer/balancer.go b/protocol/group/balancer/balancer.go
+index 7178e3e7..4f56d3a8 100644
+--- a/protocol/group/balancer/balancer.go
++++ b/protocol/group/balancer/balancer.go
+@@ -206,6 +206,10 @@ func (s *Balancer) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
+ func (s *Balancer) NewConnectionEx(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
+ 	ctx = interrupt.ContextWithIsExternalConnection(ctx)
+ 	selected := s.strategyFn.Select(metadata, metadata.Network, true)
++	if selected == nil {
++		return
++	}
++	metadata.SetRealOutbound(selected.Tag())
+ 	conn = s.interruptGroup.NewConn(conn, interrupt.IsExternalConnectionFromContext(ctx))
+ 	if outboundHandler, isHandler := selected.(adapter.ConnectionHandlerEx); isHandler {
+ 		outboundHandler.NewConnectionEx(ctx, conn, metadata, onClose)
+diff --git a/protocol/group/selector.go b/protocol/group/selector.go
+index 02139bd0..5540b721 100644
+--- a/protocol/group/selector.go
++++ b/protocol/group/selector.go
+@@ -166,7 +166,11 @@ func (s *Selector) pingSelected() {
+ 	}
+ }
+ func (s *Selector) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+-	conn, err := s.selected.Load().DialContext(ctx, network, destination)
++	selected := s.selected.Load()
++	if metadata := adapter.ContextFrom(ctx); metadata != nil {
++		metadata.SetRealOutbound(selected.Tag())
++	}
++	conn, err := selected.DialContext(ctx, network, destination)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+@@ -174,7 +178,11 @@ func (s *Selector) DialContext(ctx context.Context, network string, destination
+ }
+ 
+ func (s *Selector) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+-	conn, err := s.selected.Load().ListenPacket(ctx, destination)
++	selected := s.selected.Load()
++	if metadata := adapter.ContextFrom(ctx); metadata != nil {
++		metadata.SetRealOutbound(selected.Tag())
++	}
++	conn, err := selected.ListenPacket(ctx, destination)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+@@ -184,6 +192,7 @@ func (s *Selector) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
+ func (s *Selector) NewConnectionEx(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
+ 	ctx = interrupt.ContextWithIsExternalConnection(ctx)
+ 	selected := s.selected.Load()
++	metadata.SetRealOutbound(selected.Tag())
+ 	conn = s.interruptGroup.NewConn(conn, interrupt.IsExternalConnectionFromContext(ctx))
+ 	if outboundHandler, isHandler := selected.(adapter.ConnectionHandlerEx); isHandler {
+ 		outboundHandler.NewConnectionEx(ctx, conn, metadata, onClose)
+@@ -195,6 +204,7 @@ func (s *Selector) NewConnectionEx(ctx context.Context, conn net.Conn, metadata
+ func (s *Selector) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
+ 	ctx = interrupt.ContextWithIsExternalConnection(ctx)
+ 	selected := s.selected.Load()
++	metadata.SetRealOutbound(selected.Tag())
+ 	conn = s.interruptGroup.NewSingPacketConn(conn, interrupt.IsExternalConnectionFromContext(ctx))
+ 	if outboundHandler, isHandler := selected.(adapter.PacketConnectionHandlerEx); isHandler {
+ 		outboundHandler.NewPacketConnectionEx(ctx, conn, metadata, onClose)
+@@ -205,6 +215,7 @@ func (s *Selector) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn,
+ 
+ func (s *Selector) NewDirectRouteConnection(metadata adapter.InboundContext, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {
+ 	selected := s.selected.Load()
++	metadata.SetRealOutbound(selected.Tag())
+ 	if !common.Contains(selected.Network(), metadata.Network) {
+ 		return nil, E.New(metadata.Network, " is not supported by outbound: ", selected.Tag())
+ 	}
+diff --git a/protocol/group/urltest.go b/protocol/group/urltest.go
+index 8b288107..e437c4c8 100644
+--- a/protocol/group/urltest.go
++++ b/protocol/group/urltest.go
+@@ -134,6 +134,9 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
+ 	if outbound == nil {
+ 		return nil, E.New("missing supported outbound")
+ 	}
++	if metadata := adapter.ContextFrom(ctx); metadata != nil {
++		metadata.SetRealOutbound(outbound.Tag())
++	}
+ 	conn, err := outbound.DialContext(ctx, network, destination)
+ 	if err == nil {
+ 		return s.group.interruptGroup.NewConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
+@@ -152,6 +155,9 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
+ 	if outbound == nil {
+ 		return nil, E.New("missing supported outbound")
+ 	}
++	if metadata := adapter.ContextFrom(ctx); metadata != nil {
++		metadata.SetRealOutbound(outbound.Tag())
++	}
+ 	conn, err := outbound.ListenPacket(ctx, destination)
+ 	if err == nil {
+ 		return s.group.interruptGroup.NewPacketConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
+@@ -183,6 +189,7 @@ func (s *URLTest) NewDirectRouteConnection(metadata adapter.InboundContext, rout
+ 	if !common.Contains(selected.Network(), metadata.Network) {
+ 		return nil, E.New(metadata.Network, " is not supported by outbound: ", selected.Tag())
+ 	}
++	metadata.SetRealOutbound(selected.Tag())
+ 	return selected.(adapter.DirectRouteOutbound).NewDirectRouteConnection(metadata, routeContext, timeout)
+ }
+ 
+diff --git a/route/route.go b/route/route.go
+index 218e7c96..4a3c47da 100644
+--- a/route/route.go
++++ b/route/route.go
+@@ -82,6 +82,7 @@ func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata ad
+ 	}
+ 	conntrack.KillerCheck()
+ 	metadata.Network = N.NetworkTCP
++	metadata.EnableRealOutboundTracking()
+ 	switch metadata.Destination.Fqdn {
+ 	case mux.Destination.Fqdn:
+ 		return E.New("global multiplex is deprecated since sing-box v1.7.0, enable multiplex in Inbound fields instead.")
+@@ -129,6 +130,7 @@ func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata ad
+ 			}
+ 		case *R.RuleActionReject:
+ 			buf.ReleaseMulti(buffers)
++			r.recordRejectedConnection(ctx, metadata, selectedRule)
+ 			if action.Method == C.RuleActionRejectMethodReply {
+ 				return E.New("reject method `reply` is not supported for TCP connections")
+ 			}
+@@ -220,6 +222,7 @@ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, m
+ 
+ 	// TODO: move to UoT
+ 	metadata.Network = N.NetworkUDP
++	metadata.EnableRealOutboundTracking()
+ 
+ 	// Currently we don't have deadline usages for UDP connections
+ 	/*if deadline.NeedAdditionalReadDeadline(conn) {
+@@ -261,6 +264,7 @@ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, m
+ 			}
+ 		case *R.RuleActionReject:
+ 			N.ReleaseMultiPacketBuffer(packetBuffers)
++			r.recordRejectedConnection(ctx, metadata, selectedRule)
+ 			if action.Method == C.RuleActionRejectMethodReply {
+ 				return E.New("reject method `reply` is not supported for UDP connections")
+ 			}
+@@ -304,6 +308,7 @@ func (r *Router) PreMatch(metadata adapter.InboundContext, routeContext tun.Dire
+ 	if selectedRule != nil {
+ 		switch action := selectedRule.Action().(type) {
+ 		case *R.RuleActionReject:
++			r.recordRejectedConnection(r.ctx, metadata, selectedRule)
+ 			switch metadata.Network {
+ 			case N.NetworkTCP:
+ 				if action.Method == C.RuleActionRejectMethodReply {
+@@ -406,6 +411,14 @@ func (r *Router) PreMatch(metadata adapter.InboundContext, routeContext tun.Dire
+ 	return directRouteOutbound.NewDirectRouteConnection(metadata, routeContext, timeout)
+ }
+ 
++func (r *Router) recordRejectedConnection(ctx context.Context, metadata adapter.InboundContext, matchedRule adapter.Rule) {
++	for _, tracker := range r.trackers {
++		if rejectedTracker, loaded := tracker.(adapter.RejectedConnectionTracker); loaded {
++			rejectedTracker.RejectedConnection(ctx, metadata, matchedRule)
++		}
++	}
++}
++
+ func (r *Router) matchRule(
+ 	ctx context.Context, metadata *adapter.InboundContext, preMatch bool, supportBypass bool,
+ 	inputConn net.Conn, inputPacketConn N.PacketConn,

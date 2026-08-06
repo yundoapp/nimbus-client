@@ -56,6 +56,11 @@ class MacOSPrivilegedHelper {
     return MacOSConnectionConflict.fromMap(result);
   }
 
+  Future<List<String>> ruleSetDiagnostics() async {
+    final result = await _channel.invokeMethod<List<Object?>>('ruleSetDiagnostics') ?? const [];
+    return result.whereType<String>().toList(growable: false);
+  }
+
   Future<void> openSystemSettings() async {
     await _channel.invokeMethod<void>('openSystemSettings');
   }

@@ -13,6 +13,7 @@ import 'package:hiddify/features/log/model/log_level.dart' as config_log_level;
 import 'package:hiddify/features/nimbus/auth/model/nimbus_acceleration_diagnostic.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_diagnostics_localization.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_rule_set_diagnostic.dart';
+import 'package:hiddify/features/nimbus/auth/model/nimbus_rules_config.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_acceleration_diagnostics_controller.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/hiddifycore/core_interface/core_interface_wrapper_stub.dart'
@@ -158,7 +159,12 @@ class HiddifyCoreService with InfraLogger {
       // macOS prepares a derived user-core config after adding the managed
       // public and account rule sets. Read tags from that effective config so
       // diagnostics describe what the core actually loads.
-      ruleSetTags = _remoteRuleSetTags(core.backgroundConfigPath(path));
+      final backgroundConfigPath = core.backgroundConfigPath(path);
+      final platformRoutingConfig = core.preparedRoutingConfig();
+      final usesPlatformRoutingConfig = platformRoutingConfig != null;
+      ruleSetTags = usesPlatformRoutingConfig
+          ? _remoteRuleSetTagsFromContent(platformRoutingConfig)
+          : _remoteRuleSetTags(backgroundConfigPath);
       loggy.info('core background preparation response: $background');
       if (background != const CoreStatus.started()) {
         _recordRuleSetFailureFromLogs(ruleSetTags, ruleSetLogOffset, diagnostics, t);
@@ -174,13 +180,26 @@ class HiddifyCoreService with InfraLogger {
         return left(background.getCoreAlert() ?? const ConnectionFailure.unexpected("failed to start core"));
       }
       diagnostics.completeStep(NimbusAccelerationStepId.corePrepare, detail: t.nimbus.diagnostics.detailCorePrepared);
+      final sourceMismatch = usesPlatformRoutingConfig
+          ? _managedRuleSetSourceMismatchFromContent(platformRoutingConfig)
+          : _managedRuleSetSourceMismatch(backgroundConfigPath);
+      if (sourceMismatch != null) {
+        diagnostics.startStep(NimbusAccelerationStepId.ruleSets, detail: t.nimbus.diagnostics.ruleSets);
+        diagnostics.failStep(
+          NimbusAccelerationStepId.ruleSets,
+          detail: sourceMismatch,
+          errorCode: 'RULE_SET_SOURCE_MISMATCH',
+        );
+        diagnostics.fail(errorCode: 'Y-RULE-002', detail: sourceMismatch);
+        statusController.add(currentState = const CoreStatus.stopped());
+        return left(ConnectionFailure.unexpected(sourceMismatch));
+      }
       // A previous stop may have left the old local HTTP/2 channel in a
       // closing state. Rebind before issuing the next start command.
       await stopListenSingle('fg');
       await stopListenSingle('bg');
       await core.refreshClients();
       await _refreshCoreListeners();
-      final backgroundConfigPath = core.backgroundConfigPath(path);
       final useRawConfig = enableRawConfig || backgroundConfigPath != path;
       final coreRuleSetLogOffset = await _coreRuleSetLogLength();
       loggy.info('core start prepared (raw=$useRawConfig, macosPathRewritten=${backgroundConfigPath != path})');
@@ -241,39 +260,22 @@ class HiddifyCoreService with InfraLogger {
           detail: t.nimbus.diagnostics.detailCoreStatusStarted,
         );
 
-        diagnostics.startStep(NimbusAccelerationStepId.ruleSets, detail: t.nimbus.diagnostics.ruleSets);
-        final ruleSetDiagnostics = await _waitForRuleSetDiagnostics(
-          tags: ruleSetTags,
-          logOffset: ruleSetLogOffset,
-          coreLogOffset: coreRuleSetLogOffset,
-        );
-        if (ruleSetDiagnostics.hasFailure || !ruleSetDiagnostics.allResolved) {
-          final detail =
-              ruleSetDiagnostics.firstFailure?.detail ??
-              t.nimbus.diagnostics.detailRuleSetsPending(
-                tags: ruleSetDiagnostics.items.map((item) => item.tag).join(', '),
-              );
-          diagnostics.failStep(
-            NimbusAccelerationStepId.ruleSets,
-            detail: detail,
-            errorCode: ruleSetDiagnostics.hasFailure ? 'RULE_SET_DOWNLOAD_FAILED' : 'RULE_SET_STATUS_UNKNOWN',
+        if (!usesPlatformRoutingConfig) {
+          final ruleSetError = await _verifyRuleSetLoading(
+            tags: ruleSetTags,
+            logOffset: ruleSetLogOffset,
+            coreLogOffset: coreRuleSetLogOffset,
+            diagnostics: diagnostics,
+            t: t,
           );
-          diagnostics.fail(errorCode: 'Y-RULE-001', detail: detail);
-          await core.bgClient.stop(Empty());
-          await core.stop();
-          statusController.add(currentState = const CoreStatus.stopped());
-          return left(ConnectionFailure.unexpected(detail));
+          if (ruleSetError != null) {
+            diagnostics.fail(errorCode: 'Y-RULE-001', detail: ruleSetError);
+            await core.bgClient.stop(Empty());
+            await core.stop();
+            statusController.add(currentState = const CoreStatus.stopped());
+            return left(ConnectionFailure.unexpected(ruleSetError));
+          }
         }
-        final ruleSetDetail = ruleSetDiagnostics.firstUpdateFailure?.detail;
-        diagnostics.completeStep(
-          NimbusAccelerationStepId.ruleSets,
-          detail: ruleSetDetail == null
-              ? t.nimbus.diagnostics.detailRuleSetsLoaded(count: ruleSetDiagnostics.items.length)
-              : t.nimbus.diagnostics.detailRuleSetsLoadedWithFailure(
-                  count: ruleSetDiagnostics.items.length,
-                  detail: ruleSetDetail,
-                ),
-        );
 
         diagnostics.startStep(NimbusAccelerationStepId.network, detail: t.nimbus.diagnostics.network);
         final networkPreparation = await _prepareTunnelNetworkMode(
@@ -318,6 +320,22 @@ class HiddifyCoreService with InfraLogger {
           return left(tunnel.getCoreAlert() ?? const ConnectionFailure.unexpected('failed to start tunnel'));
         }
         diagnostics.completeStep(NimbusAccelerationStepId.tunnel, detail: t.nimbus.diagnostics.detailTunnelActive);
+        if (usesPlatformRoutingConfig) {
+          final ruleSetError = await _verifyRuleSetLoading(
+            tags: ruleSetTags,
+            logOffset: ruleSetLogOffset,
+            coreLogOffset: coreRuleSetLogOffset,
+            diagnostics: diagnostics,
+            t: t,
+          );
+          if (ruleSetError != null) {
+            diagnostics.fail(errorCode: 'Y-RULE-001', detail: ruleSetError);
+            await core.bgClient.stop(Empty());
+            await core.stop();
+            statusController.add(currentState = const CoreStatus.stopped());
+            return left(ConnectionFailure.unexpected(ruleSetError));
+          }
+        }
         diagnostics.startStep(NimbusAccelerationStepId.routing, detail: t.nimbus.diagnostics.routing);
         diagnostics.completeStep(NimbusAccelerationStepId.routing, detail: t.nimbus.diagnostics.detailRoutingActive);
         loggy.info('macOS tunnel activation flow completed; releasing prepared config');
@@ -351,12 +369,65 @@ class HiddifyCoreService with InfraLogger {
 
   Set<String> _remoteRuleSetTags(String path) {
     try {
-      final decoded = jsonDecode(File(path).readAsStringSync());
-      if (decoded is! Map) return const {};
-      return nimbusRemoteRuleSetTagsFromConfig(Map<String, dynamic>.from(decoded));
+      return _remoteRuleSetTagsFromContent(File(path).readAsStringSync());
     } catch (_) {
       return const {};
     }
+  }
+
+  Set<String> _remoteRuleSetTagsFromContent(String content) {
+    final decoded = jsonDecode(content);
+    if (decoded is! Map) return const {};
+    return nimbusRemoteRuleSetTagsFromConfig(Map<String, dynamic>.from(decoded));
+  }
+
+  String? _managedRuleSetSourceMismatch(String path) {
+    try {
+      return _managedRuleSetSourceMismatchFromContent(File(path).readAsStringSync());
+    } catch (error) {
+      return 'RULE_SET_SOURCE_MISMATCH config validation failed: $error';
+    }
+  }
+
+  String? _managedRuleSetSourceMismatchFromContent(String content) {
+    try {
+      final decoded = jsonDecode(content);
+      if (decoded is! Map) return 'RULE_SET_SOURCE_MISMATCH config is not an object';
+      final expected = ref.read(nimbusManagedRouteOptionsProvider).ruleSets;
+      return nimbusManagedRuleSetSourceMismatch(config: Map<String, dynamic>.from(decoded), expectedRuleSets: expected);
+    } catch (error) {
+      return 'RULE_SET_SOURCE_MISMATCH config validation failed: $error';
+    }
+  }
+
+  Future<String?> _verifyRuleSetLoading({
+    required Set<String> tags,
+    required int logOffset,
+    required int coreLogOffset,
+    required NimbusAccelerationDiagnosticsController diagnostics,
+    required Translations t,
+  }) async {
+    diagnostics.startStep(NimbusAccelerationStepId.ruleSets, detail: t.nimbus.diagnostics.ruleSets);
+    final result = await _waitForRuleSetDiagnostics(tags: tags, logOffset: logOffset, coreLogOffset: coreLogOffset);
+    if (result.hasFailure || !result.allResolved) {
+      final detail =
+          result.firstFailure?.detail ??
+          t.nimbus.diagnostics.detailRuleSetsPending(tags: result.items.map((item) => item.tag).join(', '));
+      diagnostics.failStep(
+        NimbusAccelerationStepId.ruleSets,
+        detail: detail,
+        errorCode: result.hasFailure ? 'RULE_SET_DOWNLOAD_FAILED' : 'RULE_SET_STATUS_UNKNOWN',
+      );
+      return detail;
+    }
+    final updateFailure = result.firstUpdateFailure?.detail;
+    diagnostics.completeStep(
+      NimbusAccelerationStepId.ruleSets,
+      detail: updateFailure == null
+          ? t.nimbus.diagnostics.detailRuleSetsLoaded(count: result.items.length)
+          : t.nimbus.diagnostics.detailRuleSetsLoadedWithFailure(count: result.items.length, detail: updateFailure),
+    );
+    return null;
   }
 
   Future<NimbusRuleSetDiagnosticsResult> _waitForRuleSetDiagnostics({
@@ -370,8 +441,14 @@ class HiddifyCoreService with InfraLogger {
     while (DateTime.now().isBefore(deadline)) {
       final start = logOffset.clamp(0, logBuffer.length);
       final coreMessages = await _readCoreRuleSetLogMessages(coreLogOffset);
+      List<String> platformMessages = const [];
+      try {
+        platformMessages = await core.ruleSetDiagnosticMessages();
+      } catch (error) {
+        loggy.debug('unable to read platform rule-set diagnostics yet: $error');
+      }
       result = parseNimbusRuleSetDiagnostics(
-        logMessages: [...logBuffer.skip(start).map((message) => message.message), ...coreMessages],
+        logMessages: [...logBuffer.skip(start).map((message) => message.message), ...coreMessages, ...platformMessages],
         tags: tags,
       );
       if (result.hasFailure || result.allResolved) return result;
@@ -518,36 +595,63 @@ class HiddifyCoreService with InfraLogger {
         diagnostics.startStep(NimbusAccelerationStepId.coreStop, detail: t.nimbus.diagnostics.coreStop);
       }
       loggy.debug("stopping");
-      var errMsg = "";
+      var coreStopError = "";
+      var verificationError = "";
       try {
         await stopListenSingle('fg');
         await stopListenSingle('bg');
         await core.bgClient.stop(Empty());
       } on GrpcError catch (e) {
         if (e.code == StatusCode.unknown && !(e.message?.contains("HTTP/2") ?? false)) {
-          errMsg = e.message ?? "failed to stop core: $e";
+          coreStopError = e.message ?? "failed to stop core: $e";
 
           loggy.error("failed to stop bg core: $e");
         }
       } catch (e) {
         loggy.error("failed to stop bg core: $e");
-        // left("failed to stop core: $e");
+        coreStopError = "failed to stop core: $e";
       }
-      if (!await core.stop()) {}
+      try {
+        final platformStopped = await core.stop();
+        if (Platform.isMacOS && !platformStopped) {
+          verificationError = 'macOS tunnel or system routes were not fully released';
+        }
+      } catch (error) {
+        loggy.error('failed to clean up the platform tunnel: $error');
+        verificationError = 'failed to clean up the platform tunnel: $error';
+      }
+      if (coreStopError.isEmpty && verificationError.isEmpty) {
+        final coreStopped = await core.waitForCoreStopped();
+        if (!coreStopped) {
+          verificationError = 'native core did not reach the stopped state';
+        }
+      }
       if (isDiagnosticStop) {
-        if (errMsg.isNotEmpty) {
-          diagnostics.failStep(NimbusAccelerationStepId.coreStop, detail: errMsg, errorCode: 'CORE_STOP_FAILED');
+        if (coreStopError.isNotEmpty) {
+          diagnostics.failStep(NimbusAccelerationStepId.coreStop, detail: coreStopError, errorCode: 'CORE_STOP_FAILED');
         } else {
           diagnostics.completeStep(NimbusAccelerationStepId.coreStop, detail: t.nimbus.diagnostics.detailCoreStopped);
           diagnostics.startStep(NimbusAccelerationStepId.coreStopVerify, detail: t.nimbus.diagnostics.coreStopVerify);
-          diagnostics.completeStep(
-            NimbusAccelerationStepId.coreStopVerify,
-            detail: t.nimbus.diagnostics.detailCoreStatusStopped,
-          );
+          if (verificationError.isEmpty) {
+            diagnostics.completeStep(
+              NimbusAccelerationStepId.coreStopVerify,
+              detail: t.nimbus.diagnostics.detailCoreStatusStopped,
+            );
+          } else {
+            diagnostics.failStep(
+              NimbusAccelerationStepId.coreStopVerify,
+              detail: verificationError,
+              errorCode: 'CORE_STOP_VERIFY_FAILED',
+            );
+          }
         }
       }
+      final errMsg = [coreStopError, verificationError].where((message) => message.isNotEmpty).join('; ');
+      if (errMsg.isNotEmpty) {
+        statusController.add(currentState = CoreStatus.stopped(alert: CoreAlert.startService, message: errMsg));
+        return left(errMsg);
+      }
       statusController.add(currentState = const CoreStatus.stopped());
-      if (errMsg.isNotEmpty) return left(errMsg);
       return right(unit);
     });
   }

@@ -4,8 +4,10 @@ import ServiceManagement
 import SystemConfiguration
 
 @objc private protocol YundoPrivilegedHelperProtocol {
+  func helperInfo(withReply reply: @escaping (String, String) -> Void)
   func startTunnel(_ config: String, withReply reply: @escaping (String?) -> Void)
   func stopTunnel(withReply reply: @escaping (String?) -> Void)
+  func ruleSetDiagnostics(withReply reply: @escaping ([String]) -> Void)
 }
 
 final class PrivilegedHelperBridge {
@@ -46,6 +48,8 @@ final class PrivilegedHelperBridge {
         self.readStatus(result: result)
       case "connectionConflict":
         self.inspectConnectionConflict(result: result)
+      case "ruleSetDiagnostics":
+        self.readRuleSetDiagnostics(result: result)
       case "openSystemSettings":
         self.openSystemSettings(result: result)
       default:
@@ -71,6 +75,10 @@ final class PrivilegedHelperBridge {
       return configured
     }
     return Bundle.main.bundleIdentifier.map { "\($0).privileged-helper" }
+  }
+
+  private var currentAppBuildNumber: String {
+    (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String) ?? "unknown"
   }
 
   private func startTunnel(config: String, result: @escaping FlutterResult) {
@@ -198,17 +206,49 @@ final class PrivilegedHelperBridge {
       )
       return
     }
-    helper.startTunnel(config) { error in
+    helper.helperInfo { helperBundleIdentifier, helperBuildNumber in
       DispatchQueue.main.async {
-        timeout.cancel()
-        if let error {
-          NSLog("Privileged helper start failed: %@", error)
-          finishFailure(
-            FlutterError(code: "helper_start_failed", message: error, details: nil),
-            error.contains("invalid tunnel configuration")
+        guard !completed else { return }
+        guard
+          helperBundleIdentifier == Bundle.main.bundleIdentifier,
+          helperBuildNumber == self.currentAppBuildNumber
+        else {
+          NSLog(
+            "Privileged helper is stale: expected %@ build %@, got %@ build %@",
+            Bundle.main.bundleIdentifier ?? "<unknown>",
+            self.currentAppBuildNumber,
+            helperBundleIdentifier,
+            helperBuildNumber
           )
-        } else {
-          finishSuccess()
+          finishFailure(
+            FlutterError(
+              code: "helper_stale",
+              message: "installed privileged helper is stale",
+              details: [
+                "expectedBundleIdentifier": Bundle.main.bundleIdentifier ?? "<unknown>",
+                "expectedBuildNumber": self.currentAppBuildNumber,
+                "actualBundleIdentifier": helperBundleIdentifier,
+                "actualBuildNumber": helperBuildNumber,
+              ]
+            ),
+            true
+          )
+          return
+        }
+
+        helper.startTunnel(config) { error in
+          DispatchQueue.main.async {
+            timeout.cancel()
+            if let error {
+              NSLog("Privileged helper start failed: %@", error)
+              finishFailure(
+                FlutterError(code: "helper_start_failed", message: error, details: nil),
+                error.contains("invalid tunnel configuration")
+              )
+            } else {
+              finishSuccess()
+            }
+          }
         }
       }
     }
@@ -329,7 +369,7 @@ final class PrivilegedHelperBridge {
     let timeout = DispatchWorkItem {
       finish(FlutterError(code: "helper_xpc_timeout", message: nil, details: nil))
     }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: timeout)
+    DispatchQueue.main.asyncAfter(deadline: .now() + 15, execute: timeout)
     let proxy = connection.remoteObjectProxyWithErrorHandler { error in
       DispatchQueue.main.async {
         timeout.cancel()
@@ -349,6 +389,37 @@ final class PrivilegedHelperBridge {
         } else {
           finish(nil)
         }
+      }
+    }
+  }
+
+  private func readRuleSetDiagnostics(result: @escaping FlutterResult) {
+    let connection = activeConnection()
+    var completed = false
+    let finish: (Any?) -> Void = { value in
+      guard !completed else { return }
+      completed = true
+      result(value)
+    }
+    let timeout = DispatchWorkItem {
+      finish(FlutterError(code: "helper_xpc_timeout", message: nil, details: nil))
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: timeout)
+    let proxy = connection.remoteObjectProxyWithErrorHandler { error in
+      DispatchQueue.main.async {
+        timeout.cancel()
+        finish(FlutterError(code: "helper_xpc_failed", message: error.localizedDescription, details: nil))
+      }
+    }
+    guard let helper = proxy as? YundoPrivilegedHelperProtocol else {
+      timeout.cancel()
+      finish(FlutterError(code: "helper_xpc_unavailable", message: nil, details: nil))
+      return
+    }
+    helper.ruleSetDiagnostics { lines in
+      DispatchQueue.main.async {
+        timeout.cancel()
+        finish(lines)
       }
     }
   }

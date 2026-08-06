@@ -3,8 +3,10 @@ import Foundation
 import Security
 
 @objc private protocol YundoPrivilegedHelperProtocol {
+  func helperInfo(withReply reply: @escaping (String, String) -> Void)
   func startTunnel(_ config: String, withReply reply: @escaping (String?) -> Void)
   func stopTunnel(withReply reply: @escaping (String?) -> Void)
+  func ruleSetDiagnostics(withReply reply: @escaping ([String]) -> Void)
 }
 
 private enum HelperProcess {
@@ -30,6 +32,7 @@ private enum HelperFailure: Error, LocalizedError {
   case invalidConfiguration(String)
   case coreLibraryUnavailable
   case coreStartFailed(String)
+  case coreStopFailed(String)
 
   var errorDescription: String? {
     switch self {
@@ -37,6 +40,7 @@ private enum HelperFailure: Error, LocalizedError {
     case .invalidConfiguration(let reason): "invalid tunnel configuration: \(reason)"
     case .coreLibraryUnavailable: "core library is unavailable"
     case .coreStartFailed(let reason): "tunnel start failed: \(reason)"
+    case .coreStopFailed(let reason): "tunnel stop failed: \(reason)"
     }
   }
 }
@@ -80,9 +84,13 @@ private final class TunnelConfigValidator {
     }
     let allowedTunKeys: Set<String> = [
       "type", "tag", "address", "mtu", "auto_route", "strict_route", "stack",
-      "endpoint_independent_nat",
+      "endpoint_independent_nat", "sniff", "sniff_override_destination",
     ]
-    guard Set(tun.keys).isSubset(of: allowedTunKeys) else {
+    guard
+      Set(tun.keys).isSubset(of: allowedTunKeys),
+      tun["sniff"] as? Bool == true,
+      tun["sniff_override_destination"] as? Bool == true
+    else {
       throw HelperFailure.invalidConfiguration("unexpected TUN option")
     }
 
@@ -376,10 +384,15 @@ private final class TunnelConfigValidator {
         throw HelperFailure.invalidConfiguration("invalid local route rule set")
       }
     case "remote":
+      let allowedKeys = Set(["tag", "type", "format", "url", "update_interval", "download_detour", "fallback_path"])
       guard
-        Set(ruleSet.keys)
-          == Set(["tag", "type", "format", "url", "update_interval", "download_detour"]),
-        tag != "geoip-cn",
+        Set(ruleSet.keys).isSubset(of: allowedKeys),
+        Set(ruleSet.keys).contains("tag"),
+        Set(ruleSet.keys).contains("type"),
+        Set(ruleSet.keys).contains("format"),
+        Set(ruleSet.keys).contains("url"),
+        Set(ruleSet.keys).contains("update_interval"),
+        Set(ruleSet.keys).contains("download_detour"),
         ruleSet["format"] as? String == "binary",
         ruleSet["download_detour"] as? String == "yundo-socks",
         let urlString = ruleSet["url"] as? String,
@@ -395,6 +408,7 @@ private final class TunnelConfigValidator {
           of: #"^(?:[0-9]+(?:\.[0-9]+)?(?:ns|us|ms|s|m|h|d))+$"#,
           options: .regularExpression
         ) != nil
+        && validateBundledFallbackPath(ruleSet["fallback_path"] as? String, tag: tag)
       else {
         throw HelperFailure.invalidConfiguration("invalid remote route rule set")
       }
@@ -407,6 +421,18 @@ private final class TunnelConfigValidator {
   private func isSafeTag(_ tag: String) -> Bool {
     tag.range(of: #"^[A-Za-z0-9][A-Za-z0-9._!+-]{0,127}$"#, options: .regularExpression)
       != nil
+  }
+
+  private func validateBundledFallbackPath(_ path: String?, tag: String) -> Bool {
+    guard let path, let appContentsURL = CoreRuntime.shared.appContentsURL else {
+      return path == nil
+    }
+    return URL(fileURLWithPath: path).standardizedFileURL
+      == appContentsURL
+        .appendingPathComponent(
+          "Frameworks/App.framework/Resources/flutter_assets/assets/rules/\(tag).srs"
+        )
+        .standardizedFileURL
   }
 }
 
@@ -440,7 +466,7 @@ private final class CoreRuntime {
     NSLog("CoreRuntime start: loading core")
     try loadCoreIfNeeded()
     NSLog("CoreRuntime start: stopping existing tunnel")
-    stopLocked()
+    try stopLocked()
 
     try FileManager.default.createDirectory(
       at: dataDirectory,
@@ -508,17 +534,29 @@ private final class CoreRuntime {
     }
   }
 
-  func stop() {
+  func stop() throws {
     lock.lock()
     defer { lock.unlock() }
-    stopLocked()
+    try stopLocked()
   }
 
   func stopAndExit() {
-    stop()
+    try? stop()
     DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) {
       exit(EXIT_SUCCESS)
     }
+  }
+
+  func ruleSetDiagnostics() -> [String] {
+    lock.lock()
+    defer { lock.unlock() }
+    let logURL = dataDirectory.appendingPathComponent("tunnel-core.log")
+    guard let rawLog = try? String(contentsOf: logURL, encoding: .utf8) else { return [] }
+    return rawLog
+      .split(separator: "\n")
+      .filter { $0.contains("rule-set ") }
+      .suffix(512)
+      .map { String($0.prefix(2_048)) }
   }
 
   fileprivate var appContentsURL: URL? {
@@ -550,7 +588,7 @@ private final class CoreRuntime {
     parseCliFunction = unsafeBitCast(parseCliSymbol, to: ParseCliFunction.self)
   }
 
-  private func stopLocked() {
+  private func stopLocked() throws {
     if let tunnelProcess, tunnelProcess.isRunning {
       tunnelProcess.terminate()
       for _ in 0..<20 where tunnelProcess.isRunning {
@@ -558,33 +596,28 @@ private final class CoreRuntime {
       }
       if tunnelProcess.isRunning {
         kill(tunnelProcess.processIdentifier, SIGKILL)
+        for _ in 0..<20 where tunnelProcess.isRunning {
+          Thread.sleep(forTimeInterval: 0.05)
+        }
       }
     }
-    stopOrphanedTunnelProcessesLocked()
+    try stopOrphanedTunnelProcessesLocked()
     tunnelProcess = nil
     tunnelLogHandle?.closeFile()
     tunnelLogHandle = nil
     try? FileManager.default.removeItem(at: dataDirectory.appendingPathComponent("active-tunnel.json"))
+
+    var residuals: [String] = []
+    for _ in 0..<30 {
+      residuals = cleanupResidualsLocked()
+      if residuals.isEmpty { return }
+      Thread.sleep(forTimeInterval: 0.1)
+    }
+    throw HelperFailure.coreStopFailed(residuals.joined(separator: "; "))
   }
 
-  private func stopOrphanedTunnelProcessesLocked() {
-    guard
-      let helperPath = HelperProcess.executableURL?.path,
-      let output = runProcess(executable: "/bin/ps", arguments: ["-axo", "pid=,command="])
-    else {
-      return
-    }
-
-    let configPath = dataDirectory.appendingPathComponent("active-tunnel.json").path
-    let expectedCommand = "\(helperPath) --run-tunnel \(configPath)"
-    let processIDs = output
-      .split(separator: "\n")
-      .compactMap { line -> pid_t? in
-        let parts = line.split(maxSplits: 1, whereSeparator: { $0 == " " || $0 == "\t" })
-        guard parts.count == 2, let pid = Int32(parts[0]), pid != getpid() else { return nil }
-        return parts[1] == expectedCommand ? pid : nil
-      }
-
+  private func stopOrphanedTunnelProcessesLocked() throws {
+    let processIDs = try ownedTunnelProcessIDsLocked()
     if !processIDs.isEmpty {
       NSLog("CoreRuntime stop: terminating orphaned tunnel pids=%@", processIDs.map(String.init).joined(separator: ","))
     }
@@ -598,8 +631,77 @@ private final class CoreRuntime {
       }
       if kill(processID, 0) == 0 {
         kill(processID, SIGKILL)
+        for _ in 0..<20 where kill(processID, 0) == 0 {
+          Thread.sleep(forTimeInterval: 0.05)
+        }
       }
     }
+  }
+
+  private func ownedTunnelProcessIDsLocked() throws -> [pid_t] {
+    guard
+      let helperPath = HelperProcess.executableURL?.path,
+      let output = runProcess(executable: "/bin/ps", arguments: ["-axo", "pid=,command="])
+    else {
+      throw HelperFailure.coreStopFailed("unable to inspect tunnel worker processes")
+    }
+
+    let configPath = dataDirectory.appendingPathComponent("active-tunnel.json").path
+    let expectedCommand = "\(helperPath) --run-tunnel \(configPath)"
+    return output
+      .split(separator: "\n")
+      .compactMap { line -> pid_t? in
+        let parts = line.split(maxSplits: 1, whereSeparator: { $0 == " " || $0 == "\t" })
+        guard parts.count == 2, let pid = Int32(parts[0]), pid != getpid() else { return nil }
+        return parts[1] == expectedCommand ? pid : nil
+      }
+  }
+
+  private func cleanupResidualsLocked() -> [String] {
+    var residuals: [String] = []
+    do {
+      let processIDs = try ownedTunnelProcessIDsLocked()
+      if !processIDs.isEmpty {
+        residuals.append("tunnel worker processes remain: \(processIDs.map(String.init).joined(separator: ","))")
+      }
+    } catch {
+      residuals.append(error.localizedDescription)
+    }
+
+    let activeConfigURL = dataDirectory.appendingPathComponent("active-tunnel.json")
+    if FileManager.default.fileExists(atPath: activeConfigURL.path) {
+      residuals.append("active tunnel configuration remains")
+    }
+
+    let addressTokens = ["172.20.0.1", "fdfe:dcba:9876::1"]
+    if let interfaces = runProcess(executable: "/sbin/ifconfig", arguments: []) {
+      if addressTokens.contains(where: interfaces.contains) {
+        residuals.append("Yundo tunnel interface address remains")
+      }
+    } else {
+      residuals.append("unable to inspect network interfaces")
+    }
+
+    let routeOutputs = [
+      runProcess(executable: "/usr/sbin/netstat", arguments: ["-rn", "-f", "inet"]),
+      runProcess(executable: "/usr/sbin/netstat", arguments: ["-rn", "-f", "inet6"]),
+    ]
+    if routeOutputs.contains(where: { $0 == nil }) {
+      residuals.append("unable to inspect system routes")
+    } else if routeOutputs.compactMap({ $0 }).contains(where: { output in
+      addressTokens.contains(where: output.contains)
+    }) {
+      residuals.append("Yundo system routes remain")
+    }
+
+    if let dns = runProcess(executable: "/usr/sbin/scutil", arguments: ["--dns"]) {
+      if addressTokens.contains(where: dns.contains) {
+        residuals.append("Yundo DNS state remains")
+      }
+    } else {
+      residuals.append("unable to inspect DNS state")
+    }
+    return residuals
   }
 
   private func runProcess(executable: String, arguments: [String]) -> String? {
@@ -624,6 +726,10 @@ private final class CoreRuntime {
 }
 
 private final class HelperEndpoint: NSObject, YundoPrivilegedHelperProtocol {
+  func helperInfo(withReply reply: @escaping (String, String) -> Void) {
+    reply(BuildIdentity.appBundleIdentifier, BuildIdentity.appBuildNumber)
+  }
+
   func startTunnel(_ config: String, withReply reply: @escaping (String?) -> Void) {
     NSLog("Helper endpoint: startTunnel received bytes=%d", config.utf8.count)
     do {
@@ -638,9 +744,18 @@ private final class HelperEndpoint: NSObject, YundoPrivilegedHelperProtocol {
 
   func stopTunnel(withReply reply: @escaping (String?) -> Void) {
     NSLog("Helper endpoint: stopTunnel received")
-    CoreRuntime.shared.stop()
-    NSLog("Helper endpoint: stopTunnel completed")
-    reply(nil)
+    do {
+      try CoreRuntime.shared.stop()
+      NSLog("Helper endpoint: stopTunnel completed")
+      reply(nil)
+    } catch {
+      NSLog("Helper endpoint: stopTunnel failed: %@", error.localizedDescription)
+      reply(error.localizedDescription)
+    }
+  }
+
+  func ruleSetDiagnostics(withReply reply: @escaping ([String]) -> Void) {
+    reply(CoreRuntime.shared.ruleSetDiagnostics())
   }
 }
 

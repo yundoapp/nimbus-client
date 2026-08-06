@@ -13,22 +13,23 @@ index d37e8b6..363c01c 100644
  	// for _, rule := range opt.Rules {
  	// 	routeRule := rule.MakeRule()
  	// 	switch rule.Outbound {
-@@ -977,6 +981,19 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
+@@ -977,6 +981,20 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
  			},
  		})
  	}
-+	// Reuse Hiddify rule sets when tags overlap, otherwise sing-box rejects the
-+	// entire configuration as containing duplicate rule-set tags.
-+	ruleSetTags := make(map[string]struct{}, len(rulesets)+len(hopt.ManagedRouteRuleSets))
-+	for _, ruleSet := range rulesets {
-+		ruleSetTags[ruleSet.Tag] = struct{}{}
++	// Product-managed rule sets are authoritative. Replace Hiddify's regional
++	// rule set at the same position when tags overlap, and append new tags once.
++	ruleSetIndexes := make(map[string]int, len(rulesets)+len(hopt.ManagedRouteRuleSets))
++	for index, ruleSet := range rulesets {
++		ruleSetIndexes[ruleSet.Tag] = index
 +	}
 +	for _, ruleSet := range hopt.ManagedRouteRuleSets {
-+		if _, exists := ruleSetTags[ruleSet.Tag]; exists {
++		if index, exists := ruleSetIndexes[ruleSet.Tag]; exists {
++			rulesets[index] = ruleSet
 +			continue
 +		}
++		ruleSetIndexes[ruleSet.Tag] = len(rulesets)
 +		rulesets = append(rulesets, ruleSet)
-+		ruleSetTags[ruleSet.Tag] = struct{}{}
 +	}
  	options.Route = &option.RouteOptions{
  		Rules:               routeRules,
@@ -63,7 +64,7 @@ new file mode 100644
 index 0000000..d39699e
 --- /dev/null
 +++ b/v2/config/managed_route_test.go
-@@ -0,0 +1,94 @@
+@@ -0,0 +1,100 @@
 +package config
 +
 +import (
@@ -73,7 +74,7 @@ index 0000000..d39699e
 +	"github.com/sagernet/sing-box/option"
 +)
 +
-+func TestManagedRoutesAreAddedWithoutReplacingHiddifyRouting(t *testing.T) {
++func TestManagedRoutesPreferManagedRuleSets(t *testing.T) {
 +	settings := DefaultHiddifyOptions()
 +	settings.Region = "cn"
 +	err := json.Unmarshal([]byte(`{
@@ -152,7 +153,13 @@ index 0000000..d39699e
 +		}
 +	}
 +	if tagCounts["geosite-cn"] != 1 {
-+		t.Fatalf("expected Hiddify geosite-cn rule set to be reused, got %v", tagCounts)
++		t.Fatalf("expected one managed geosite-cn rule set, got %v", tagCounts)
++	}
++	for _, rawRuleSet := range ruleSets {
++		ruleSet, _ := rawRuleSet.(map[string]any)
++		if ruleSet["tag"] == "geosite-cn" && ruleSet["url"] != "https://rules.example/geosite-cn.srs" {
++			t.Fatalf("managed geosite-cn source was not selected: %v", ruleSet)
++		}
 +	}
 +	if tagCounts["geosite-test"] != 1 {
 +		t.Fatalf("expected non-overlapping managed rule set to be added, got %v", tagCounts)
@@ -171,11 +178,6 @@ index 7b48349..8eabb0b 100644
    rpc StartService (StartRequest) returns (CoreInfoResponse);
    rpc Stop (hcommon.Empty) returns (CoreInfoResponse);
    rpc Restart (StartRequest) returns (CoreInfoResponse);
-@@ -30,4 +30,3 @@ service Core {
-   rpc Close (CloseRequest) returns (hcommon.Empty); 
- }
- 
--
 diff --git a/v2/hcore/hcore_service_grpc.pb.go b/v2/hcore/hcore_service_grpc.pb.go
 index c3d8911..032e82d 100644
 --- a/v2/hcore/hcore_service_grpc.pb.go

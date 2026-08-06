@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:hiddify/core/app_info/app_info_provider.dart';
+import 'package:hiddify/core/directories/directories_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/data/connection_data_providers.dart';
@@ -9,6 +10,7 @@ import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
+import 'package:hiddify/features/nimbus/auth/data/nimbus_bundled_rules.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_acceleration_diagnostic.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_diagnostics_localization.dart';
@@ -81,15 +83,26 @@ Future<NimbusRulesPackage> prepareNimbusRulesPackage({
     }
   }
 
-  final manifest = await fetchManifest(supportedCache?.manifest);
+  NimbusRulesManifest manifest;
+  try {
+    manifest = await fetchManifest(supportedCache?.manifest);
+  } catch (_) {
+    if (supportedCache != null) return supportedCache;
+    rethrow;
+  }
   if (supportedCache != null && !manifest.requiresUpdate && manifest.sameVersions(supportedCache.manifest)) {
     return supportedCache;
   }
 
-  final rulesPackage = await fetchPackage();
-  assertSupportedNimbusRulesPackage(rulesPackage);
-  await savePackage(rulesPackage);
-  return rulesPackage;
+  try {
+    final rulesPackage = await fetchPackage();
+    assertSupportedNimbusRulesPackage(rulesPackage);
+    await savePackage(rulesPackage);
+    return rulesPackage;
+  } catch (_) {
+    if (supportedCache != null) return supportedCache;
+    rethrow;
+  }
 }
 
 void assertSupportedNimbusRulesPackage(NimbusRulesPackage rulesPackage) {
@@ -416,16 +429,28 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         appVersion: appInfo.version,
         rulesManifest: rulesPackage.manifest,
       );
+      var usingRulesFallback = false;
       if (plan.rulesManifest.requiresUpdate || !plan.rulesManifest.sameVersions(rulesPackage.manifest)) {
         diagnostics.startStep(NimbusAccelerationStepId.rules, detail: _diagnosticsT.nimbus.diagnostics.rules);
-        rulesPackage = await _repository.fetchRulesPackage(session);
-        assertSupportedNimbusRulesPackage(rulesPackage);
-        await _repository.saveRulesPackage(session.user.id, rulesPackage);
-        ref.invalidate(nimbusCachedRulesPackageProvider);
-        ref.invalidate(nimbusRulesPackageProvider);
+        try {
+          rulesPackage = await _repository.fetchRulesPackage(session);
+          assertSupportedNimbusRulesPackage(rulesPackage);
+          await _repository.saveRulesPackage(session.user.id, rulesPackage);
+          ref.invalidate(nimbusCachedRulesPackageProvider);
+          ref.invalidate(nimbusRulesPackageProvider);
+        } catch (error) {
+          usingRulesFallback = true;
+          loggy.warning('rules package refresh failed; keeping the last validated snapshot: $error');
+        }
       }
       if (!plan.rulesManifest.sameVersions(rulesPackage.manifest)) {
-        throw const FormatException('rules package changed while preparing connection');
+        if (!usingRulesFallback) {
+          throw const FormatException('rules package changed while preparing connection');
+        }
+        // The plan is authoritative for the current account versions. Keep
+        // the last validated payload for this connection rather than blocking
+        // the network because a newer remote package could not be downloaded.
+        rulesPackage = rulesPackage.copyWith(manifest: plan.rulesManifest);
       }
       diagnostics.completeStep(NimbusAccelerationStepId.rules, detail: _rulesLoadedDiagnostic(rulesPackage));
       diagnostics.completeStep(
@@ -456,7 +481,7 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         return;
       }
       diagnostics.startStep(NimbusAccelerationStepId.rules, detail: _diagnosticsT.nimbus.diagnostics.rules);
-      _applyManagedRouteOptions(rulesPackage);
+      await _applyManagedRouteOptions(rulesPackage);
       diagnostics.completeStep(NimbusAccelerationStepId.rules, detail: _rulesLoadedDiagnostic(rulesPackage));
       diagnostics.startStep(NimbusAccelerationStepId.coreConfig, detail: _diagnosticsT.nimbus.diagnostics.coreConfig);
       _validateStandardProfileContent(profileContent);
@@ -530,11 +555,16 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
 
   String _rulesLoadedDiagnostic(NimbusRulesPackage package) {
     final publicVersion = package.manifest.publicRulesVersion?.trim();
-    return _diagnosticsT.nimbus.diagnostics.detailRulesLoaded(
+    final detail = _diagnosticsT.nimbus.diagnostics.detailRulesLoaded(
       publicCount: package.publicRules.length.toString(),
       publicVersion: publicVersion == null || publicVersion.isEmpty ? '--' : publicVersion,
       userCount: package.userRules.length.toString(),
     );
+    final sources = [...package.publicRules, ...package.userRules]
+        .where((item) => item.sourceUrl?.trim().isNotEmpty ?? false)
+        .map((item) => '${item.pattern}=${item.sourceUrl}')
+        .join('|');
+    return sources.isEmpty ? detail : '$detail\nsource=$sources';
   }
 
   Future<void> _cleanupFailedConnectionAttempt() async {
@@ -572,36 +602,48 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     final plan = state.plan;
     final session = ref.read(nimbusAuthControllerProvider).session;
     state = state.copyWith(isPreparing: false, isDisconnecting: true, connectedReported: false);
-    diagnostics.startStep(NimbusAccelerationStepId.coreStop, detail: _diagnosticsT.nimbus.diagnostics.coreStop);
-    await ref.read(connectionNotifierProvider.notifier).abortConnection();
-    diagnostics.startStep(NimbusAccelerationStepId.tunnel, detail: _diagnosticsT.nimbus.diagnostics.tunnel);
-    diagnostics.completeStep(
-      NimbusAccelerationStepId.tunnel,
-      detail: _diagnosticsT.nimbus.diagnostics.detailTunnelReleased,
-    );
-    diagnostics.startStep(NimbusAccelerationStepId.routing, detail: _diagnosticsT.nimbus.diagnostics.routing);
-    _clearManagedRouteOptions();
-    diagnostics.completeStep(
-      NimbusAccelerationStepId.routing,
-      detail: _diagnosticsT.nimbus.diagnostics.detailRoutingRestored,
-    );
-    await ref.read(Preferences.startedByUser.notifier).update(false);
-    if (reportToServer && plan != null && session != null) {
-      unawaited(_safeReportDisconnect(session, plan, reason));
+    try {
+      diagnostics.startStep(NimbusAccelerationStepId.coreStop, detail: _diagnosticsT.nimbus.diagnostics.coreStop);
+      await ref.read(connectionNotifierProvider.notifier).abortConnection();
+      diagnostics.startStep(NimbusAccelerationStepId.tunnel, detail: _diagnosticsT.nimbus.diagnostics.tunnel);
+      diagnostics.completeStep(
+        NimbusAccelerationStepId.tunnel,
+        detail: _diagnosticsT.nimbus.diagnostics.detailTunnelReleased,
+      );
+      diagnostics.startStep(NimbusAccelerationStepId.routing, detail: _diagnosticsT.nimbus.diagnostics.routing);
+      _clearManagedRouteOptions();
+      diagnostics.completeStep(
+        NimbusAccelerationStepId.routing,
+        detail: _diagnosticsT.nimbus.diagnostics.detailRoutingRestored,
+      );
+      await ref.read(Preferences.startedByUser.notifier).update(false);
+      if (reportToServer && plan != null && session != null) {
+        unawaited(_safeReportDisconnect(session, plan, reason));
+      }
+      diagnostics.startStep(NimbusAccelerationStepId.cleanup, detail: _diagnosticsT.nimbus.diagnostics.cleanup);
+      await _removeManagedProfile();
+      diagnostics.completeStep(
+        NimbusAccelerationStepId.cleanup,
+        detail: _diagnosticsT.nimbus.diagnostics.detailCleanupDone,
+      );
+      diagnostics.complete(detail: _diagnosticsT.nimbus.diagnostics.detailAccelerationStopped);
+      state = const NimbusConnectionState();
+    } catch (error, stackTrace) {
+      diagnostics.failRunningStep(detail: error.toString(), errorCode: 'Y-CLEANUP-001');
+      diagnostics.fail(errorCode: 'Y-CLEANUP-001', detail: error.toString());
+      state = state.copyWith(isDisconnecting: false);
+      Error.throwWithStackTrace(error, stackTrace);
     }
-    diagnostics.startStep(NimbusAccelerationStepId.cleanup, detail: _diagnosticsT.nimbus.diagnostics.cleanup);
-    await _removeManagedProfile();
-    diagnostics.completeStep(
-      NimbusAccelerationStepId.cleanup,
-      detail: _diagnosticsT.nimbus.diagnostics.detailCleanupDone,
-    );
-    diagnostics.complete(detail: _diagnosticsT.nimbus.diagnostics.detailAccelerationStopped);
-    state = const NimbusConnectionState();
   }
 
   Future<NimbusRulesPackage> _prepareRulesPackage(NimbusAuthSession session) {
+    return _prepareRulesPackageWithBundledFallback(session);
+  }
+
+  Future<NimbusRulesPackage> _prepareRulesPackageWithBundledFallback(NimbusAuthSession session) async {
+    final cached = _repository.readRulesPackage(session.user.id) ?? await readNimbusBundledRulesPackage();
     return prepareNimbusRulesPackage(
-      cached: _repository.readRulesPackage(session.user.id),
+      cached: cached,
       fetchManifest: (localManifest) => _repository.fetchRulesManifest(session: session, localManifest: localManifest),
       fetchPackage: () => _repository.fetchRulesPackage(session),
       savePackage: (rulesPackage) async {
@@ -611,10 +653,19 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     );
   }
 
-  void _applyManagedRouteOptions(NimbusRulesPackage rulesPackage) {
+  Future<void> _applyManagedRouteOptions(NimbusRulesPackage rulesPackage) async {
+    final ruleSetTags = rulesPackage.publicRules
+        .followedBy(rulesPackage.userRules)
+        .where((rule) => rule.kind == 'rule_set')
+        .map((rule) => rule.pattern);
+    final bundledRuleSetPaths = await ensureNimbusBundledRuleSetFiles(
+      tags: ruleSetTags,
+      directories: ref.read(appDirectoriesProvider).requireValue,
+    );
     final options = buildNimbusManagedRouteOptions(
       rulesPackage: rulesPackage,
       isAutomaticMode: ref.read(Preferences.nimbusProxyMode) == NimbusProxyMode.auto,
+      bundledRuleSetPaths: bundledRuleSetPaths,
     );
     ref.read(nimbusManagedRouteOptionsProvider.notifier).state = options;
   }

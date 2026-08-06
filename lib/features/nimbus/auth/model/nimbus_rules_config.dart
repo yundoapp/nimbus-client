@@ -105,6 +105,7 @@ List<Map<String, dynamic>> buildNimbusRuleSets(
   List<NimbusRulePackageItem> rules,
   String downloadDetour, {
   NimbusRuleSetDownloadMode mode = nimbusRuleSetDownloadMode,
+  Map<String, String> bundledRuleSetPaths = const {},
 }) {
   final definitions = <String, Map<String, dynamic>>{};
   for (final rule in rules) {
@@ -127,6 +128,7 @@ List<Map<String, dynamic>> buildNimbusRuleSets(
         'http_client': nimbusRuleSetHttpClientTag
       else
         'download_detour': downloadDetour,
+      if (bundledRuleSetPaths[rule.pattern]?.isNotEmpty == true) 'fallback_path': bundledRuleSetPaths[rule.pattern],
     };
   }
   return definitions.values.toList(growable: false);
@@ -148,13 +150,14 @@ NimbusManagedRouteOptions buildNimbusManagedRouteOptions({
   required bool isAutomaticMode,
   String proxyTag = 'nimbus-proxy',
   String directTag = nimbusHiddifyDirectTag,
+  Map<String, String> bundledRuleSetPaths = const {},
 }) {
   if (!isAutomaticMode) {
     // Global mode must also bypass Hiddify's built-in regional rules. The
     // IPv4/IPv6 rules are inserted before those rules by the core adapter and
     // satisfy the macOS tunnel's requirement that every route rule has a matcher.
     return NimbusManagedRouteOptions(
-      rules: nimbusGlobalRouteRules(proxyTag: proxyTag),
+      rules: [...nimbusGlobalRouteRules(proxyTag: proxyTag)],
       ruleSets: const [],
     );
   }
@@ -167,15 +170,8 @@ NimbusManagedRouteOptions buildNimbusManagedRouteOptions({
   return NimbusManagedRouteOptions(
     rules: [
       ...buildNimbusRouteRules(activeRules, proxyTag, directTag: directTag),
-      // 浏览器可能在域名和协议尚未可供规则匹配前就发起 UDP。将其送入加速
-      // 出站，避免首包落入 macOS TUN 下不可用的普通直连兜底。
-      {
-        'network': ['udp'],
-        'action': 'route',
-        'outbound': proxyTag,
-      },
       nimbusFallbackRouteRule(directTag: directTag),
     ],
-    ruleSets: buildNimbusRuleSets(activeRules, proxyTag),
+    ruleSets: buildNimbusRuleSets(activeRules, proxyTag, bundledRuleSetPaths: bundledRuleSetPaths),
   );
 }

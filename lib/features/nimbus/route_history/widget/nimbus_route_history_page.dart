@@ -126,6 +126,8 @@ class NimbusRouteHistoryPage extends HookConsumerWidget {
 IconData nimbusRouteHistoryDecisionIcon(NimbusRouteDecision decision) => switch (decision) {
   NimbusRouteDecision.direct => nimbusRouteAccessIcon(requiresConnection: false),
   NimbusRouteDecision.accelerated => nimbusRouteAccessIcon(requiresConnection: true),
+  NimbusRouteDecision.rejected => Icons.block_rounded,
+  NimbusRouteDecision.unknown => Icons.help_outline_rounded,
 };
 
 class _RouteHistoryToolbar extends ConsumerWidget {
@@ -242,7 +244,7 @@ class _RouteHistoryToolbar extends ConsumerWidget {
   }
 }
 
-enum _RouteHistoryFilterAction { reset, direct, accelerated, active, completed }
+enum _RouteHistoryFilterAction { reset, direct, accelerated, rejected, active, completed }
 
 class _RouteHistoryFilterButton extends ConsumerWidget {
   const _RouteHistoryFilterButton({
@@ -288,6 +290,7 @@ class _RouteHistoryFilterButton extends ConsumerWidget {
     final labels = <String>[
       if (selectedDecisionFilter == NimbusRouteDecisionFilter.direct) t.nimbus.routePreferences.directConnection,
       if (selectedDecisionFilter == NimbusRouteDecisionFilter.accelerated) t.nimbus.routePreferences.requiresConnection,
+      if (selectedDecisionFilter == NimbusRouteDecisionFilter.rejected) t.nimbus.routePreferences.blockConnection,
       if (selectedFilter == NimbusRouteHistoryFilter.active) t.nimbus.routeHistory.filterActive,
       if (selectedFilter == NimbusRouteHistoryFilter.completed) t.nimbus.routeHistory.filterCompleted,
     ];
@@ -299,9 +302,10 @@ class _RouteHistoryFilterButton extends ConsumerWidget {
     const PopupMenuDivider(),
     _menuItem(_filterOptions(t)[1]),
     _menuItem(_filterOptions(t)[2]),
-    const PopupMenuDivider(),
     _menuItem(_filterOptions(t)[3]),
+    const PopupMenuDivider(),
     _menuItem(_filterOptions(t)[4]),
+    _menuItem(_filterOptions(t)[5]),
   ];
 
   List<({String label, _RouteHistoryFilterAction action, bool selected})> _filterOptions(Translations t) => [
@@ -320,6 +324,11 @@ class _RouteHistoryFilterButton extends ConsumerWidget {
       action: _RouteHistoryFilterAction.accelerated,
       label: t.nimbus.routePreferences.requiresConnection,
       selected: selectedDecisionFilter == NimbusRouteDecisionFilter.accelerated,
+    ),
+    (
+      action: _RouteHistoryFilterAction.rejected,
+      label: t.nimbus.routePreferences.blockConnection,
+      selected: selectedDecisionFilter == NimbusRouteDecisionFilter.rejected,
     ),
     (
       action: _RouteHistoryFilterAction.active,
@@ -389,6 +398,13 @@ class _RouteHistoryFilterButton extends ConsumerWidget {
               : NimbusRouteDecisionFilter.accelerated,
         );
         return;
+      case _RouteHistoryFilterAction.rejected:
+        onDecisionFilterChanged(
+          selectedDecisionFilter == NimbusRouteDecisionFilter.rejected
+              ? NimbusRouteDecisionFilter.all
+              : NimbusRouteDecisionFilter.rejected,
+        );
+        return;
       case _RouteHistoryFilterAction.active:
         onFilterChanged(
           selectedFilter == NimbusRouteHistoryFilter.active
@@ -417,13 +433,23 @@ class _RouteHistoryTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
     final colorScheme = Theme.of(context).colorScheme;
-    final decisionColor = entry.decision == NimbusRouteDecision.direct ? colorScheme.tertiary : colorScheme.primary;
-    final decisionLabel = entry.decision == NimbusRouteDecision.direct
-        ? t.nimbus.routePreferences.directConnection
-        : t.nimbus.routePreferences.requiresConnection;
+    final decisionColor = switch (entry.decision) {
+      NimbusRouteDecision.direct => colorScheme.tertiary,
+      NimbusRouteDecision.accelerated => colorScheme.primary,
+      NimbusRouteDecision.rejected => colorScheme.error,
+      NimbusRouteDecision.unknown => colorScheme.onSurfaceVariant,
+    };
+    final decisionLabel = switch (entry.decision) {
+      NimbusRouteDecision.direct => t.nimbus.routePreferences.directConnection,
+      NimbusRouteDecision.accelerated => t.nimbus.routePreferences.requiresConnection,
+      NimbusRouteDecision.rejected => t.nimbus.routePreferences.blockConnection,
+      NimbusRouteDecision.unknown => t.nimbus.routeHistory.unknownAccess,
+    };
     final statusLabel = entry.isActive ? t.nimbus.routeHistory.active : t.nimbus.routeHistory.completed;
     final compact = MediaQuery.sizeOf(context).width < 600;
-    final ruleLabel = entry.ruleDescription.isEmpty ? t.nimbus.routeHistory.defaultRule : entry.ruleDescription;
+    final ruleLabel = entry.rule == 'final' && entry.rulePayload.isEmpty || entry.ruleDescription.isEmpty
+        ? t.nimbus.routeHistory.defaultRule
+        : entry.ruleDescription;
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       isThreeLine: compact,
@@ -610,9 +636,12 @@ class _RouteHistoryDetailsBody extends ConsumerWidget {
         _DetailRow(label: t.nimbus.routeHistory.target, value: entry.endpoint),
         _DetailRow(
           label: t.nimbus.routeHistory.finalDecision,
-          value: entry.decision == NimbusRouteDecision.direct
-              ? t.nimbus.routePreferences.directConnection
-              : t.nimbus.routePreferences.requiresConnection,
+          value: switch (entry.decision) {
+            NimbusRouteDecision.direct => t.nimbus.routePreferences.directConnection,
+            NimbusRouteDecision.accelerated => t.nimbus.routePreferences.requiresConnection,
+            NimbusRouteDecision.rejected => t.nimbus.routePreferences.blockConnection,
+            NimbusRouteDecision.unknown => t.nimbus.routeHistory.unknownAccess,
+          },
         ),
         _DetailRow(
           label: t.nimbus.routeHistory.status,
@@ -627,7 +656,9 @@ class _RouteHistoryDetailsBody extends ConsumerWidget {
         ),
         _DetailRow(
           label: t.nimbus.routeHistory.matchedRule,
-          value: entry.ruleDescription.isEmpty ? t.nimbus.routeHistory.defaultRule : entry.ruleDescription,
+          value: entry.rule == 'final' && entry.rulePayload.isEmpty || entry.ruleDescription.isEmpty
+              ? t.nimbus.routeHistory.defaultRule
+              : entry.ruleDescription,
         ),
         if (entry.destinationIp.isNotEmpty)
           _DetailRow(label: t.nimbus.routeHistory.address, value: entry.destinationIp),
@@ -645,6 +676,7 @@ class _RouteHistoryDetailsBody extends ConsumerWidget {
   final domain = normalizeNimbusDomain(entry.host);
   if (domain == null) return null;
   final requestedType = oppositeNimbusRoutePreferenceType(entry.decision);
+  if (requestedType == null) return null;
   return (
     domain: domain,
     requestedType: requestedType,

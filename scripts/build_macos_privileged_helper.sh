@@ -4,6 +4,7 @@ set -euo pipefail
 source_dir="${SRCROOT}/PrivilegedHelper"
 helper_name="YundoPrivilegedHelper"
 service_name="${YUNDO_PRIVILEGED_HELPER_SERVICE:-${PRODUCT_BUNDLE_IDENTIFIER}.privileged-helper}"
+app_build_number="${CURRENT_PROJECT_VERSION:-${FLUTTER_BUILD_NUMBER:-unknown}}"
 contents_dir="${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}"
 helper_dir="${contents_dir}/Library/HelperTools"
 daemon_dir="${contents_dir}/Library/LaunchDaemons"
@@ -16,6 +17,7 @@ mkdir -p "$helper_dir" "$daemon_dir" "$build_dir"
 cat >"$generated_identity" <<EOF
 enum BuildIdentity {
   static let appBundleIdentifier = "${PRODUCT_BUNDLE_IDENTIFIER}"
+  static let appBuildNumber = "${app_build_number}"
   static let appExecutableName = "${EXECUTABLE_NAME}"
   static let serviceName = "${service_name}"
 }
@@ -59,4 +61,3 @@ if [[ "$identity" != "-" ]]; then
   codesign_args+=(--options runtime --timestamp)
 fi
 codesign "${codesign_args[@]}" "$helper_path"
-

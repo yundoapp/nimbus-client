@@ -36,6 +36,15 @@ void main() {
     ]);
   });
 
+  test('recognizes a bundled fallback rule set as loaded', () {
+    final result = parseNimbusRuleSetDiagnostics(
+      tags: const ['geosite-cn'],
+      logMessages: const ['WARN router: rule-set geosite-cn: loaded from bundled fallback'],
+    );
+
+    expect(result.items.single.status, NimbusRuleSetDiagnosticStatus.loaded);
+  });
+
   test('recognizes a failed initial download with a core log prefix', () {
     final result = parseNimbusRuleSetDiagnostics(
       tags: tags,
@@ -82,5 +91,44 @@ void main() {
     expect(result.hasFailure, isFalse);
     expect(result.allResolved, isFalse);
     expect(result.items.single.status, NimbusRuleSetDiagnosticStatus.pending);
+  });
+
+  test('accepts the managed source when it replaces an equal-tag core rule set', () {
+    final mismatch = nimbusManagedRuleSetSourceMismatch(
+      config: {
+        'route': {
+          'rule_set': [
+            {'tag': 'geosite-cn', 'type': 'remote', 'url': 'https://rules.yundo.app/geosite-cn.srs'},
+          ],
+        },
+      },
+      expectedRuleSets: const [
+        {'tag': 'geosite-cn', 'type': 'remote', 'url': 'https://rules.yundo.app/geosite-cn.srs'},
+      ],
+    );
+
+    expect(mismatch, isNull);
+  });
+
+  test('reports an equal-tag source mismatch instead of accepting the built-in URL', () {
+    final mismatch = nimbusManagedRuleSetSourceMismatch(
+      config: {
+        'route': {
+          'rule_set': [
+            {
+              'tag': 'geosite-cn',
+              'type': 'remote',
+              'url': 'https://raw.githubusercontent.com/hiddify/hiddify-geo/geosite-cn.srs',
+            },
+          ],
+        },
+      },
+      expectedRuleSets: const [
+        {'tag': 'geosite-cn', 'type': 'remote', 'url': 'https://rules.yundo.app/geosite-cn.srs'},
+      ],
+    );
+
+    expect(mismatch, contains('RULE_SET_SOURCE_MISMATCH'));
+    expect(mismatch, contains('tag=geosite-cn'));
   });
 }

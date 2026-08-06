@@ -256,6 +256,7 @@ jobs:
 
       - name: Prepare for ${{ matrix.platform }}
         run: |
+          scripts/cache_yundo_rule_sets.sh
           make ${{ matrix.platform }}-prepare
 
 

@@ -48,6 +48,7 @@ export DEVELOPER_DIR="${developer_dir}"
 cd "${repo_root}"
 mkdir -p "${output_dir}"
 
+YUNDO_API_BASE_URL="${api_base_url}" "${script_dir}/cache_yundo_rule_sets.sh"
 GO_BIN="${GO_BIN:-$(command -v go || true)}" "${script_dir}/build_yundo_macos_core.sh"
 "${flutter_bin}" build macos "${flutter_mode}" \
   --target="${target}" \

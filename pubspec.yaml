@@ -1,7 +1,7 @@
 name: hiddify
 description: Cross Platform Multi Protocol Proxy Frontend.
 publish_to: "none"
-version: 4.1.2+202608105
+version: 4.1.2+202608119
 
 environment:
   sdk: ^3.10.4
@@ -162,9 +162,9 @@ flutter:
     - assets/images/disconnect_norouz.PNG
     - assets/images/world_map.png
     - assets/images/source/ic_launcher_border.png
-    # macOS transparent routing needs a local domestic IP snapshot before the
-    # account rule package has finished downloading.
-    - assets/rules/geoip-cn.srs
+    # The build pipeline refreshes this directory from Yundo's published public
+    # rule package. The checked-in snapshot remains the offline fallback.
+    - assets/rules/
 
   fonts:
     - family: Shabnam

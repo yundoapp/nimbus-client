@@ -6,12 +6,14 @@ import 'package:hiddify/core/router/adaptive_layout/my_adaptive_layout.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/custom_transition.dart';
+import 'package:hiddify/core/router/go_router/nimbus_auth_redirect.dart';
 import 'package:hiddify/core/router/go_router/refresh_listenable.dart';
 import 'package:hiddify/features/about/widget/about_page.dart';
 import 'package:hiddify/features/home/widget/home_page.dart';
 import 'package:hiddify/features/log/overview/logs_page.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_auth_page.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_auth_restoring_page.dart';
 import 'package:hiddify/features/nimbus/route_history/widget/nimbus_route_history_page.dart';
 import 'package:hiddify/features/nimbus/rules/widget/nimbus_rules_overview_page.dart';
 import 'package:hiddify/features/per_app_proxy/overview/per_app_proxy_page.dart';
@@ -67,10 +69,14 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
     );
     return RoutingConfig(
       redirect: (context, state) {
+        final authRedirect = resolveNimbusAuthRedirect(
+          isRestoring: authState.isRestoring,
+          isAuthenticated: authState.isAuthenticated,
+          matchedLocation: state.matchedLocation,
+        );
+        if (authRedirect != null) return authRedirect;
+
         final isAuthRoute = state.matchedLocation.startsWith('/auth/');
-        if (authState.isRestoring && !isAuthRoute) return '/auth/login';
-        if (!authState.isAuthenticated && !isAuthRoute) return '/auth/login';
-        if (authState.isAuthenticated && isAuthRoute) return '/home';
         if (isAuthRoute) return null;
 
         // fix path-parameters for deep link
@@ -105,6 +111,11 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
         return null;
       },
       routes: <RouteBase>[
+        GoRoute(
+          name: 'nimbusAuthRestoring',
+          path: nimbusAuthRestoringPath,
+          builder: (_, _) => const NimbusAuthRestoringPage(),
+        ),
         GoRoute(
           name: 'nimbusLogin',
           path: '/auth/login',

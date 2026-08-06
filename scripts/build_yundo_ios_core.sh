@@ -11,6 +11,9 @@ if [[ "${output_framework}" != /* ]]; then
 fi
 patch_file="${repo_root}/patches/hiddify-core/0001-managed-route-options.patch"
 rule_set_patch_file="${repo_root}/patches/hiddify-core/0002-rule-set-observability-and-root-domain.patch"
+observability_patch_file="${repo_root}/patches/hiddify-core/0003-connection-observability-and-actual-outbound.patch"
+exact_history_patch_file="${repo_root}/patches/hiddify-core/0004-exact-route-decision-history.patch"
+bundled_rule_set_patch_file="${repo_root}/patches/hiddify-core/0005-bundled-rule-set-fallback.patch"
 go_bin="${GO_BIN:-$(command -v go || true)}"
 
 fail() {
@@ -19,6 +22,15 @@ fail() {
 }
 
 restore_core_source() {
+  if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${bundled_rule_set_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}/hiddify-sing-box" apply --reverse "${bundled_rule_set_patch_file}"
+  fi
+  if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${exact_history_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}/hiddify-sing-box" apply --reverse "${exact_history_patch_file}"
+  fi
+  if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${observability_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}/hiddify-sing-box" apply --reverse "${observability_patch_file}"
+  fi
   if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${rule_set_patch_file}" >/dev/null 2>&1; then
     git -C "${core_dir}/hiddify-sing-box" apply --reverse "${rule_set_patch_file}"
   fi
@@ -40,9 +52,12 @@ export GOTOOLCHAIN=go1.25.6
 export GOPROXY="${GOPROXY:-https://goproxy.cn,direct}"
 export GOSUMDB="${GOSUMDB:-sum.golang.google.cn}"
 export PATH="$(${go_bin} env GOPATH)/bin:${PATH}"
+go_path="$(${go_bin} env GOPATH)"
 
-(cd "${core_dir}" && "${go_bin}" install github.com/sagernet/gomobile/cmd/gomobile@v0.1.11)
-(cd "${core_dir}" && "${go_bin}" install github.com/sagernet/gomobile/cmd/gobind@v0.1.11)
+if [[ ! -x "${go_path}/bin/gomobile" || ! -x "${go_path}/bin/gobind" ]]; then
+  (cd "${core_dir}" && "${go_bin}" install github.com/sagernet/gomobile/cmd/gomobile@v0.1.11)
+  (cd "${core_dir}" && "${go_bin}" install github.com/sagernet/gomobile/cmd/gobind@v0.1.11)
+fi
 
 rm -rf "${core_dir}/bin/HiddifyCore.xcframework" "${output_framework}"
 mkdir -p "${core_dir}/bin" "$(dirname "${output_framework}")"
@@ -61,4 +76,6 @@ trap 'rm -f "${strings_file}"; restore_core_source' EXIT
 strings "${binary_path}" >"${strings_file}"
 grep -F 'managed-route-rules' "${strings_file}" >/dev/null \
   || fail "iOS Core 不包含受控规则入口"
+grep -F 'yundo_exact_history' "${strings_file}" >/dev/null \
+  || fail "iOS Core 不包含精确路由记录"
 xcodebuild -create-xcframework -help >/dev/null

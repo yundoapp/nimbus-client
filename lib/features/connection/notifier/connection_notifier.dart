@@ -114,9 +114,24 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
 
   Future<void> abortConnection() async {
     final core = ref.read(hiddifyCoreServiceProvider);
-    if (!core.core.isInitialized()) return;
+    if (!core.core.isInitialized()) {
+      if (!Platform.isMacOS) return;
+      final cleaned = await core.core.stop();
+      if (cleaned) return;
+      final failure = ConnectionFailure.unexpected(
+        StateError('macOS tunnel cleanup could not be verified while the user core was unavailable'),
+        StackTrace.current,
+      );
+      state = AsyncError(failure, StackTrace.current);
+      throw failure;
+    }
     loggy.debug("aborting connection and stopping native core");
-    await _disconnect();
+    final result = await _connectionRepo.disconnect().run();
+    result.match((failure) {
+      loggy.warning('error aborting connection', failure);
+      state = AsyncError(failure, StackTrace.current);
+      throw failure;
+    }, (_) => null);
   }
 
   final _singleStart = SingleCall();

@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "publicRulesVersion": "2026.08.03.3",
+  "publicRulesSourceVersion": "sha256:18086150f7994d5fe64a21c9b0ffdcc4fbe66947c5e3a25ea7000317145926ea",
+  "publicRulesUpdatedAt": "2026-08-03T14:47:05.780Z",
+  "generatedAt": "2026-08-06T08:31:52Z",
+  "source": "https://api.yundo.app/api/v1/rules/public-package",
+  "items": [
+    {
+      "tag": "geosite-telegram",
+      "patternType": "geosite",
+      "action": "accelerate",
+      "sourceUrl": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-telegram.srs",
+      "sha256": "924584651fb89cc9b8bc1d88836b922f6631bcc57997e85bd670efee7be406fe",
+      "asset": "assets/rules/geosite-telegram.srs"
+    },
+    {
+      "tag": "geosite-private",
+      "patternType": "geosite",
+      "action": "direct",
+      "sourceUrl": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-private.srs",
+      "sha256": "260491243e0266e5ba543f509ca7f13b07d6f4c2c26ade3f675ddea1661f3213",
+      "asset": "assets/rules/geosite-private.srs"
+    },
+    {
+      "tag": "geosite-category-ads-all",
+      "patternType": "geosite",
+      "action": "block",
+      "sourceUrl": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs",
+      "sha256": "a224429a3a570a9517628cbb4620ecc26c51303ddd4f885ce934b13035334a88",
+      "asset": "assets/rules/geosite-category-ads-all.srs"
+    },
+    {
+      "tag": "geosite-icloud",
+      "patternType": "geosite",
+      "action": "direct",
+      "sourceUrl": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-icloud.srs",
+      "sha256": "858490ee14f2af1c822d559f5a933c54ae818c08bf210e0db9ec7eacb667265b",
+      "asset": "assets/rules/geosite-icloud.srs"
+    },
+    {
+      "tag": "geosite-apple",
+      "patternType": "geosite",
+      "action": "direct",
+      "sourceUrl": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-apple.srs",
+      "sha256": "9418454daa0f7f9935576ecf4270110621253382cbde6cd2b7bd96011f3b4463",
+      "asset": "assets/rules/geosite-apple.srs"
+    },
+    {
+      "tag": "geosite-google",
+      "patternType": "geosite",
+      "action": "accelerate",
+      "sourceUrl": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-google.srs",
+      "sha256": "45e226ecde3589f49c5a0cf70ff1ea4ad63afd214e5dd35fa89c87f10a2fa970",
+      "asset": "assets/rules/geosite-google.srs"
+    },
+    {
+      "tag": "geosite-gfw",
+      "patternType": "geosite",
+      "action": "accelerate",
+      "sourceUrl": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/gfw.srs",
+      "sha256": "ed0700a4f833f0fb903daf36e8f9301aad494810b0db7bf2f7b766652dcd2371",
+      "asset": "assets/rules/geosite-gfw.srs"
+    },
+    {
+      "tag": "geosite-category-ai-!cn",
+      "patternType": "geosite",
+      "action": "accelerate",
+      "sourceUrl": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ai-!cn.srs",
+      "sha256": "d45599ca0a42894f19fdb2a3f0ed7fb3ba094e157ab17d91522a9cc97e243afc",
+      "asset": "assets/rules/geosite-category-ai-!cn.srs"
+    },
+    {
+      "tag": "geosite-geolocation-!cn",
+      "patternType": "geosite",
+      "action": "accelerate",
+      "sourceUrl": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-geolocation-!cn.srs",
+      "sha256": "2bd563602c18ba2c0b42014493986e635ea1d59fb0fc5792c7a2f4e1ced4afe1",
+      "asset": "assets/rules/geosite-geolocation-!cn.srs"
+    },
+    {
+      "tag": "geosite-cn",
+      "patternType": "geosite",
+      "action": "direct",
+      "sourceUrl": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
+      "sha256": "6060ef69f047e91e5b0cd84504ab8f857ed1f93612452de1e055a95f3d0053cd",
+      "asset": "assets/rules/geosite-cn.srs"
+    },
+    {
+      "tag": "geoip-telegram",
+      "patternType": "geoip",
+      "action": "accelerate",
+      "sourceUrl": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/telegram.srs",
+      "sha256": "c5ae208004b0752baee307348ef820b9fe9e8aa3a14556f54af68791b6d4030b",
+      "asset": "assets/rules/geoip-telegram.srs"
+    },
+    {
+      "tag": "geoip-cn",
+      "patternType": "geoip",
+      "action": "direct",
+      "sourceUrl": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
+      "sha256": "bc1a9eb66f9c6a0fe9fc5300cf5b5e885e0f9eadd7213b085b767a95d6af3d2a",
+      "asset": "assets/rules/geoip-cn.srs"
+    }
+  ]
+}

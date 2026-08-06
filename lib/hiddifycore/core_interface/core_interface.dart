@@ -19,6 +19,13 @@ class CoreInterface {
 
   String backgroundConfigPath(String originalPath) => originalPath;
 
+  /// Returns the effective config owned by the platform tunnel layer. On
+  /// macOS this is the privileged Helper config; other platforms keep routing
+  /// in the main Core config and return null.
+  String? preparedRoutingConfig() => null;
+
+  Future<List<String>> ruleSetDiagnosticMessages() async => const [];
+
   Future<String> generateFullConfig(String path) async {
     final response = await fgClient.generateConfig(GenerateConfigRequest(path: path));
     if (response.configContent.trim().isEmpty) {
@@ -48,6 +55,11 @@ class CoreInterface {
   /// Returns the latest core state, or null on platforms without a desktop
   /// gRPC status stream.
   Future<CoreStates?> waitForCoreState({Duration timeout = const Duration(seconds: 5)}) async => null;
+
+  /// Confirms that the native core has actually reached its stopped state.
+  /// Platforms without a persistent desktop status channel are stopped by
+  /// their platform service and therefore return true by default.
+  Future<bool> waitForCoreStopped({Duration timeout = const Duration(seconds: 5)}) async => true;
 
   Future<bool> restart(String path, String name) async {
     return false;

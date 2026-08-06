@@ -24,6 +24,19 @@ void main() {
     expect(captured?.arguments, {'config': '{"inbounds":[]}'});
   });
 
+  test('requests verified tunnel cleanup from the native helper', () async {
+    MethodCall? captured;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+      captured = call;
+      return null;
+    });
+
+    await helper.stopTunnel();
+
+    expect(captured?.method, 'stopTunnel');
+    expect(captured?.arguments, isNull);
+  });
+
   test('exposes the native service status', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
       return {'status': 'requiresApproval'};
@@ -66,5 +79,17 @@ void main() {
     expect(conflict.tunneledRouteCount, 0);
     expect(conflict.yundoRoutedCount, 0);
     expect(conflict.routeCheckFailures, 0);
+  });
+
+  test('reads sanitized rule-set lifecycle messages from the helper', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+      expect(call.method, 'ruleSetDiagnostics');
+      return <Object?>['rule-set geosite-cn: loaded from bundled fallback', 'rule-set geosite-gfw: download completed'];
+    });
+
+    expect(await helper.ruleSetDiagnostics(), [
+      'rule-set geosite-cn: loaded from bundled fallback',
+      'rule-set geosite-gfw: download completed',
+    ]);
   });
 }

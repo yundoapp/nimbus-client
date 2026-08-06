@@ -51,7 +51,7 @@ class _NimbusRulesOverviewPageState extends ConsumerState<NimbusRulesOverviewPag
                   pattern: item.pattern,
                   patternType: item.patternType,
                   action: _ruleAction(item.action),
-                  updatedAt: package.cachedAt,
+                  updatedAt: package.manifest.publicRulesUpdatedAt,
                 ),
           ]);
     final userItems = _buildUserRuleItems(package: package, preferences: preferences.valueOrNull);
@@ -420,7 +420,7 @@ List<_RuleItem>? _buildUserRuleItems({
   }
 
   for (final item in package?.userRules ?? const <NimbusRulePackageItem>[]) {
-    addItem(pattern: item.pattern, patternType: item.patternType, action: item.action, updatedAt: package?.cachedAt);
+    addItem(pattern: item.pattern, patternType: item.patternType, action: item.action);
   }
   for (final preference in preferences?.items ?? const <NimbusRoutePreference>[]) {
     addItem(

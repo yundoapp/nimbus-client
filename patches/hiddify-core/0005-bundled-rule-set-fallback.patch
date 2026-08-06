@@ -1,0 +1,51 @@
+--- a/option/rule_set.go
++++ b/option/rule_set.go
+@@ -124,6 +124,7 @@
+ 	URL            string             `json:"url"`
+ 	DownloadDetour string             `json:"download_detour,omitempty"`
+ 	UpdateInterval badoption.Duration `json:"update_interval,omitempty"`
++	FallbackPath   string             `json:"fallback_path,omitempty"`
+ }
+ 
+ type _HeadlessRule struct {
+--- a/route/rule/rule_set_remote.go
++++ b/route/rule/rule_set_remote.go
+@@ -9,6 +9,8 @@
+ 	"io"
+ 	"net"
+ 	"net/http"
++	"os"
++	"path/filepath"
+ 	"runtime"
+ 	"strings"
+ 	"sync"
+@@ -29,6 +31,7 @@
+ 	"github.com/sagernet/sing/common/ntp"
+ 	"github.com/sagernet/sing/common/x/list"
+ 	"github.com/sagernet/sing/service"
++	"github.com/sagernet/sing/service/filemanager"
+ 	"github.com/sagernet/sing/service/pause"
+ 	"golang.org/x/net/publicsuffix"
+ 
+@@ -117,6 +120,21 @@
+ 			s.lastEtag = savedSet.LastEtag
+ 			// Keep lifecycle markers visible with the app's default warn log level.
+ 			s.logger.Warn("rule-set ", s.options.Tag, ": loaded from cache")
+ 		}
+ 	}
++	if s.lastUpdated.IsZero() && s.options.RemoteOptions.FallbackPath != "" {
++		fallbackPath := filemanager.BasePath(s.ctx, s.options.RemoteOptions.FallbackPath)
++		fallbackPath, _ = filepath.Abs(fallbackPath)
++		content, err := os.ReadFile(fallbackPath)
++		if err != nil {
++			s.logger.Error("rule-set ", s.options.Tag, ": read bundled fallback: ", err)
++		} else if err = s.loadBytes(content); err != nil {
++			s.logger.Error("rule-set ", s.options.Tag, ": parse bundled fallback: ", err)
++		} else {
++			// Mark the snapshot as usable now, but stale, so PostStart triggers
++			// an asynchronous refresh without blocking connection startup.
++			s.lastUpdated = time.Now().Add(-s.updateInterval)
++			s.logger.Warn("rule-set ", s.options.Tag, ": loaded from bundled fallback")
++		}
++	}
+ 	if s.lastUpdated.IsZero() {

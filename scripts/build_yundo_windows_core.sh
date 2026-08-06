@@ -13,6 +13,9 @@ makefile="${core_dir}/Makefile"
 icon_file="${repo_root}/windows/runner/resources/app_icon.ico"
 patch_file="${repo_root}/patches/hiddify-core/0001-managed-route-options.patch"
 rule_set_patch_file="${repo_root}/patches/hiddify-core/0002-rule-set-observability-and-root-domain.patch"
+observability_patch_file="${repo_root}/patches/hiddify-core/0003-connection-observability-and-actual-outbound.patch"
+exact_history_patch_file="${repo_root}/patches/hiddify-core/0004-exact-route-decision-history.patch"
+bundled_rule_set_patch_file="${repo_root}/patches/hiddify-core/0005-bundled-rule-set-fallback.patch"
 go_bin="${GO_BIN:-$(command -v go || true)}"
 backup_dir=""
 strings_file=""
@@ -28,6 +31,15 @@ cleanup() {
     cp "${backup_dir}/Makefile" "${makefile}"
     cp "${backup_dir}/hiddify-cli.ico" "${core_dir}/assets/hiddify-cli.ico"
     rm -rf "${backup_dir}"
+  fi
+  if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${bundled_rule_set_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}/hiddify-sing-box" apply --reverse "${bundled_rule_set_patch_file}"
+  fi
+  if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${exact_history_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}/hiddify-sing-box" apply --reverse "${exact_history_patch_file}"
+  fi
+  if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${observability_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}/hiddify-sing-box" apply --reverse "${observability_patch_file}"
   fi
   if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${rule_set_patch_file}" >/dev/null 2>&1; then
     git -C "${core_dir}/hiddify-sing-box" apply --reverse "${rule_set_patch_file}"
@@ -95,10 +107,15 @@ strings_file="$(mktemp)"
 strings "${core_dll}" >"${strings_file}"
 grep -F 'managed-route-rules' "${strings_file}" >/dev/null \
   || fail "Core 不包含受控规则入口"
+grep -F 'yundo_exact_history' "${strings_file}" >/dev/null \
+  || fail "Core 不包含精确路由记录"
 
 mkdir -p "${output_dir}"
 cp "${core_dll}" "${core_exe}" "${cronet_dll}" "${output_dir}/"
 printf 'coreCommit=%s\n' "$(git -C "${core_dir}" rev-parse HEAD)" >"${output_dir}/build-metadata.txt"
 printf 'patchSha256=%s\n' "$(sha256sum "${repo_root}/patches/hiddify-core/0001-managed-route-options.patch" | awk '{print $1}')" >>"${output_dir}/build-metadata.txt"
 printf 'ruleSetPatchSha256=%s\n' "$(sha256sum "${rule_set_patch_file}" | awk '{print $1}')" >>"${output_dir}/build-metadata.txt"
+printf 'connectionObservabilityPatchSha256=%s\n' "$(sha256sum "${observability_patch_file}" | awk '{print $1}')" >>"${output_dir}/build-metadata.txt"
+printf 'exactRouteHistoryPatchSha256=%s\n' "$(sha256sum "${exact_history_patch_file}" | awk '{print $1}')" >>"${output_dir}/build-metadata.txt"
+printf 'bundledRuleSetFallbackPatchSha256=%s\n' "$(sha256sum "${bundled_rule_set_patch_file}" | awk '{print $1}')" >>"${output_dir}/build-metadata.txt"
 sha256sum "${output_dir}/YundoCore.dll" "${output_dir}/YundoCore.exe" "${output_dir}/libcronet.dll"

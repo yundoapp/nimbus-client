@@ -152,8 +152,8 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - 现象：账号已保存 `rawya.ai -> 直连访问`，但新请求仍命中 `final` 并走加速出口。
 - 平台根因：声明 `configVersion` 的连接方案会把规则从兼容字段 `singBoxConfigPatch` 中移除，但曾错误地继续用该兼容字段生成 `profileContent`，导致标准 Profile 没有当前用户规则。平台已改为分别生成“标准 Profile 完整快照”和“旧字段兼容快照”。
 - 客户端根因：Hiddify 标准 Profile 解析器只保留节点配置，顶层 `route` 不会进入最终运行配置；旧 Flutter `route-rule` 字段在当前 Core 中也没有执行路径。因此只修平台仍不能让规则生效。
-- 修复：客户端在每次手动或自动加速前校验规则 manifest，下载并验证同版本账号规则包，按“用户自定义网站 -> 公共规则 -> 本地网络兜底”生成受控规则数据；Hiddify Core 只新增 `managed-route-rules` 和 `managed-route-rule-sets` 两个 Config Option 字段，把它们追加到原生路由表。直连规则使用 Hiddify 自带的 `direct §hide§` 出站，不新增直连出站，也不覆盖 DNS、inbound、TUN、系统代理、Helper 或最终出站。
-- 规则合并：用户自定义规则放在 Hiddify 地区默认规则之前，保证 `rawya.ai -> 直连访问` 这类明确选择不会被更宽泛规则先命中；规则集在 Hiddify 完成内置地区规则集后按 tag 去重，`geoip-cn`、`geosite-cn` 等重名项直接复用 Hiddify 内置版本，避免 sing-box 因重复 tag 拒绝整份配置。
+- 修复：客户端在每次手动或自动加速前校验规则 manifest，下载并验证同版本账号规则包，按“用户自定义网站 -> 公共规则 -> 本地网络兜底 -> 明确的模式默认路由”生成受控规则数据；Hiddify Core 只新增 `managed-route-rules` 和 `managed-route-rule-sets` 两个 Config Option 字段，把它们追加到原生路由表。直连规则使用 Hiddify 自带的 `direct §hide§` 出站，不新增直连出站，也不覆盖 DNS、inbound、TUN、系统代理或 Helper。
+- 规则合并：用户自定义规则放在 Hiddify 地区默认规则之前，保证 `rawya.ai -> 直连访问` 这类明确选择不会被更宽泛规则先命中；规则集在 Hiddify 完成内置地区规则集后按 tag 去重，`geoip-cn`、`geosite-cn` 等重名项由云渡管理的远程来源替换 Hiddify 内置版本，避免同名规则源不一致或 sing-box 因重复 tag 拒绝整份配置。
 - macOS 打包：Xcode 的 Core Copy Files 阶段必须在所有构建动作执行；双版本安装脚本每次都删除 App 内旧 Core、复制本轮源码构建的 `YundoCore.dylib`，并在签名前检查 `managed-route-rules` 标记。禁止以“目标文件已存在”为理由复用上轮 Core，否则 Dart 规则已经生成也不会进入实际运行核心。
 - 四端构建身份：同一轮基线使用 `pubspec.yaml` 中的统一构建号，每轮构建前递增构建号；App 内所有版本展示统一使用 `MAJOR.MINOR.PATCH+BUILD`，开发版再追加环境标识。macOS 双版本构建脚本默认读取该构建号，并把同一个值写入两个 App 的包元数据；Android Debug 固定使用独立包名 `app.yundo.client.dev`，系统语言为简体中文、繁体中文和其他语言时分别显示“云渡开发版”“雲渡開發版”和“Yundo Dev”。Windows/Android CI 交付文件统一使用 Yundo 名称，不把内部 Flutter package 名带入产物文件名。
 - Windows Core 构建从锁定的 `hiddify-core/go.mod` 解析 Cronet 完整伪版本并传给上游 Makefile；不直接使用上游版本文件中的裸 commit hash，避免 Go 模块代理无法解析时漏生成 `libcronet.dll`。该处理只修复依赖寻址，不升级或替换锁定的 Core 依赖。
@@ -192,6 +192,7 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 ### 4.12 登录首屏与品牌资源回归（2026-08-05）
 
 - 云渡账号登录成功后直接进入主页，不再经过旧版首次启动 IntroPage；已有设备如果保存过 `intro_completed=false`，在登录恢复或登录成功时自动迁移为已完成，保证旧数据不会再次把用户拦在已废弃的设置页面。
+- App 启动恢复本地会话期间使用独立 `/auth/restoring` 过渡页，复用安装包应用图标和正式版/开发版多语言名称；恢复成功进入首页，恢复结束且无有效会话时才进入 `/auth/login`，不再让登录表单在自动登录前短暂闪现。该逻辑位于共享 Flutter 路由与页面层，macOS、Windows、iOS、Android 同源生效。
 - 认证页、关于页和 macOS 原生应用图标统一使用云渡蓝底白色 `Y`；macOS 原生窗口显式设置包内 `AppIcon.icns`，避免窗口或系统缓存显示默认图标。
 - 旧 Hiddify 柱状图不再作为用户可见资源：通用托盘 PNG、Android 启动图、Android 应用商店图和旧 banner 已替换为云渡 Logo；Windows 三态托盘继续使用已有的云渡 `Y` 图标和状态点。
 - 该变更位于认证路由、品牌展示和资源层，不改变 Core、DNS、TUN、路由、Helper 或系统代理行为；macOS 开发版、正式版以及其他端共享资源需按同一提交重新构建。
@@ -257,3 +258,55 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - 远程规则库匹配先执行原始域名匹配；原始匹配失败时，按可注册根域及其父域逐级回退，例如 `support.weixin.qq.com` 会依次检查 `weixin.qq.com`、`qq.com`，直到公开后缀为止。每一级都只会命中规则库中明确存在的条目，不会因为域名属于 `qq.com` 就自动改变路由。用户自定义的 `qq.com` 已通过 `domain_suffix` 覆盖其子域名，不依赖 Core 的根域回退。
 - 本轮 macOS Debug/Release 已基于构建号 `202608105` 完成编译、签名、覆盖安装和启动；iOS Core 与 Simulator Debug App 的本地构建因 Go 模块冷缓存下载中断尚未完成，Windows/Android 继续保留同源脚本和远程按需构建入口。
 - 同日修复 macOS 正式版规则库状态误判：Core 已将 12 个规则库写入 `data/box.log`，但 App 重建 gRPC 日志监听后仍可能收不到实时事件，导致诊断错误地以 `Y-RULE-001 / RULE_SET_STATUS_UNKNOWN` 中止加速。现在启动前记录 Core 日志文件偏移，启动后把本次新增日志与实时流合并解析；只有本次启动明确出现规则库下载失败才阻断。正式版构建 `202608105` 复测 14 个阶段全部完成，耗时 6.9 秒，Google、X 和百度的 CLI 请求均返回成功。
+
+### 4.20 UDP、默认路由与记录最终出口（2026-08-06）
+
+- UDP 全量加速规则曾由云渡 Flutter 层临时加入，代码提交 `3da075ab` 可追溯；Hiddify 原生默认规则没有这条规则。现已删除该硬编码，UDP 与 TCP 一样按用户规则、通用规则和模式默认路由执行。
+- 规则模式和全局模式不再追加无匹配条件的兜底规则，也不再扩展 Core 的 `managed-route-final`。Hiddify 生成的主 Core `route.final` 保持原样；macOS 由特权 Helper 按投影后的规则决定直连、拦截或送入本机 Core，加速流量进入 Core 后只使用 Hiddify 原生主出站，避免 Helper 与用户 Core 对同一请求重复分流。
+- Hiddify/sing-box Clash API 原先在负载均衡出站时计算了真实叶子出口，却序列化了旧的 `t.Chain`；本轮 Core 补丁 `0003-connection-observability-and-actual-outbound.patch` 同时输出包含真实叶子出口的 `chains` 和明确的 `outbound`。客户端记录优先使用 `outbound`，旧数据只有明确的直连/加速标签时才兼容判断，无法确认时显示“无法确认”，不再把所有 `final` 记录默认为加速。
+- Core 补丁由四端构建脚本统一应用并在构建退出时还原子模块源码；对应 Dart 规则生成、路由记录和 Core JSON 行为均有定向测试。
+
+### 4.21 SRS 本地反解快照（2026-08-06）
+
+- 当前正式配置引用的 12 个 SRS 已按原始 SHA-256 固定保存，并反解为 JSON，目录为 `/Users/kandejian/workspace/nimbus资料/yundo-rule-sets`；`manifest.json` 记录规则标签、来源 URL、哈希和解码工具版本。
+- `scripts/archive_yundo_rule_sets.sh` 优先复用本机缓存，缓存不存在时按当前配置的 HTTPS URL 下载；规则更新不会覆盖旧快照，后续只需比较 manifest 和同名规则 JSON。
+- 已核对当前 `geosite-cn` 快照明确包含 `qq.com`。因此 `res.wx.qq.com`、`support.weixin.qq.com` 等请求在规则库加载成功且命中逻辑生效时应归入国内直连；若记录仍显示默认路由，诊断日志应优先检查对应 SRS 加载状态和实际 `outbound`。
+
+### 4.22 规则源权威、缓存隔离与根域回溯开关（2026-08-06）
+
+- 公共规则库由平台发布的 `sourceUrl` 作为唯一权威来源。用户不需要下载、替换或维护本地 SRS；客户端只在加速准备阶段按平台返回的 URL 使用远程规则，并在成功校验后由 Core 缓存。
+- 同名规则集采用“云渡来源优先”：同一个 tag 如果同时出现在 Hiddify 默认配置和云渡管理配置中，最终 Core 配置必须保留云渡 URL。缓存键同时包含 tag 和 URL 哈希，换源后不会把旧 Hiddify 缓存误当成云渡规则。
+- 客户端启动前会读取最终交给 Core 的配置，逐一核对公共规则的 tag、类型和 URL。实际来源与平台返回值不一致时，以 `Y-RULE-002` 失败关闭，并把期望来源、实际来源写入诊断日志，不继续带着未知规则加速。
+- 规则 manifest 的公共更新时间来自平台规则包发布记录（`publishedAt` / `publicRulesUpdatedAt`），不使用本机缓存时间伪装成规则库更新；规则包只有真正下载、校验并原子替换成功后才更新本地缓存状态。
+- 规则 manifest 额外携带公共规则来源指纹，覆盖规则内容、动作和 `sourceUrl`；同一发布版本更换远程来源时客户端会更新一次，来源未变时不会在每次加速时重复下载。
+- 根域回溯由 Core 内部变量 `yundoRootDomainFallbackEnabled` 控制，默认值为 `true`。它不是 App 设置项，也不由用户配置；研发排查时可以在 Core 内部切换为 `false`，重新构建即可关闭，后续无需改变产品 UI 或规则数据。
+- 回溯只在完整域名未命中时逐级检查可注册根域及其父域，例如 `support.weixin.qq.com` 依次检查 `weixin.qq.com`、`qq.com`；它不会凭域名后缀直接改变路由。全局模式由平台隧道层的明确 IPv4/IPv6 匹配规则覆盖全部公网流量，规则模式仍按用户规则、公共规则和最终出口执行。
+- 规则加载诊断至少记录公共规则数量、我的规则数量、每个公共规则的来源 URL/版本摘要、Core 实际远程规则集和下载/缓存生命周期。这样 SRS 下载失败、来源错配、同名规则覆盖失效、根域回溯关闭等问题都能在一次诊断记录内定位。
+
+### 4.23 构建期公共规则快照与启动兜底（2026-08-06）
+
+- 每次客户端构建先调用平台 `GET /api/v1/rules/public-package`，按响应中的 `sourceUrl` 下载全部公共 `rule_set`，写入 `assets/rules/manifest.json` 和同目录 SRS 文件；下载全部成功后才原子替换快照，任一失败都保留上一份可用快照。远程公共规则包暂时不可用时，构建脚本会使用仓库中上一份已提交且带 SHA-256 的可信清单重新下载和校验全部 SRS，避免构建产物因为一次接口故障没有可用规则。
+- macOS、Windows、iOS 和 Android 的构建脚本都接入同一缓存步骤。Windows/Android 仍由 GitHub Actions 按需构建，但不会绕过规则快照步骤；macOS/iOS 本地构建直接复用同一份工作区快照。
+- 运行时把构建产物内的 SRS 作为 Core 的 `fallback_path`。Core 先加载内置快照，再异步检查远程更新；远程规则包、单个 SRS 或网络失败不会阻断已有快照的首次加速。账号“我的规则”仍按账号缓存，账号缓存不可用时才会在诊断中明确失败。
+- 当前生产 `api.yundo.app` 尚未提供 `rules/public-package`（现状是 HTTP 404），所以正式版构建会先用上一份已验证清单刷新快照；平台端点部署后下一次构建才会自动刷新到生产发布版本。可信清单兜底只能保证构建可用，不能冒充生产最新发布版本；客户端对旧生产 API 不认识 `publicRulesSourceVersion` 的情况保留一次精确兼容重试，避免平台灰度部署期间无法连接。
+- 构建日志必须记录公共规则版本、来源指纹、每个 SRS 的 URL 和 SHA-256；诊断日志必须区分“使用内置快照”“使用 Core 缓存”“后台更新失败”和“无任何可用规则”，不能把远程检查失败显示成规则已更新。
+- macOS IPv4 兜底不再替换 Hiddify 生成的 DNS 服务器、最终 DNS 或域名解析器，只把本次会话的地址策略限制为 IPv4。这样降级不会把系统解析强制改成 Cloudflare，也不会引入一套脱离 Hiddify 的 DNS 路径。
+- 旧版线上 API 对新增来源指纹字段返回 400 时，客户端只在该字段确实发送过的情况下无副作用地重试一次旧请求；第二次响应仍按真实错误处理，不会把其他参数校验错误吞掉。
+
+### 4.24 macOS 路由所有权与失败关闭（2026-08-06）
+
+- macOS 拆分架构明确只有特权 Helper 持有产品级路由、直连、拦截和规则库决策；用户 Core 只保留本机 mixed 入站、真实加速出站、Hiddify 原生最终出站及 DNS 规则依赖的规则库定义，不再重复执行云渡路由动作。Windows、iOS、Android 继续使用各自原生隧道和共享规则配置，不进入该 macOS 专属拆分路径。
+- 加速出站能力探测改为三态：IPv4、IPv6 都可用时使用双栈；只有 IPv4 可用时使用 IPv4 兜底；IPv4 不可用时拒绝启动 Helper/TUN，确保探针失败不会先接管系统网络再留下无出口路由。探测必须复用 Helper 真正消费的 SOCKS5 地址、端口和认证信息，使用字面量 HTTP 目标验证 IPv4/IPv6；不得再通过另一套 HTTP CONNECT/TLS 路径推断真实隧道能力。
+- IPv4 兜底沿用 Hiddify DNS，只调整地址策略，不再构造云渡专用 Cloudflare DNS。该修复不增加微信、SSH、腾讯会议或 QQ 音乐等域名特判。
+- Helper 启动前必须清理并验证旧 worker；停止和退出必须确认 worker、活动配置、固定 TUN 地址、系统路由和 DNS 状态均已释放。任一残留都会让停止流程失败并写入诊断日志，不再提前把界面标记为“已停止”。
+- macOS 产品路由规则库由 Helper 实际加载，诊断日志从 root 私有 Core 日志中只读取脱敏后的 `rule-set` 生命周期行；缓存、内置快照、远程更新和下载失败均以真实路由持有者为准，不把用户 Core 为 DNS 初始化保留的定义误判为第二套路由决策。
+- 四端同类问题审计：本次 `Y-NETWORK-001` 误判只存在于 macOS 桌面拆分架构的 Helper 启动前探测；Windows 使用桌面原生服务但不进入 `Platform.isMacOS` 探测分支，iOS Packet Tunnel 与 Android VPN Service 也不经过该路径，因此三端不受此次根因影响。共享连接方案、规则生成和 Core 配置没有因本修复改变；iOS 仍需完成同一提交的 Simulator 构建，Windows/Android 保留各自自动构建和实体设备回归要求。
+- 本机构建 `4.1.2+202608117` 已完成 macOS 开发版/正式版签名覆盖和 iOS Simulator Debug 构建安装。正式版连续三次启动均记录 `ipv4=true, ipv6=true` 并成功进入 Helper/TUN；两次正常退出后 Core、TUN worker 和云渡路由全部释放，`1.1.1.1`、`8.8.8.8` 恢复到物理网卡，系统 DNS 保持原值。每轮加速后 Google、百度、`servicewechat.com`、`cube.weixinbridge.com` HTTPS 均成功，`github.com:22` TCP 建连成功。
+- `4.1.2+202608118` 收紧 macOS 双层架构的出口与观测边界：用户 Core 的 `selector / urltest / fallback / balancer / loadbalance` 组在接管系统网络前统一剔除 `direct / block / dns` 终端成员，Helper 判定为加速的流量不再于用户 Core 二次落入直连；任一加速组没有代理成员时失败关闭。记录页在 macOS 只读取 Helper 的完整 `/connections` 快照，以 `yundo-direct / yundo-socks` 作为最终访问方式，不再把用户 Core 的中间 `balance / select` 链重复显示为“无法确认”。Windows、iOS、Android 保持单 Core 采集。134 项全量 Flutter 测试通过；macOS 双版本已签名覆盖，正式版按原状态恢复加速，运行时 `select / balance / lowest` 均无直连成员，Google、`servicewechat.com`、npm HTTPS 建连成功；同构建号 iOS Simulator Debug 已构建、安装并启动。
+
+### 4.25 精确路由三态与可控 Core 补丁（2026-08-07）
+
+- `patches/hiddify-core/0004-exact-route-decision-history.patch` 是独立、可逆的 Core 观测补丁，不修改路由规则、出站选择算法或普通 Hiddify `/connections` 返回。它跟踪 TCP/UDP 最终选中的终端出站，并在拒绝规则执行时记录 `rejected`，最近关闭的短连接也保留在 500 条有界内存历史中。
+- 云渡只通过 `/connections?yundo_exact_history=1` 读取精确历史；结果必须具有 `accelerated`、`direct`、`rejected` 之一。Dart 层不再从 `final`、selector、chain、规则名或目标 IP 猜测，缺少最终结果的旧格式行不会出现在精确记录页。
+- 内部编译开关 `YUNDO_EXACT_ROUTE_HISTORY` 默认开启；使用 `--dart-define=YUNDO_EXACT_ROUTE_HISTORY=false` 可让客户端回到原生连接接口。需要完全撤销 Core 修改时可从 `apply_yundo_core_patches.sh` 和四端 Core 构建脚本中省略 `0004`；两种开关必须成对使用，不能让旧 Core 配合精确客户端。
+- macOS 只监听特权 Helper 内 Core，Windows、iOS、Android 监听各自最终 Core。拒绝请求没有相反规则快捷操作，DNS 请求不进入访问明细，记录仍只在当前进程内存保存且不上传。

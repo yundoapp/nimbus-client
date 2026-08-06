@@ -16,6 +16,33 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const nimbusApiBaseUrl = String.fromEnvironment('NIMBUS_API_BASE_URL', defaultValue: 'http://localhost:4000/api/v1');
 
+bool isNimbusUnsupportedPublicRulesSourceVersionError(Object error) {
+  if (error is! DioException || error.response?.statusCode != 400) return false;
+  final data = error.response?.data;
+  if (data is! Map) return false;
+  if (data['code'] == 'VALIDATION_FAILED') {
+    final fields = data['fields'];
+    if (fields is List && fields.any((field) => field.toString() == 'publicRulesSourceVersion')) {
+      return true;
+    }
+  }
+
+  // Older deployed API versions use Nest's default validation response rather
+  // than Nimbus's structured error payload.
+  final messages = data['message'];
+  final text = messages is List ? messages.join(' ') : messages?.toString() ?? '';
+  return RegExp(r'\bpublicRulesSourceVersion\b').hasMatch(text);
+}
+
+/// Some older gateways strip the structured validation body. A 400 for a
+/// request carrying this optional field is still safe to retry without it:
+/// validation has no side effects, and the second response is surfaced if the
+/// request failed for another reason.
+bool shouldRetryNimbusRulesSourceCompatibility({required Object error, required bool sourceVersionWasSent}) {
+  if (!sourceVersionWasSent || error is! DioException) return false;
+  return error.response?.statusCode == 400;
+}
+
 final nimbusAuthRepositoryProvider = Provider<NimbusAuthRepository>((ref) {
   final preferences = ref.watch(sharedPreferencesProvider).requireValue;
   return NimbusAuthRepository(preferences: preferences, appInfo: ref.watch(appInfoProvider).requireValue);
@@ -209,15 +236,34 @@ class NimbusAuthRepository {
     required NimbusAuthSession session,
     NimbusRulesManifest? localManifest,
   }) async {
-    final response = await _dio.get<Map<String, dynamic>>(
-      'rules/manifest',
-      queryParameters: {
-        if (localManifest?.publicRulesVersion != null) 'publicRulesVersion': localManifest!.publicRulesVersion,
-        if (localManifest?.userRulesVersion.isNotEmpty ?? false) 'userRulesVersion': localManifest!.userRulesVersion,
-        if (localManifest?.configVersion.isNotEmpty ?? false) 'configVersion': localManifest!.configVersion,
-      },
-      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
-    );
+    final queryParameters = <String, Object?>{
+      if (localManifest?.publicRulesVersion != null) 'publicRulesVersion': localManifest!.publicRulesVersion,
+      if (localManifest?.publicRulesSourceVersion != null)
+        'publicRulesSourceVersion': localManifest!.publicRulesSourceVersion,
+      if (localManifest?.userRulesVersion.isNotEmpty ?? false) 'userRulesVersion': localManifest!.userRulesVersion,
+      if (localManifest?.configVersion.isNotEmpty ?? false) 'configVersion': localManifest!.configVersion,
+    };
+    late Response<Map<String, dynamic>> response;
+    try {
+      response = await _dio.get<Map<String, dynamic>>(
+        'rules/manifest',
+        queryParameters: queryParameters,
+        options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+      );
+    } on DioException catch (error) {
+      if (!shouldRetryNimbusRulesSourceCompatibility(
+        error: error,
+        sourceVersionWasSent: queryParameters.containsKey('publicRulesSourceVersion'),
+      )) {
+        rethrow;
+      }
+      queryParameters.remove('publicRulesSourceVersion');
+      response = await _dio.get<Map<String, dynamic>>(
+        'rules/manifest',
+        queryParameters: queryParameters,
+        options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+      );
+    }
     return NimbusRulesManifest.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
   }
 
@@ -357,19 +403,32 @@ class NimbusAuthRepository {
     required String appVersion,
     required NimbusRulesManifest rulesManifest,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      'connect/plan',
-      data: {
-        'deviceId': session.device.deviceId,
-        'selectedLocation': selectedLocation,
-        'appVersion': appVersion,
-        'rulesVersion': rulesManifest.publicRulesVersion,
-        'publicRulesVersion': rulesManifest.publicRulesVersion,
-        'userRulesVersion': rulesManifest.userRulesVersion,
-        'configVersion': rulesManifest.configVersion,
-      },
-      options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
-    );
+    final data = <String, Object?>{
+      'deviceId': session.device.deviceId,
+      'selectedLocation': selectedLocation,
+      'appVersion': appVersion,
+      'rulesVersion': rulesManifest.publicRulesVersion,
+      'publicRulesVersion': rulesManifest.publicRulesVersion,
+      'publicRulesSourceVersion': rulesManifest.publicRulesSourceVersion,
+      'userRulesVersion': rulesManifest.userRulesVersion,
+      'configVersion': rulesManifest.configVersion,
+    };
+    late Response<Map<String, dynamic>> response;
+    try {
+      response = await _dio.post<Map<String, dynamic>>(
+        'connect/plan',
+        data: data,
+        options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+      );
+    } on DioException catch (error) {
+      if (!shouldRetryNimbusRulesSourceCompatibility(error: error, sourceVersionWasSent: true)) rethrow;
+      data.remove('publicRulesSourceVersion');
+      response = await _dio.post<Map<String, dynamic>>(
+        'connect/plan',
+        data: data,
+        options: Options(headers: {'authorization': 'Bearer ${session.accessToken}'}),
+      );
+    }
     return NimbusConnectPlan.fromJson(Map<String, dynamic>.from(response.data ?? const {}));
   }
 

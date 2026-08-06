@@ -102,6 +102,7 @@ jobs:
         run: |
           dart pub global activate fastforge
           echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+          scripts/cache_yundo_rule_sets.sh
           make common-prepare
       - uses: actions/download-artifact@v7
         with:
@@ -183,7 +184,9 @@ jobs:
           java-version: 17
       - uses: android-actions/setup-android@v3
       - name: 生成共享代码
-        run: make common-prepare
+        run: |
+          scripts/cache_yundo_rule_sets.sh
+          make common-prepare
       - uses: actions/download-artifact@v7
         with:
           name: yundo-android-core

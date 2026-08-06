@@ -14,6 +14,7 @@ auth_key_path="${APPSTORE_AUTH_KEY_PATH:-}"
 auth_key_id="${APPSTORE_API_KEY_ID:-}"
 auth_issuer_id="${APPSTORE_ISSUER_ID:-}"
 output_dir="${YUNDO_OUTPUT_DIR:-${repo_root}/out}"
+api_base_url="${NIMBUS_PROD_API_BASE_URL:-https://api.yundo.app/api/v1}"
 archive_path="${repo_root}/build/ios/archive/Yundo.xcarchive"
 export_path="${repo_root}/build/ios/export"
 
@@ -35,11 +36,13 @@ cd "${repo_root}"
 mkdir -p "${output_dir}"
 rm -rf "${archive_path}" "${export_path}"
 
+YUNDO_API_BASE_URL="${api_base_url}" "${script_dir}/cache_yundo_rule_sets.sh"
 # 先让 Flutter 生成框架和 Pods，再由 xcodebuild 负责真正的设备归档与签名。
 make ios-prepare
 "${flutter_bin}" build ios --release --no-codesign \
   --target=lib/main_prod.dart \
-  --build-number="${build_number}"
+  --build-number="${build_number}" \
+  --dart-define="NIMBUS_API_BASE_URL=${api_base_url}"
 
 xcodebuild \
   -workspace ios/Runner.xcworkspace \

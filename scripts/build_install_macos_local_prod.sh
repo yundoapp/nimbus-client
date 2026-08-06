@@ -39,6 +39,7 @@ if pgrep -f "${expected_executable}" >/dev/null 2>&1; then
 fi
 
 cd "${repo_root}"
+YUNDO_API_BASE_URL="${api_base_url}" "${script_dir}/cache_yundo_rule_sets.sh"
 GO_BIN="${GO_BIN:-$(command -v go || true)}" "${script_dir}/build_yundo_macos_core.sh"
 "${flutter_bin}" build macos --release \
   --target=lib/main_prod.dart \

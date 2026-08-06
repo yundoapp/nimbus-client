@@ -1,0 +1,81 @@
+diff --git a/experimental/clashapi/trafficontrol/tracker.go b/experimental/clashapi/trafficontrol/tracker.go
+index a9d4c32a..ec97b5a1 100644
+--- a/experimental/clashapi/trafficontrol/tracker.go
++++ b/experimental/clashapi/trafficontrol/tracker.go
+@@ -65,10 +65,14 @@ func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
+ 		rule = "final"
+ 	}
+ 	chains := t.Chain
++	outbound := t.Outbound
+ 	if t.OutboundType == C.TypeBalancer {
+-		chains = make([]string, len(t.Chain)+1)
+-		chains[0] = t.Metadata.GetRealOutbound()
+-		copy(chains[1:], t.Chain)
++		if realOutbound := t.Metadata.GetRealOutbound(); realOutbound != "" {
++			chains = make([]string, len(t.Chain)+1)
++			chains[0] = realOutbound
++			copy(chains[1:], t.Chain)
++			outbound = realOutbound
++		}
+ 	}
+ 	return json.Marshal(map[string]any{
+ 		"id": t.ID,
+@@ -86,7 +90,8 @@ func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
+ 		"upload":      t.Upload.Load(),
+ 		"download":    t.Download.Load(),
+ 		"start":       t.CreatedAt,
+-		"chains":      t.Chain,
++		"chains":      chains,
++		"outbound":    outbound,
+ 		"rule":        rule,
+ 		"rulePayload": "",
+ 	})
+diff --git a/experimental/clashapi/trafficontrol/tracker_test.go b/experimental/clashapi/trafficontrol/tracker_test.go
+new file mode 100644
+index 00000000..d7a5f1a8
+--- /dev/null
++++ b/experimental/clashapi/trafficontrol/tracker_test.go
+@@ -0,0 +1,43 @@
++package trafficontrol
++
++import (
++	"encoding/json"
++	"sync/atomic"
++	"testing"
++
++	"github.com/gofrs/uuid/v5"
++	"github.com/sagernet/sing-box/adapter"
++	C "github.com/sagernet/sing-box/constant"
++)
++
++func TestMarshalJSONExposesRealBalancerOutbound(t *testing.T) {
++	metadata := adapter.InboundContext{}
++	metadata.SetRealOutbound("nimbus-proxy")
++	tracker := TrackerMetadata{
++		ID:           uuid.Nil,
++		Metadata:     metadata,
++		Upload:       new(atomic.Int64),
++		Download:     new(atomic.Int64),
++		Chain:        []string{"balance", "select"},
++		Outbound:     "balance",
++		OutboundType: C.TypeBalancer,
++	}
++
++	raw, err := tracker.MarshalJSON()
++	if err != nil {
++		t.Fatalf("marshal tracker: %v", err)
++	}
++	var payload struct {
++		Chains   []string `json:"chains"`
++		Outbound string   `json:"outbound"`
++	}
++	if err := json.Unmarshal(raw, &payload); err != nil {
++		t.Fatalf("decode tracker: %v", err)
++	}
++	if payload.Outbound != "nimbus-proxy" {
++		t.Fatalf("expected real outbound, got %q", payload.Outbound)
++	}
++	if len(payload.Chains) != 3 || payload.Chains[0] != "nimbus-proxy" {
++		t.Fatalf("expected real outbound at the head of chains, got %v", payload.Chains)
++	}
++}

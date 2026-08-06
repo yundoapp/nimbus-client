@@ -13,5 +13,7 @@ void main() {
   test('route history uses the shared acceleration and direct access icons', () {
     expect(nimbusRouteHistoryDecisionIcon(NimbusRouteDecision.accelerated), Icons.rocket_launch_rounded);
     expect(nimbusRouteHistoryDecisionIcon(NimbusRouteDecision.direct), Icons.language_rounded);
+    expect(nimbusRouteHistoryDecisionIcon(NimbusRouteDecision.rejected), Icons.block_rounded);
+    expect(nimbusRouteHistoryDecisionIcon(NimbusRouteDecision.unknown), Icons.help_outline_rounded);
   });
 }

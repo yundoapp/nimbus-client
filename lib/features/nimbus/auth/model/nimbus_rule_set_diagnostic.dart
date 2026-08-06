@@ -41,6 +41,46 @@ Set<String> nimbusRemoteRuleSetTagsFromConfig(Map<String, dynamic> config) {
   };
 }
 
+String? nimbusManagedRuleSetSourceMismatch({
+  required Map<String, dynamic> config,
+  required Iterable<Map<String, dynamic>> expectedRuleSets,
+}) {
+  final expectedItems = expectedRuleSets
+      .where((item) => item['tag'] is String && item['url'] is String)
+      .where((item) => (item['tag'] as String).trim().isNotEmpty && (item['url'] as String).trim().isNotEmpty)
+      .toList(growable: false);
+  if (expectedItems.isEmpty) return null;
+
+  final route = config['route'];
+  if (route is! Map || route['rule_set'] is! List) {
+    return 'RULE_SET_SOURCE_MISMATCH route.rule_set is missing';
+  }
+
+  final actualByTag = <String, Map<String, dynamic>>{};
+  for (final item in route['rule_set'] as List) {
+    if (item is! Map) continue;
+    final tag = item['tag'];
+    if (tag is String && tag.trim().isNotEmpty) {
+      actualByTag[tag] = Map<String, dynamic>.from(item);
+    }
+  }
+
+  for (final item in expectedItems) {
+    final tag = item['tag'];
+    final expectedUrl = item['url'];
+    if (tag is! String || tag.trim().isEmpty || expectedUrl is! String || expectedUrl.trim().isEmpty) continue;
+    final actual = actualByTag[tag];
+    if (actual == null) {
+      return 'RULE_SET_SOURCE_MISMATCH tag=$tag expected=$expectedUrl actual=missing';
+    }
+    final actualUrl = actual['url'];
+    if (actualUrl != expectedUrl) {
+      return 'RULE_SET_SOURCE_MISMATCH tag=$tag expected=$expectedUrl actual=${actualUrl ?? '-'}';
+    }
+  }
+  return null;
+}
+
 NimbusRuleSetDiagnosticsResult parseNimbusRuleSetDiagnostics({
   required Iterable<String> logMessages,
   required Iterable<String> tags,
@@ -59,7 +99,9 @@ NimbusRuleSetDiagnosticsResult parseNimbusRuleSetDiagnostics({
       if (markerIndex < 0) continue;
       final detail = normalized.substring(markerIndex + prefix.length).trim();
       final status = switch (detail) {
-        'loaded from cache' || 'download completed' => NimbusRuleSetDiagnosticStatus.loaded,
+        'loaded from cache' ||
+        'loaded from bundled fallback' ||
+        'download completed' => NimbusRuleSetDiagnosticStatus.loaded,
         _ when detail.startsWith('download failed:') =>
           states[tag]!.status == NimbusRuleSetDiagnosticStatus.loaded
               ? NimbusRuleSetDiagnosticStatus.loadedWithFailure

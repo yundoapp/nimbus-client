@@ -42,7 +42,10 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
   String? _preparedConfigPath;
   String? _preparedIpv4FallbackConfigPath;
   String? _preparedIpv4FallbackConfig;
+  String? _preparedSocksHost;
   int? _preparedSocksPort;
+  String? _preparedSocksUsername;
+  String? _preparedSocksPassword;
   String? _tunnelConfig;
   ClientChannel? _clientChannel;
 
@@ -176,6 +179,21 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
   }
 
   @override
+  Future<bool> waitForCoreStopped({Duration timeout = const Duration(seconds: 5)}) async {
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      try {
+        final response = await bgClient.coreInfoListener(Empty()).first.timeout(const Duration(milliseconds: 800));
+        if (response.coreState == CoreStates.STOPPED) return true;
+      } catch (error) {
+        loggy.debug('waiting for stopped core status: $error');
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    return false;
+  }
+
+  @override
   Future<CoreStatus> setupBackground(String path, String name) async {
     if (!Platform.isMacOS) return const CoreStatus.started();
     return _prepareMacOSTunnel(path);
@@ -187,6 +205,15 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
       return _preparedConfigPath!;
     }
     return originalPath;
+  }
+
+  @override
+  String? preparedRoutingConfig() => Platform.isMacOS ? _tunnelConfig : null;
+
+  @override
+  Future<List<String>> ruleSetDiagnosticMessages() async {
+    if (!Platform.isMacOS) return const [];
+    return _privilegedHelper.ruleSetDiagnostics();
   }
 
   @override
@@ -202,7 +229,10 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
     _preparedConfigPath = null;
     _preparedIpv4FallbackConfigPath = null;
     _preparedIpv4FallbackConfig = null;
+    _preparedSocksHost = null;
     _preparedSocksPort = null;
+    _preparedSocksUsername = null;
+    _preparedSocksPassword = null;
     for (final preparedPath in preparedPaths.nonNulls) {
       final file = File(preparedPath);
       if (await file.exists()) await file.delete();
@@ -252,7 +282,10 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
       _preparedConfigPath = preparedPath;
       _preparedIpv4FallbackConfigPath = fallbackPath;
       _preparedIpv4FallbackConfig = fallback.userCoreConfig;
+      _preparedSocksHost = prepared.socksHost;
       _preparedSocksPort = prepared.socksPort;
+      _preparedSocksUsername = prepared.socksUsername;
+      _preparedSocksPassword = prepared.socksPassword;
       _tunnelConfig = prepared.tunnelConfig;
       bgClient = fgClient;
       return const CoreStatus.started();
@@ -268,42 +301,52 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
   @override
   Future<TunnelActivationPreparation> prepareTunnelActivation() async {
     if (!Platform.isMacOS) return (fallbackConfigPath: null, errorMessage: null, usedIpv4Fallback: false);
+    final socksHost = _preparedSocksHost;
     final socksPort = _preparedSocksPort;
     final fallbackPath = _preparedIpv4FallbackConfigPath;
-    if (socksPort == null || fallbackPath == null) {
+    if (socksHost == null || socksPort == null || fallbackPath == null) {
       return (
         fallbackConfigPath: null,
         errorMessage: 'macOS adaptive network config is not prepared',
         usedIpv4Fallback: false,
       );
     }
-    final fallbackFile = File(fallbackPath);
-    if (!await fallbackFile.exists()) {
-      final fallbackConfig = _preparedIpv4FallbackConfig;
-      if (fallbackConfig == null) {
-        return (
-          fallbackConfigPath: null,
-          errorMessage: 'macOS IPv4 fallback config is unavailable',
-          usedIpv4Fallback: false,
-        );
-      }
-      await fallbackFile.writeAsString(fallbackConfig, flush: true);
-      loggy.warning('restored missing macOS IPv4 fallback config before network activation');
-    }
-    final capabilities = await _macOSNetworkCapabilityProbe.probe(proxyPort: socksPort);
+    final capabilities = await _macOSNetworkCapabilityProbe.probe(
+      proxyHost: socksHost,
+      proxyPort: socksPort,
+      proxyUsername: _preparedSocksUsername,
+      proxyPassword: _preparedSocksPassword,
+    );
     loggy.info(
       'macOS accelerated network capabilities '
       '(ipv4=${capabilities.ipv4Available}, ipv6=${capabilities.ipv6Available})',
     );
-    if (!capabilities.ipv4Available) {
-      loggy.warning('macOS IPv4 probe was inconclusive; continuing with the IPv4 fallback config');
-      return (fallbackConfigPath: fallbackPath, errorMessage: null, usedIpv4Fallback: true);
+    switch (selectMacOSTunnelNetworkMode(capabilities)) {
+      case MacOSTunnelNetworkSelection.unavailable:
+        loggy.warning('macOS accelerated IPv4 is unavailable; refusing to take over the system network');
+        return (
+          fallbackConfigPath: null,
+          errorMessage: 'macOS accelerated IPv4 connectivity check failed; system network was not changed',
+          usedIpv4Fallback: false,
+        );
+      case MacOSTunnelNetworkSelection.dualStack:
+        return (fallbackConfigPath: null, errorMessage: null, usedIpv4Fallback: false);
+      case MacOSTunnelNetworkSelection.ipv4Fallback:
+        final fallbackFile = File(fallbackPath);
+        if (!await fallbackFile.exists()) {
+          final fallbackConfig = _preparedIpv4FallbackConfig;
+          if (fallbackConfig == null) {
+            return (
+              fallbackConfigPath: null,
+              errorMessage: 'macOS IPv4 fallback config is unavailable',
+              usedIpv4Fallback: false,
+            );
+          }
+          await fallbackFile.writeAsString(fallbackConfig, flush: true);
+          loggy.warning('restored missing macOS IPv4 fallback config before network activation');
+        }
+        return (fallbackConfigPath: fallbackPath, errorMessage: null, usedIpv4Fallback: true);
     }
-    return (
-      fallbackConfigPath: capabilities.ipv6Available ? null : fallbackPath,
-      errorMessage: null,
-      usedIpv4Fallback: !capabilities.ipv6Available,
-    );
   }
 
   @override
@@ -338,7 +381,14 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
     if (!Platform.isMacOS) return false;
     try {
       await _privilegedHelper.stopTunnel();
-      return true;
+      final deadline = DateTime.now().add(const Duration(seconds: 5));
+      do {
+        final conflict = await _privilegedHelper.connectionConflict();
+        if (conflict.yundoRoutedCount == 0) return true;
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+      } while (DateTime.now().isBefore(deadline));
+      loggy.warning('macOS privileged helper stopped but Yundo routes are still active');
+      return false;
     } catch (error) {
       loggy.warning('failed to stop macOS privileged helper: $error');
       return false;

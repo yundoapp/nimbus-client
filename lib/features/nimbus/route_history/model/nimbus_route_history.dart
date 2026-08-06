@@ -1,13 +1,17 @@
 const nimbusRouteHistoryLimit = 500;
 
-enum NimbusRouteDecision { direct, accelerated }
+enum NimbusRouteDecision { direct, accelerated, rejected, unknown }
 
 enum NimbusRouteHistoryFilter { all, active, completed }
 
-enum NimbusRouteDecisionFilter { all, direct, accelerated }
+enum NimbusRouteDecisionFilter { all, direct, accelerated, rejected }
 
-String oppositeNimbusRoutePreferenceType(NimbusRouteDecision decision) =>
-    decision == NimbusRouteDecision.direct ? 'accelerate' : 'direct';
+String? oppositeNimbusRoutePreferenceType(NimbusRouteDecision decision) => switch (decision) {
+  NimbusRouteDecision.direct => 'accelerate',
+  NimbusRouteDecision.accelerated => 'direct',
+  NimbusRouteDecision.rejected => null,
+  NimbusRouteDecision.unknown => null,
+};
 
 String formatNimbusRouteTextForDisplay(String value) => value
     .replaceAll('nimbus-proxy', 'yundo-proxy')
@@ -22,6 +26,36 @@ bool isNimbusDirectRouteChain(Iterable<String> chains) => chains.any(
       tag == 'bypass \u00a7hide\u00a7',
 );
 
+bool isNimbusAcceleratedRouteChain(Iterable<String> chains) =>
+    chains.any((tag) => tag == 'nimbus-proxy' || tag == 'yundo-proxy' || tag == 'yundo-socks');
+
+NimbusRouteDecision nimbusRouteDecisionFromConnection({
+  required String exactDecision,
+  required String outbound,
+  required Iterable<String> chains,
+}) {
+  switch (exactDecision.trim().toLowerCase()) {
+    case 'direct':
+      return NimbusRouteDecision.direct;
+    case 'accelerated':
+      return NimbusRouteDecision.accelerated;
+    case 'rejected':
+      return NimbusRouteDecision.rejected;
+  }
+  final explicitOutbound = outbound.trim();
+  if (isNimbusDirectRouteChain([explicitOutbound])) return NimbusRouteDecision.direct;
+  if (isNimbusAcceleratedRouteChain([explicitOutbound])) return NimbusRouteDecision.accelerated;
+
+  // Older Core builds did not expose outbound. Keep backwards compatibility
+  // for records that do contain a terminal route tag, but never infer
+  // acceleration merely because a connection reached `final`.
+  final hasDirectChain = isNimbusDirectRouteChain(chains);
+  final hasAcceleratedChain = isNimbusAcceleratedRouteChain(chains);
+  if (hasDirectChain && !hasAcceleratedChain) return NimbusRouteDecision.direct;
+  if (hasAcceleratedChain && !hasDirectChain) return NimbusRouteDecision.accelerated;
+  return NimbusRouteDecision.unknown;
+}
+
 class NimbusRouteHistoryEntry {
   const NimbusRouteHistoryEntry({
     required this.id,
@@ -33,6 +67,7 @@ class NimbusRouteHistoryEntry {
     required this.rule,
     required this.rulePayload,
     required this.chains,
+    required this.outbound,
     required this.decision,
     required this.startedAt,
     this.completedAt,
@@ -47,6 +82,7 @@ class NimbusRouteHistoryEntry {
   final String rule;
   final String rulePayload;
   final List<String> chains;
+  final String outbound;
   final NimbusRouteDecision decision;
   final DateTime startedAt;
   final DateTime? completedAt;
@@ -65,6 +101,7 @@ class NimbusRouteHistoryEntry {
     String? rule,
     String? rulePayload,
     List<String>? chains,
+    String? outbound,
     NimbusRouteDecision? decision,
     DateTime? startedAt,
     DateTime? completedAt,
@@ -80,6 +117,7 @@ class NimbusRouteHistoryEntry {
       rule: rule ?? this.rule,
       rulePayload: rulePayload ?? this.rulePayload,
       chains: chains ?? this.chains,
+      outbound: outbound ?? this.outbound,
       decision: decision ?? this.decision,
       startedAt: startedAt ?? this.startedAt,
       completedAt: clearCompletedAt ? null : completedAt ?? this.completedAt,
@@ -102,7 +140,9 @@ NimbusRouteHistoryEntry? parseNimbusRouteHistoryEntry(Map<String, dynamic> conne
     final List value => value.whereType<String>().toList(growable: false),
     _ => const <String>[],
   };
+  final outbound = _stringValue(connection['outbound']);
   final parsedStart = DateTime.tryParse(_stringValue(connection['start']))?.toLocal();
+  final parsedClosedAt = DateTime.tryParse(_stringValue(connection['closedAt']))?.toLocal();
 
   return NimbusRouteHistoryEntry(
     id: id,
@@ -114,8 +154,14 @@ NimbusRouteHistoryEntry? parseNimbusRouteHistoryEntry(Map<String, dynamic> conne
     rule: _stringValue(connection['rule']),
     rulePayload: _stringValue(connection['rulePayload']),
     chains: List.unmodifiable(chains),
-    decision: isNimbusDirectRouteChain(chains) ? NimbusRouteDecision.direct : NimbusRouteDecision.accelerated,
+    outbound: outbound,
+    decision: nimbusRouteDecisionFromConnection(
+      exactDecision: _stringValue(connection['decision']),
+      outbound: outbound,
+      chains: chains,
+    ),
     startedAt: parsedStart ?? observedAt,
+    completedAt: parsedClosedAt,
   );
 }
 
@@ -130,9 +176,13 @@ List<NimbusRouteHistoryEntry> mergeNimbusRouteHistory({
   for (final raw in snapshot) {
     final parsed = parseNimbusRouteHistoryEntry(raw, observedAt: observedAt);
     if (parsed == null) continue;
-    activeIds.add(parsed.id);
+    if (parsed.isActive) activeIds.add(parsed.id);
     final existing = byId[parsed.id];
-    byId[parsed.id] = parsed.copyWith(startedAt: existing?.startedAt ?? parsed.startedAt, clearCompletedAt: true);
+    byId[parsed.id] = parsed.copyWith(
+      startedAt: existing?.startedAt ?? parsed.startedAt,
+      completedAt: parsed.completedAt,
+      clearCompletedAt: parsed.isActive,
+    );
   }
   for (final entry in byId.values.toList(growable: false)) {
     if (entry.isActive && !activeIds.contains(entry.id)) {
@@ -166,6 +216,7 @@ List<NimbusRouteHistoryEntry> filterNimbusRouteHistory({
         NimbusRouteDecisionFilter.all => true,
         NimbusRouteDecisionFilter.direct => entry.decision == NimbusRouteDecision.direct,
         NimbusRouteDecisionFilter.accelerated => entry.decision == NimbusRouteDecision.accelerated,
+        NimbusRouteDecisionFilter.rejected => entry.decision == NimbusRouteDecision.rejected,
       };
       if (!matchesStatus || !matchesDecision) return false;
       if (normalizedQuery.isEmpty) return true;
@@ -182,10 +233,28 @@ List<NimbusRouteHistoryEntry> filterNimbusRouteHistory({
   );
 }
 
-List<Map<String, dynamic>> extractNimbusRouteConnections(Map<String, dynamic> payload) {
+List<Map<String, dynamic>> extractNimbusRouteConnections(
+  Map<String, dynamic> payload, {
+  bool requireExactDecision = false,
+}) {
   final connections = payload['connections'];
   if (connections is! List) return const [];
-  return List.unmodifiable(connections.whereType<Map>().map(Map<String, dynamic>.from));
+  return List.unmodifiable(
+    connections
+        .whereType<Map>()
+        .map(Map<String, dynamic>.from)
+        .where((connection) => !requireExactDecision || _isNimbusExactRouteDecision(connection['decision'])),
+  );
 }
+
+List<Map<String, dynamic>> extractNimbusMacOSTunnelConnections(
+  Map<String, dynamic> payload, {
+  bool requireExactDecision = false,
+}) => extractNimbusRouteConnections(payload, requireExactDecision: requireExactDecision);
+
+bool _isNimbusExactRouteDecision(Object? value) => switch (_stringValue(value).toLowerCase()) {
+  'direct' || 'accelerated' || 'rejected' => true,
+  _ => false,
+};
 
 String _stringValue(Object? value) => value?.toString().trim() ?? '';

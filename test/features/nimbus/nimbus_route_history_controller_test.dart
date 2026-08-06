@@ -17,8 +17,23 @@ void main() {
       ''');
 
       expect(config, isNotNull);
-      expect(config!.webSocketUri.toString(), 'ws://127.0.0.1:16756/connections');
+      expect(config!.webSocketUri.toString(), 'ws://127.0.0.1:16756/connections?yundo_exact_history=1&interval=250');
       expect(config.headers, {'Authorization': 'Bearer local-secret'});
+    });
+
+    test('can disable the exact Core history channel without changing the native endpoint', () {
+      final config = parseNimbusRouteHistoryControllerConfig('''
+        {
+          "experimental": {
+            "clash_api": {
+              "external_controller": "127.0.0.1:16756"
+            }
+          }
+        }
+      ''', exactHistory: false);
+
+      expect(config, isNotNull);
+      expect(config!.webSocketUri.toString(), 'ws://127.0.0.1:16756/connections');
     });
 
     test('rejects a non-loopback controller', () {
@@ -39,6 +54,30 @@ void main() {
     test('returns null for missing or malformed core config', () {
       expect(parseNimbusRouteHistoryControllerConfig('{}'), isNull);
       expect(parseNimbusRouteHistoryControllerConfig('{'), isNull);
+    });
+
+    test('uses only the authoritative helper controller on macOS', () {
+      final controller = NimbusRouteHistoryControllerConfig(
+        webSocketUri: Uri.parse('ws://127.0.0.1:16756/connections'),
+        secret: 'local-secret',
+      );
+
+      final sources = nimbusRouteHistoryMonitoringControllers(controller, isMacOS: true, appProcessName: 'Yundo Dev');
+
+      expect(sources, hasLength(1));
+      expect(sources.single.tunnelLayer, isTrue);
+      expect(sources.single.config.webSocketUri.port, 16757);
+    });
+
+    test('keeps the user Core controller on other platforms', () {
+      final controller = NimbusRouteHistoryControllerConfig(
+        webSocketUri: Uri.parse('ws://127.0.0.1:16756/connections'),
+        secret: 'local-secret',
+      );
+
+      final sources = nimbusRouteHistoryMonitoringControllers(controller, isMacOS: false, appProcessName: 'Yundo.exe');
+
+      expect(sources, [(config: controller, tunnelLayer: false)]);
     });
   });
 
@@ -88,5 +127,148 @@ void main() {
 
     expect(entry, isNotNull);
     expect(entry!.decision, NimbusRouteDecision.direct);
+  });
+
+  test('uses the explicit final outbound instead of inferring from final', () {
+    final entry = parseNimbusRouteHistoryEntry({
+      'id': 'connection-proxy',
+      'metadata': {'host': 'x.com', 'destinationPort': '443', 'network': 'tcp'},
+      'rule': 'final',
+      'chains': ['balance', 'select'],
+      'outbound': 'nimbus-proxy',
+    }, observedAt: DateTime(2026, 8, 3, 12));
+
+    expect(entry, isNotNull);
+    expect(entry!.outbound, 'nimbus-proxy');
+    expect(entry.decision, NimbusRouteDecision.accelerated);
+  });
+
+  test('uses the explicit Core decision as the final authority', () {
+    final entry = parseNimbusRouteHistoryEntry({
+      'id': 'connection-rejected',
+      'metadata': {'host': 'ads.example', 'destinationPort': '443', 'network': 'tcp'},
+      'rule': 'rule_set=ads => reject',
+      'chains': ['nimbus-proxy'],
+      'outbound': 'nimbus-proxy',
+      'decision': 'rejected',
+      'start': '2026-08-03T04:00:00Z',
+      'closedAt': '2026-08-03T04:00:00.050Z',
+    }, observedAt: DateTime(2026, 8, 3, 12));
+
+    expect(entry, isNotNull);
+    expect(entry!.decision, NimbusRouteDecision.rejected);
+    expect(entry.isActive, isFalse);
+    expect(entry.completedAt, DateTime.parse('2026-08-03T04:00:00.050Z').toLocal());
+  });
+
+  test('exact extraction drops legacy rows instead of showing an ambiguous result', () {
+    final connections = extractNimbusRouteConnections({
+      'connections': [
+        {
+          'id': 'exact',
+          'decision': 'direct',
+          'metadata': {'host': 'baidu.com'},
+        },
+        {
+          'id': 'legacy',
+          'metadata': {'host': 'example.com'},
+        },
+      ],
+    }, requireExactDecision: true);
+
+    expect(connections.map((connection) => connection['id']), ['exact']);
+  });
+
+  test('keeps Core completion timestamps while merging exact history snapshots', () {
+    final entries = mergeNimbusRouteHistory(
+      previous: const [],
+      observedAt: DateTime(2026, 8, 3, 12),
+      snapshot: [
+        {
+          'id': 'closed',
+          'decision': 'direct',
+          'metadata': {'host': 'baidu.com', 'destinationPort': '443'},
+          'start': '2026-08-03T03:59:59Z',
+          'closedAt': '2026-08-03T04:00:00Z',
+        },
+      ],
+    );
+
+    expect(entries, hasLength(1));
+    expect(entries.single.isActive, isFalse);
+    expect(entries.single.completedAt, DateTime.parse('2026-08-03T04:00:00Z').toLocal());
+  });
+
+  test('filters rejected requests independently', () {
+    final observedAt = DateTime(2026, 8, 3, 12);
+    final entries = [
+      parseNimbusRouteHistoryEntry({
+        'id': 'direct',
+        'decision': 'direct',
+        'metadata': {'host': 'baidu.com'},
+      }, observedAt: observedAt)!,
+      parseNimbusRouteHistoryEntry({
+        'id': 'rejected',
+        'decision': 'rejected',
+        'metadata': {'host': 'ads.example'},
+      }, observedAt: observedAt)!,
+    ];
+
+    final filtered = filterNimbusRouteHistory(
+      entries: entries,
+      filter: NimbusRouteHistoryFilter.all,
+      decisionFilter: NimbusRouteDecisionFilter.rejected,
+      query: '',
+    );
+    expect(filtered.map((entry) => entry.id), ['rejected']);
+  });
+
+  test('does not label an unresolved final connection as accelerated', () {
+    final entry = parseNimbusRouteHistoryEntry({
+      'id': 'connection-unresolved',
+      'metadata': {'host': 'x.com', 'destinationPort': '443', 'network': 'tcp'},
+      'rule': 'final',
+      'chains': ['balance', 'select'],
+    }, observedAt: DateTime(2026, 8, 3, 12));
+
+    expect(entry, isNotNull);
+    expect(entry!.decision, NimbusRouteDecision.unknown);
+  });
+
+  test('does not guess when an old record has both direct and proxy chains', () {
+    final entry = parseNimbusRouteHistoryEntry({
+      'id': 'connection-ambiguous',
+      'metadata': {'host': 'example.com', 'destinationPort': '443', 'network': 'tcp'},
+      'rule': 'final',
+      'chains': ['nimbus-direct', 'nimbus-proxy'],
+    }, observedAt: DateTime(2026, 8, 3, 12));
+
+    expect(entry, isNotNull);
+    expect(entry!.decision, NimbusRouteDecision.unknown);
+  });
+
+  test('keeps both final decisions from the authoritative macOS tunnel layer', () {
+    final connections = extractNimbusMacOSTunnelConnections({
+      'connections': [
+        {
+          'id': 'direct',
+          'outbound': 'yundo-direct',
+          'chains': ['yundo-direct'],
+          'metadata': {'host': 'baidu.com', 'destinationPort': '443'},
+        },
+        {
+          'id': 'forwarded',
+          'outbound': 'yundo-socks',
+          'chains': ['yundo-socks'],
+          'metadata': {'host': 'google.com', 'destinationPort': '443'},
+        },
+      ],
+    });
+
+    expect(connections.map((connection) => connection['id']), ['direct', 'forwarded']);
+    final decisions = connections
+        .map((connection) => parseNimbusRouteHistoryEntry(connection, observedAt: DateTime(2026, 8, 3, 12))!.decision)
+        .toList();
+    expect(decisions, [NimbusRouteDecision.direct, NimbusRouteDecision.accelerated]);
   });
 }

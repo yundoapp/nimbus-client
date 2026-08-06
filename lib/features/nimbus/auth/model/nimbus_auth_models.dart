@@ -479,6 +479,8 @@ class NimbusConnectTraffic {
 class NimbusRulesManifest {
   const NimbusRulesManifest({
     required this.publicRulesVersion,
+    this.publicRulesSourceVersion,
+    this.publicRulesUpdatedAt,
     required this.userRulesVersion,
     required this.configVersion,
     required this.requiresUpdate,
@@ -492,6 +494,8 @@ class NimbusRulesManifest {
     final changes = Map<String, dynamic>.from(json['changes'] as Map? ?? const {});
     return NimbusRulesManifest(
       publicRulesVersion: json['publicRulesVersion'] as String?,
+      publicRulesSourceVersion: json['publicRulesSourceVersion'] as String?,
+      publicRulesUpdatedAt: _dateTime(json['publicRulesUpdatedAt']),
       userRulesVersion: json['userRulesVersion'] as String? ?? '',
       configVersion: json['configVersion'] as String? ?? '',
       requiresUpdate: json['requiresUpdate'] as bool? ?? true,
@@ -503,6 +507,8 @@ class NimbusRulesManifest {
   }
 
   final String? publicRulesVersion;
+  final String? publicRulesSourceVersion;
+  final DateTime? publicRulesUpdatedAt;
   final String userRulesVersion;
   final String configVersion;
   final bool requiresUpdate;
@@ -513,11 +519,14 @@ class NimbusRulesManifest {
 
   bool sameVersions(NimbusRulesManifest other) =>
       publicRulesVersion == other.publicRulesVersion &&
+      publicRulesSourceVersion == other.publicRulesSourceVersion &&
       userRulesVersion == other.userRulesVersion &&
       configVersion == other.configVersion;
 
   Map<String, dynamic> toJson() => {
     'publicRulesVersion': publicRulesVersion,
+    'publicRulesSourceVersion': publicRulesSourceVersion,
+    'publicRulesUpdatedAt': publicRulesUpdatedAt?.toUtc().toIso8601String(),
     'userRulesVersion': userRulesVersion,
     'configVersion': configVersion,
     'requiresUpdate': requiresUpdate,
@@ -586,8 +595,8 @@ class NimbusRulesPackage {
   final List<NimbusRulePackageItem> publicRules;
   final DateTime? cachedAt;
 
-  NimbusRulesPackage copyWith({DateTime? cachedAt}) => NimbusRulesPackage(
-    manifest: manifest,
+  NimbusRulesPackage copyWith({NimbusRulesManifest? manifest, DateTime? cachedAt}) => NimbusRulesPackage(
+    manifest: manifest ?? this.manifest,
     userRules: userRules,
     publicRules: publicRules,
     cachedAt: cachedAt ?? this.cachedAt,
