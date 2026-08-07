@@ -1,0 +1,104 @@
+name: Windows Acceptance
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: windows-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.38.5'
+  GO_VERSION: '1.25.6'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - uses: subosito/flutter-action@v2.21.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Generate shared code and run tests
+        run: |
+          make common-prepare
+          flutter test
+
+  windows-core:
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: hiddify-core/go.sum
+      - name: Install Windows cross compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64
+      - name: Build Windows Core from locked sources
+        run: scripts/build_yundo_windows_core.sh
+      - uses: actions/upload-artifact@v6
+        with:
+          name: yundo-windows-core
+          path: out/yundo-windows-core
+          if-no-files-found: error
+          retention-days: 7
+
+  windows:
+    needs: [test, windows-core]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2.21.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Install packaging tools and prepare dependencies
+        shell: bash
+        run: |
+          dart pub global activate fastforge
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+          scripts/cache_yundo_rule_sets.sh
+          make common-prepare
+      - uses: actions/download-artifact@v7
+        with:
+          name: yundo-windows-core
+          path: hiddify-core/bin
+      - name: Build Windows x64 acceptance package
+        shell: bash
+        env:
+          CHANNEL: dev
+          WINDOWS_SKIP_MSIX: 'true'
+        run: make windows-release
+      - name: Collect Windows artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path out -Force | Out-Null
+          $versionLine = Select-String -Path pubspec.yaml -Pattern '^version:\s*([^+]+)\+(\d+)$'
+          if (-not $versionLine) { throw 'Cannot read version from pubspec.yaml' }
+          $version = $versionLine.Matches[0].Groups[1].Value
+          $build = $versionLine.Matches[0].Groups[2].Value
+          $setup = Get-ChildItem -Path dist -Recurse -Filter '*.exe' | Select-Object -First 1
+          $portable = Get-ChildItem -Path dist -Recurse -Filter '*.zip' | Select-Object -First 1
+          if (-not $setup -or -not $portable) { throw 'Windows artifacts were not generated' }
+          Copy-Item $setup.FullName "out/Yundo-Windows-$version-build$build-x64-setup-unsigned.exe"
+          Copy-Item $portable.FullName "out/Yundo-Windows-$version-build$build-x64-portable.zip"
+          Get-FileHash out/* -Algorithm SHA256 | Format-Table -AutoSize
+      - uses: actions/upload-artifact@v6
+        with:
+          name: windows-acceptance
+          path: out
+          if-no-files-found: error
+          retention-days: 7
