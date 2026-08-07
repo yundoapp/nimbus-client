@@ -1,7 +1,7 @@
 name: Windows Acceptance
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 concurrency:
   group: windows-acceptance-${{ github.ref }}
