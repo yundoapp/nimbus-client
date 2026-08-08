@@ -51,7 +51,7 @@ reviewed_boundary_blobs=(
   '3535de4515c20b88c6f1ab4c977ab7693519444f ios/HiddifyPacketTunnel/HiddifyPacketTunnel.entitlements'
   'f1a72f0a6e4522625d6ac5c4bdc36eebe8dbd526 lib/hiddifycore/core_interface/macos_network_capability_probe.dart'
   '4d1ab7aafaf6954ff8445984b16d263c43ca6e49 lib/hiddifycore/core_interface/macos_tunnel_config.dart'
-  '1ace7512f90bed3e90d24d68e182174772708739 macos/PrivilegedHelper/YundoPrivilegedHelper.swift'
+  '2c7eacdfa6bf0cc7dcdfab32eab9290d13b9af6e macos/PrivilegedHelper/YundoPrivilegedHelper.swift'
 )
 
 changed_files="$({
