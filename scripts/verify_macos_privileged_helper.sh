@@ -80,6 +80,8 @@ reject_mutated_config() {
 
 reject_mutated_config "系统级 GeoIP 路由排除" \
   '.inbounds[0].route_exclude_address_set = ["geoip-cn"]'
+reject_mutated_config "非字面 IP 路由排除" \
+  '.inbounds[0].route_exclude_address = ["node.example.com/32"]'
 reject_mutated_config "非 HTTPS 远程规则" \
   '.route.rule_set[0].url = "http://rules.example/geosite-gfw.srs"'
 reject_mutated_config "App 包外本地规则路径" \
@@ -94,4 +96,3 @@ App：${app_path}
 服务：${service_name}
 Helper：${helper_path}
 EOF
-

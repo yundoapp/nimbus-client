@@ -517,6 +517,19 @@ class NimbusRulesManifest {
   final bool configChanged;
   final String? downloadUrl;
 
+  NimbusRulesManifest copyWith({DateTime? publicRulesUpdatedAt}) => NimbusRulesManifest(
+    publicRulesVersion: publicRulesVersion,
+    publicRulesSourceVersion: publicRulesSourceVersion,
+    publicRulesUpdatedAt: publicRulesUpdatedAt ?? this.publicRulesUpdatedAt,
+    userRulesVersion: userRulesVersion,
+    configVersion: configVersion,
+    requiresUpdate: requiresUpdate,
+    publicRulesChanged: publicRulesChanged,
+    userRulesChanged: userRulesChanged,
+    configChanged: configChanged,
+    downloadUrl: downloadUrl,
+  );
+
   bool sameVersions(NimbusRulesManifest other) =>
       publicRulesVersion == other.publicRulesVersion &&
       publicRulesSourceVersion == other.publicRulesSourceVersion &&
@@ -540,10 +553,12 @@ class NimbusRulePackageItem {
     required this.pattern,
     required this.patternType,
     required this.action,
+    this.id,
     this.kind = 'custom',
     this.sourceUrl,
     this.format,
     this.updateInterval,
+    this.updatedAt,
   });
 
   factory NimbusRulePackageItem.fromJson(Map<String, dynamic> json) {
@@ -552,22 +567,27 @@ class NimbusRulePackageItem {
       pattern: json['pattern'] as String? ?? '',
       patternType: json['patternType'] as String? ?? '',
       action: json['action'] as String? ?? '',
+      id: json['id'] as String?,
       kind: json['kind'] as String? ?? (sourceUrl?.isNotEmpty == true ? 'rule_set' : 'custom'),
       sourceUrl: sourceUrl,
       format: json['format'] as String?,
       updateInterval: json['updateInterval'] as String?,
+      updatedAt: _dateTime(json['updatedAt']),
     );
   }
 
   final String pattern;
   final String patternType;
   final String action;
+  final String? id;
   final String kind;
   final String? sourceUrl;
   final String? format;
   final String? updateInterval;
+  final DateTime? updatedAt;
 
   Map<String, dynamic> toJson() => {
+    'id': id,
     'kind': kind,
     'pattern': pattern,
     'patternType': patternType,
@@ -575,11 +595,18 @@ class NimbusRulePackageItem {
     'sourceUrl': sourceUrl,
     'format': format,
     'updateInterval': updateInterval,
+    'updatedAt': updatedAt?.toUtc().toIso8601String(),
   };
 }
 
 class NimbusRulesPackage {
-  const NimbusRulesPackage({required this.manifest, required this.userRules, required this.publicRules, this.cachedAt});
+  const NimbusRulesPackage({
+    required this.manifest,
+    required this.userRules,
+    required this.publicRules,
+    this.cachedAt,
+    this.publicRulesLoadedAt,
+  });
 
   factory NimbusRulesPackage.fromJson(Map<String, dynamic> json) {
     return NimbusRulesPackage(
@@ -587,6 +614,7 @@ class NimbusRulesPackage {
       userRules: _ruleItems(json['userRules']),
       publicRules: _ruleItems(json['publicRules']),
       cachedAt: _dateTime(json['cachedAt']),
+      publicRulesLoadedAt: _dateTime(json['publicRulesLoadedAt']),
     );
   }
 
@@ -595,18 +623,43 @@ class NimbusRulesPackage {
   final List<NimbusRulePackageItem> publicRules;
   final DateTime? cachedAt;
 
-  NimbusRulesPackage copyWith({NimbusRulesManifest? manifest, DateTime? cachedAt}) => NimbusRulesPackage(
-    manifest: manifest ?? this.manifest,
-    userRules: userRules,
-    publicRules: publicRules,
-    cachedAt: cachedAt ?? this.cachedAt,
-  );
+  /// Offline fallback timestamp from the packaged snapshot or legacy cache.
+  /// Runtime SRS load time comes from the Core rule-set status API.
+  final DateTime? publicRulesLoadedAt;
+
+  NimbusRulesPackage copyWith({NimbusRulesManifest? manifest, DateTime? cachedAt, DateTime? publicRulesLoadedAt}) =>
+      NimbusRulesPackage(
+        manifest: manifest ?? this.manifest,
+        userRules: userRules,
+        publicRules: publicRules,
+        cachedAt: cachedAt ?? this.cachedAt,
+        publicRulesLoadedAt: publicRulesLoadedAt ?? this.publicRulesLoadedAt,
+      );
+
+  NimbusRulesPackage withFallbackPublicRulesMetadata(NimbusRulesPackage fallback) {
+    final sameSnapshot =
+        manifest.publicRulesVersion == fallback.manifest.publicRulesVersion &&
+        manifest.publicRulesSourceVersion == fallback.manifest.publicRulesSourceVersion;
+    if (!sameSnapshot) return this;
+
+    final fallbackUpdatedAt = manifest.publicRulesUpdatedAt ?? fallback.manifest.publicRulesUpdatedAt;
+    final fallbackLoadedAt = publicRulesLoadedAt ?? fallback.publicRulesLoadedAt;
+    if (fallbackUpdatedAt == manifest.publicRulesUpdatedAt && fallbackLoadedAt == publicRulesLoadedAt) return this;
+
+    return copyWith(
+      manifest: fallbackUpdatedAt == manifest.publicRulesUpdatedAt
+          ? null
+          : manifest.copyWith(publicRulesUpdatedAt: fallbackUpdatedAt),
+      publicRulesLoadedAt: fallbackLoadedAt,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'manifest': manifest.toJson(),
     'userRules': userRules.map((item) => item.toJson()).toList(),
     'publicRules': publicRules.map((item) => item.toJson()).toList(),
     'cachedAt': cachedAt?.toUtc().toIso8601String(),
+    'publicRulesLoadedAt': publicRulesLoadedAt?.toUtc().toIso8601String(),
   };
 
   String encode() => jsonEncode(toJson());

@@ -116,6 +116,10 @@ trap cleanup EXIT
 
 helper_path="${built_app}/Contents/Library/HelperTools/YundoPrivilegedHelper"
 [[ -x "${helper_path}" ]] || fail "构建产物缺少特权辅助进程：${helper_path}"
+helper_service_name="$(plutil -extract YundoPrivilegedHelperService raw -o - "${built_app}/Contents/Info.plist" 2>/dev/null || true)"
+[[ -n "${helper_service_name}" ]] || fail "正式版缺少 YundoPrivilegedHelperService"
+helper_daemon_plist="${built_app}/Contents/Library/LaunchDaemons/${helper_service_name}.plist"
+[[ -f "${helper_daemon_plist}" ]] || fail "正式版缺少 Helper LaunchDaemon 配置：${helper_daemon_plist}"
 if [[ "${distribution_build}" == 1 ]]; then
   "${script_dir}/sign_macos_distribution_app.sh" "${built_app}" "${codesign_identity}"
 else
@@ -125,7 +129,7 @@ else
     || fail "正式版 App entitlement 格式无效"
   codesign --force --sign "${codesign_identity}" "${branded_core}"
   codesign --force --sign "${codesign_identity}" \
-    --identifier "${expected_bundle_id}.privileged-helper" \
+    --identifier "${helper_service_name}" \
     "${helper_path}"
   login_item="${built_app}/Contents/Library/LoginItems/LaunchAtLoginHelper.app"
   if [[ -d "${login_item}" ]]; then
@@ -182,7 +186,9 @@ if [[ "${was_running}" == true ]]; then
   pgrep -f "${expected_executable}" >/dev/null 2>&1 \
     || fail "正式版覆盖安装后未能启动"
   if [[ "${was_accelerated}" == true ]]; then
-    for _ in {1..120}; do
+    # 正式版恢复可能需要重新准备 Core、Helper 和系统通道；与开发版保持一致，
+    # 最多等待 180 秒，避免把正常的慢恢复误判为安装失败。
+    for _ in {1..360}; do
       if defaults read "${expected_bundle_id}" flutter.started_by_user 2>/dev/null \
         | grep -Eq '(^|[[:space:]])(1|true)([[:space:]]|$)'; then
         break

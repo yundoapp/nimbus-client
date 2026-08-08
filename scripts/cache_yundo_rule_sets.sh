@@ -173,7 +173,7 @@ jq -n \
   --arg generatedAt "${generated_at}" \
   --arg source "${snapshot_source_url}" \
   --argjson items "${downloaded_items}" \
-  '{schemaVersion: 1, publicRulesVersion: $publicRulesVersion, publicRulesSourceVersion: $publicRulesSourceVersion, publicRulesUpdatedAt: $publicRulesUpdatedAt, generatedAt: $generatedAt, source: $source, items: $items}' \
+  '{schemaVersion: 1, publicRulesVersion: $publicRulesVersion, publicRulesSourceVersion: $publicRulesSourceVersion, publicRulesUpdatedAt: $publicRulesUpdatedAt, generatedAt: $generatedAt, bundledAt: $generatedAt, source: $source, items: $items}' \
   >"${stage_dir}/manifest.json"
 
 # Keep the checked-in snapshot stable when the published package did not
@@ -182,8 +182,8 @@ jq -n \
 if [[ -f "${assets_dir}/manifest.json" ]]; then
   current_fingerprint="${work_dir}/current-fingerprint.json"
   next_fingerprint="${work_dir}/next-fingerprint.json"
-  jq -S 'del(.generatedAt)' "${assets_dir}/manifest.json" >"${current_fingerprint}"
-  jq -S 'del(.generatedAt)' "${stage_dir}/manifest.json" >"${next_fingerprint}"
+  jq -S 'del(.generatedAt, .bundledAt)' "${assets_dir}/manifest.json" >"${current_fingerprint}"
+  jq -S 'del(.generatedAt, .bundledAt)' "${stage_dir}/manifest.json" >"${next_fingerprint}"
   if cmp -s "${current_fingerprint}" "${next_fingerprint}"; then
     log "公共规则包未变化，保留现有内置快照（版本 $(jq -r '.publicRulesVersion // "-"' "${assets_dir}/manifest.json")）"
     exit 0

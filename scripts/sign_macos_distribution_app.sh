@@ -16,7 +16,8 @@ fail() {
 app_info="${app_path}/Contents/Info.plist"
 bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${app_info}")"
 helper_path="${app_path}/Contents/Library/HelperTools/YundoPrivilegedHelper"
-helper_service="${bundle_id}.privileged-helper"
+helper_service="$(/usr/libexec/PlistBuddy -c 'Print :YundoPrivilegedHelperService' "${app_info}" 2>/dev/null || true)"
+[[ -n "${helper_service}" ]] || fail "App 缺少 YundoPrivilegedHelperService"
 entitlements="$(mktemp "${TMPDIR:-/tmp}/yundo-distribution-entitlements.XXXXXX")"
 cleanup() {
   rm -f "${entitlements}"

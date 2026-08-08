@@ -17,7 +17,7 @@ void main() {
       ''');
 
       expect(config, isNotNull);
-      expect(config!.webSocketUri.toString(), 'ws://127.0.0.1:16756/connections?yundo_exact_history=1&interval=250');
+      expect(config!.webSocketUri.toString(), 'ws://127.0.0.1:16756/connections?yundo_exact_history=1&interval=1000');
       expect(config.headers, {'Authorization': 'Bearer local-secret'});
     });
 
@@ -89,7 +89,15 @@ void main() {
       snapshot: [
         {
           'id': 'connection-1',
-          'metadata': {'host': 'servicewechat.com', 'destinationIP': '', 'destinationPort': '443', 'network': 'tcp'},
+          'metadata': {
+            'host': 'servicewechat.com',
+            'sourceIP': '172.20.0.2',
+            'sourcePort': '52144',
+            'destinationIP': '203.0.113.10',
+            'destinationPort': '443',
+            'network': 'tcp',
+            'type': 'tun',
+          },
           'rule': 'final',
           'rulePayload': '',
           'chains': ['nimbus-proxy', 'select'],
@@ -100,8 +108,32 @@ void main() {
 
     expect(entries, hasLength(1));
     expect(entries.single.target, 'servicewechat.com');
+    expect(entries.single.sourceIp, '172.20.0.2');
+    expect(entries.single.sourcePort, '52144');
+    expect(entries.single.destinationIp, '203.0.113.10');
+    expect(entries.single.inboundType, 'tun');
     expect(entries.single.decision, NimbusRouteDecision.accelerated);
     expect(entries.single.isActive, isTrue);
+  });
+
+  test('keeps optional endpoint metadata empty for legacy records', () {
+    final entry = parseNimbusRouteHistoryEntry({
+      'id': 'legacy-connection',
+      'metadata': {
+        'host': 'legacy.example.com',
+        'destinationIP': '203.0.113.20',
+        'destinationPort': '443',
+        'network': 'tcp',
+      },
+      'rule': 'final',
+      'chains': ['nimbus-proxy'],
+    }, observedAt: DateTime.utc(2026, 8, 7, 1));
+
+    expect(entry, isNotNull);
+    expect(entry!.sourceIp, isEmpty);
+    expect(entry.sourcePort, isEmpty);
+    expect(entry.inboundType, isEmpty);
+    expect(entry.destinationIp, '203.0.113.20');
   });
 
   test('recognizes the Hiddify native direct outbound as direct access', () {
@@ -177,6 +209,15 @@ void main() {
     }, requireExactDecision: true);
 
     expect(connections.map((connection) => connection['id']), ['exact']);
+  });
+
+  test('reads total traffic counters from the privileged tunnel snapshot', () {
+    final stats = parseNimbusTunnelTrafficStats({'uploadTotal': 123, 'downloadTotal': '456'});
+    expect(stats, isNotNull);
+    expect(stats!.uploadTotal, 123);
+    expect(stats.downloadTotal, 456);
+    expect(parseNimbusTunnelTrafficStats({'uploadTotal': -1, 'downloadTotal': 10}), isNull);
+    expect(parseNimbusTunnelTrafficStats({'connections': []}), isNull);
   });
 
   test('keeps Core completion timestamps while merging exact history snapshots', () {

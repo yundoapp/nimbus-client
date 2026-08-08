@@ -1,5 +1,19 @@
 const nimbusRouteHistoryLimit = 500;
 
+class NimbusTunnelTrafficStats {
+  const NimbusTunnelTrafficStats({required this.uploadTotal, required this.downloadTotal});
+
+  final int uploadTotal;
+  final int downloadTotal;
+}
+
+NimbusTunnelTrafficStats? parseNimbusTunnelTrafficStats(Map<String, dynamic> payload) {
+  final uploadTotal = _nonNegativeInt(payload['uploadTotal']);
+  final downloadTotal = _nonNegativeInt(payload['downloadTotal']);
+  if (uploadTotal == null || downloadTotal == null) return null;
+  return NimbusTunnelTrafficStats(uploadTotal: uploadTotal, downloadTotal: downloadTotal);
+}
+
 enum NimbusRouteDecision { direct, accelerated, rejected, unknown }
 
 enum NimbusRouteHistoryFilter { all, active, completed }
@@ -61,6 +75,9 @@ class NimbusRouteHistoryEntry {
     required this.id,
     required this.target,
     required this.host,
+    required this.sourceIp,
+    required this.sourcePort,
+    required this.inboundType,
     required this.destinationIp,
     required this.destinationPort,
     required this.network,
@@ -76,6 +93,9 @@ class NimbusRouteHistoryEntry {
   final String id;
   final String target;
   final String host;
+  final String sourceIp;
+  final String sourcePort;
+  final String inboundType;
   final String destinationIp;
   final String destinationPort;
   final String network;
@@ -95,6 +115,9 @@ class NimbusRouteHistoryEntry {
   NimbusRouteHistoryEntry copyWith({
     String? target,
     String? host,
+    String? sourceIp,
+    String? sourcePort,
+    String? inboundType,
     String? destinationIp,
     String? destinationPort,
     String? network,
@@ -111,6 +134,9 @@ class NimbusRouteHistoryEntry {
       id: id,
       target: target ?? this.target,
       host: host ?? this.host,
+      sourceIp: sourceIp ?? this.sourceIp,
+      sourcePort: sourcePort ?? this.sourcePort,
+      inboundType: inboundType ?? this.inboundType,
       destinationIp: destinationIp ?? this.destinationIp,
       destinationPort: destinationPort ?? this.destinationPort,
       network: network ?? this.network,
@@ -133,6 +159,9 @@ NimbusRouteHistoryEntry? parseNimbusRouteHistoryEntry(Map<String, dynamic> conne
     _ => const <String, dynamic>{},
   };
   final host = _stringValue(metadata['host']).toLowerCase();
+  final sourceIp = _stringValue(metadata['sourceIP']);
+  final sourcePort = _stringValue(metadata['sourcePort']);
+  final inboundType = _stringValue(metadata['type']);
   final destinationIp = _stringValue(metadata['destinationIP']);
   final target = host.isNotEmpty ? host : destinationIp;
   if (target.isEmpty) return null;
@@ -148,6 +177,9 @@ NimbusRouteHistoryEntry? parseNimbusRouteHistoryEntry(Map<String, dynamic> conne
     id: id,
     target: target,
     host: host,
+    sourceIp: sourceIp,
+    sourcePort: sourcePort,
+    inboundType: inboundType,
     destinationIp: destinationIp,
     destinationPort: _stringValue(metadata['destinationPort']),
     network: _stringValue(metadata['network']).toLowerCase(),
@@ -222,6 +254,9 @@ List<NimbusRouteHistoryEntry> filterNimbusRouteHistory({
       if (normalizedQuery.isEmpty) return true;
       return [
         entry.target,
+        entry.sourceIp,
+        entry.sourcePort,
+        entry.inboundType,
         entry.destinationIp,
         entry.destinationPort,
         entry.network,
@@ -258,3 +293,8 @@ bool _isNimbusExactRouteDecision(Object? value) => switch (_stringValue(value).t
 };
 
 String _stringValue(Object? value) => value?.toString().trim() ?? '';
+
+int? _nonNegativeInt(Object? value) {
+  final parsed = value is int ? value : int.tryParse(value?.toString() ?? '');
+  return parsed != null && parsed >= 0 ? parsed : null;
+}

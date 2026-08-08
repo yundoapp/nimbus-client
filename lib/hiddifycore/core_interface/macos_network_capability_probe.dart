@@ -28,6 +28,7 @@ class MacOSNetworkCapabilityProbe {
     this.timeout = const Duration(milliseconds: 1500),
     this.maxAttempts = 2,
     this.retryDelay = const Duration(milliseconds: 200),
+    this.ipv4RecoveryDelay = const Duration(milliseconds: 400),
   }) : _attempt = attempt ?? _attemptThroughSocks5;
 
   // Literal HTTP targets isolate the destination address family. TLS, DNS,
@@ -40,6 +41,7 @@ class MacOSNetworkCapabilityProbe {
   final Duration timeout;
   final int maxAttempts;
   final Duration retryDelay;
+  final Duration ipv4RecoveryDelay;
 
   Future<MacOSNetworkCapabilities> probe({
     required String proxyHost,
@@ -52,6 +54,31 @@ class MacOSNetworkCapabilityProbe {
       _isAvailable(ipv6ProbeUri, proxyHost, proxyPort, proxyUsername, proxyPassword),
     ]);
     return (ipv4Available: results[0], ipv6Available: results[1]);
+  }
+
+  /// Rechecks IPv4 only when the first capability probe fails. Rapid node
+  /// switches can briefly leave the new outbound unable to answer the HTTP
+  /// probe even though the Core process is already running. Normal starts do
+  /// not pay for this extra check, and a confirmed failure still fails closed.
+  Future<MacOSNetworkCapabilities> probeWithIpv4Recovery({
+    required String proxyHost,
+    required int proxyPort,
+    String? proxyUsername,
+    String? proxyPassword,
+  }) async {
+    final initial = await probe(
+      proxyHost: proxyHost,
+      proxyPort: proxyPort,
+      proxyUsername: proxyUsername,
+      proxyPassword: proxyPassword,
+    );
+    if (initial.ipv4Available) return initial;
+
+    if (ipv4RecoveryDelay > Duration.zero) {
+      await Future<void>.delayed(ipv4RecoveryDelay);
+    }
+    final recoveredIpv4 = await _isAvailable(ipv4ProbeUri, proxyHost, proxyPort, proxyUsername, proxyPassword);
+    return (ipv4Available: recoveredIpv4, ipv6Available: initial.ipv6Available);
   }
 
   Future<bool> _isAvailable(

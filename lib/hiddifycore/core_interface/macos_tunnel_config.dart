@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
@@ -44,6 +45,7 @@ PreparedMacOSTunnelConfig splitMacOSTunnelConfig(
   String? macOSDirectRouteRuleSetPath,
 }) {
   final config = jsonDecode(jsonEncode(source)) as Map<String, dynamic>;
+  final macOSProxyServerRouteExclusions = _macOSProxyServerRouteExclusions(config);
   final rawInbounds = config['inbounds'];
   if (rawInbounds is! List) {
     throw const MacOSTunnelConfigException('managed config has no inbounds');
@@ -114,6 +116,8 @@ PreparedMacOSTunnelConfig splitMacOSTunnelConfig(
     'address': ['172.20.0.1/30', if (!configureWindowsDnsBridge) 'fdfe:dcba:9876::1/126'],
     'auto_route': true,
     'stack': 'system',
+    if (!configureWindowsDnsBridge && macOSProxyServerRouteExclusions.isNotEmpty)
+      'route_exclude_address': macOSProxyServerRouteExclusions,
     // The system TUN often receives an IP after the OS resolver has run.
     // Preserve a sniffed TLS/HTTP/QUIC/SSH domain when handing the connection
     // to the user Core, otherwise domain rules degrade to `final` routing.
@@ -172,6 +176,25 @@ PreparedMacOSTunnelConfig splitMacOSTunnelConfig(
     socksUsername: username,
     socksPassword: password,
   );
+}
+
+List<String> _macOSProxyServerRouteExclusions(Map<String, dynamic> config) {
+  final rawOutbounds = config['outbounds'];
+  if (rawOutbounds is! List) return const [];
+
+  final exclusions = <String>{};
+  for (final rawOutbound in rawOutbounds.whereType<Map>()) {
+    final server = rawOutbound['server'];
+    if (server is! String || server.trim().isEmpty) continue;
+
+    // Only exclude literal IP endpoints. Resolving a node hostname here would
+    // introduce a second DNS policy and could become stale while the app runs.
+    final address = InternetAddress.tryParse(server.trim());
+    if (address == null) continue;
+    final prefixLength = address.type == InternetAddressType.IPv4 ? 32 : 128;
+    exclusions.add('${address.address}/$prefixLength');
+  }
+  return exclusions.toList()..sort();
 }
 
 void _removeMacOSUserCorePolicyDecisions(Map<String, dynamic> config) {

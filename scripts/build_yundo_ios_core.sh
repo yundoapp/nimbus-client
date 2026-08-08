@@ -14,6 +14,8 @@ rule_set_patch_file="${repo_root}/patches/hiddify-core/0002-rule-set-observabili
 observability_patch_file="${repo_root}/patches/hiddify-core/0003-connection-observability-and-actual-outbound.patch"
 exact_history_patch_file="${repo_root}/patches/hiddify-core/0004-exact-route-decision-history.patch"
 bundled_rule_set_patch_file="${repo_root}/patches/hiddify-core/0005-bundled-rule-set-fallback.patch"
+rule_set_status_patch_file="${repo_root}/patches/hiddify-core/0006-rule-set-status-api.patch"
+active_outbound_delay_patch_file="${repo_root}/patches/hiddify-core/0007-active-outbound-url-test.patch"
 go_bin="${GO_BIN:-$(command -v go || true)}"
 
 fail() {
@@ -22,6 +24,12 @@ fail() {
 }
 
 restore_core_source() {
+  if git -C "${core_dir}" apply --ignore-whitespace --reverse --check "${active_outbound_delay_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}" apply --ignore-whitespace --reverse "${active_outbound_delay_patch_file}"
+  fi
+  if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${rule_set_status_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}/hiddify-sing-box" apply --reverse "${rule_set_status_patch_file}"
+  fi
   if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${bundled_rule_set_patch_file}" >/dev/null 2>&1; then
     git -C "${core_dir}/hiddify-sing-box" apply --reverse "${bundled_rule_set_patch_file}"
   fi

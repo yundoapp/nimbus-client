@@ -1,9 +1,10 @@
 {
   "schemaVersion": 1,
-  "publicRulesVersion": "2026.08.03.3",
+  "publicRulesVersion": "2026.08.05.1",
   "publicRulesSourceVersion": "sha256:18086150f7994d5fe64a21c9b0ffdcc4fbe66947c5e3a25ea7000317145926ea",
-  "publicRulesUpdatedAt": "2026-08-03T14:47:05.780Z",
-  "generatedAt": "2026-08-06T08:31:52Z",
+  "publicRulesUpdatedAt": "2026-08-05T07:52:33.387Z",
+  "generatedAt": "2026-08-08T10:40:09Z",
+  "bundledAt": "2026-08-08T10:40:09Z",
   "source": "https://api.yundo.app/api/v1/rules/public-package",
   "items": [
     {
@@ -59,7 +60,7 @@
       "patternType": "geosite",
       "action": "accelerate",
       "sourceUrl": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/gfw.srs",
-      "sha256": "ed0700a4f833f0fb903daf36e8f9301aad494810b0db7bf2f7b766652dcd2371",
+      "sha256": "faeef60218b2b96b4b1f94e373d3d96f0f9d40a148f5667f02e6ad5e18e4567e",
       "asset": "assets/rules/geosite-gfw.srs"
     },
     {
@@ -75,7 +76,7 @@
       "patternType": "geosite",
       "action": "accelerate",
       "sourceUrl": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-geolocation-!cn.srs",
-      "sha256": "2bd563602c18ba2c0b42014493986e635ea1d59fb0fc5792c7a2f4e1ced4afe1",
+      "sha256": "1d8f12fb08c6a83f87b6488080d6d3c7c56db4ab1b84f5777ae5ef2c7bc5e603",
       "asset": "assets/rules/geosite-geolocation-!cn.srs"
     },
     {
@@ -83,7 +84,7 @@
       "patternType": "geosite",
       "action": "direct",
       "sourceUrl": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
-      "sha256": "6060ef69f047e91e5b0cd84504ab8f857ed1f93612452de1e055a95f3d0053cd",
+      "sha256": "ddcaea905ae139872b2406e5fb3b725150c610c8c5ad945ab470558874f004e5",
       "asset": "assets/rules/geosite-cn.srs"
     },
     {

@@ -52,6 +52,11 @@ class CoreInterface {
   /// Desktop core restarts can terminate active HTTP/2 streams by design.
   Future<void> refreshClients() async {}
 
+  /// Reconciles a user core that is still running while the application-level
+  /// connection state is stopped. Returns an error detail when cleanup cannot
+  /// be verified and a new core must not be started.
+  Future<String?> reconcileBeforeStart() async => null;
+
   /// Returns the latest core state, or null on platforms without a desktop
   /// gRPC status stream.
   Future<CoreStates?> waitForCoreState({Duration timeout = const Duration(seconds: 5)}) async => null;

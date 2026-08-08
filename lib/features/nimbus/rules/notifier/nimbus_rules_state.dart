@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:hiddify/core/directories/directories_provider.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
+import 'package:hiddify/features/nimbus/auth/data/nimbus_bundled_rules.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_rules_config.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
@@ -34,16 +35,19 @@ final nimbusRulesPackageProvider = FutureProvider.autoDispose<NimbusRulesPackage
   if (session == null) return null;
 
   final repository = ref.read(nimbusAuthRepositoryProvider);
+  final bundled = await readNimbusBundledRulesPackage();
   final cached = repository.readRulesPackage(session.user.id);
   try {
-    final package = await repository.fetchRulesPackage(session);
+    var package = await repository.fetchRulesPackage(session);
+    if (bundled != null) package = package.withFallbackPublicRulesMetadata(bundled);
     if (package.manifest.configVersion != nimbusRulesConfigVersion) {
       throw FormatException('unsupported rules config version: ${package.manifest.configVersion}');
     }
     await repository.saveRulesPackage(session.user.id, package);
     return repository.readRulesPackage(session.user.id) ?? package;
   } catch (_) {
-    return cached;
+    if (cached != null) return bundled == null ? cached : cached.withFallbackPublicRulesMetadata(bundled);
+    return bundled;
   }
 });
 

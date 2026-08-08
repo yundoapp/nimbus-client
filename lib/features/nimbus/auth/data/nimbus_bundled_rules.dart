@@ -52,6 +52,7 @@ Future<NimbusRulesPackage?> readNimbusBundledRulesPackage() async {
 
     final sourceVersion = decoded['publicRulesSourceVersion'] as String?;
     if (sourceVersion == null || sourceVersion.isEmpty) return null;
+    final bundledAt = DateTime.tryParse((decoded['bundledAt'] ?? decoded['generatedAt']) as String? ?? '');
     return NimbusRulesPackage(
       manifest: NimbusRulesManifest(
         publicRulesVersion: decoded['publicRulesVersion'] as String?,
@@ -67,6 +68,7 @@ Future<NimbusRulesPackage?> readNimbusBundledRulesPackage() async {
       ),
       userRules: const [],
       publicRules: publicRules,
+      publicRulesLoadedAt: bundledAt,
     );
   } catch (error, stackTrace) {
     _logger.error('unable to read bundled public rule package: $error', error, stackTrace);

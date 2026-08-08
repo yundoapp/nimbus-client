@@ -1,6 +1,6 @@
 # 云渡 Hiddify 重建迁移基线
 
-最后更新：`2026-08-05`
+最后更新：`2026-08-08`
 
 ## 1. 目标
 
@@ -39,13 +39,15 @@
 
 ## 4. 规则和连接适配原则
 
-1. 后台返回短期连接方案、完整 Hiddify 标准 Profile 和同版本的账号规则包。
-2. 客户端只校验并安装标准 Profile，不消费旧版 `singBoxConfigPatch`；连接前按版本校验并缓存规则包，只把规则条目交给 Hiddify Config Option 的受控入口，不拼装整份运行配置。
+1. 后台返回短期连接方案、完整 Hiddify 标准 Profile 和账号规则清单；公共规则项只描述规则集名称、来源 URL、策略和清单版本。
+2. 客户端只校验并安装标准 Profile，不消费旧版 `singBoxConfigPatch`；连接前把清单转换为 Hiddify Config Option 的受控入口，不拼装整份运行配置，也不自行实现 SRS 的下载、缓存或更新判断。
 3. Hiddify 原有 `ProfileParser`、`ProfileRepository`、`ConnectionRepository`、配置构建器和 Core 生命周期继续负责解析、生成 DNS/inbound/最终路由、启动和停止。
 4. 受控入口只允许追加 `route.rules` 和 `route.rule_set`。如果某项云渡能力超出该边界，优先调整产品规则表达或暂缓，不扩大到 DNS、TUN、系统代理或 Helper。
 5. 不允许由云渡代码接管系统 DNS，不允许在加速前后直接修改物理网卡 DNS，不允许自行创建或清理系统路由。
 
-Hiddify Core 校验 profile 时会使用临时输入文件生成完整运行配置；在部分桌面启动时序下，Core 释放临时输入后可能异步清理校验输出路径。因此云渡适配器使用独立校验路径读取 Hiddify 生成的完整配置，先完成 Hiddify profile 入库并等待 active profile 稳定，再把完整配置写入云渡自己的最终 profile 文件，最后调用原生 `ConnectionRepository.connect`。Hiddify 标准 Profile 解析器会规范化节点内容并丢弃顶层产品路由，所以账号规则不能只写在 Profile 中；客户端必须在连接前把同版本规则包转换成受控 Config Option，由 Hiddify 在生成完整运行配置时追加。不得把后台返回的原始 profile 直接覆盖为最终运行文件，也不得让云渡接管 Core 的 DNS、TUN 或系统代理配置。
+公共规则的运行时更新时间以 sing-box remote rule-set 为准。核心负责远程 SRS 的下载、缓存、校验、刷新和加载；云渡后台只维护规则清单，客户端只通过核心已有的本机只读状态接口读取各规则集最后确认时间。构建时随 App 打包的 SRS 只作为核心的离线 fallback，不参与远程版本判断；`publicRulesUpdatedAt` 仅表示云渡清单发布时间。
+
+Hiddify Core 校验 profile 时会使用临时输入文件生成完整运行配置；在部分桌面启动时序下，Core 释放临时输入后可能异步清理校验输出路径。因此云渡适配器使用独立校验路径读取 Hiddify 生成的完整配置，先完成 Hiddify profile 入库并等待 active profile 稳定，再把完整配置写入云渡自己的最终 profile 文件，最后调用原生 `ConnectionRepository.connect`。Hiddify 标准 Profile 解析器会规范化节点内容并丢弃顶层产品路由，所以账号规则不能只写在 Profile 中；客户端必须在连接前把当前规则清单转换成受控 Config Option，由 Hiddify 在生成完整运行配置时追加。不得把后台返回的原始 profile 直接覆盖为最终运行文件，也不得让云渡接管 Core 的 DNS、TUN 或系统代理配置。
 
 服务端可以继续返回旧 `singBoxConfigPatch` 供旧客户端兼容，但新客户端收到缺少 `profileContent` 的响应时必须失败关闭，不得回退消费旧字段。
 
@@ -56,6 +58,8 @@ Hiddify Core 校验 profile 时会使用临时输入文件生成完整运行配�
 macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装名 `Yundo Dev.app`，Release 使用 `app.yundo.client`；重建开发版与旧云渡开发版不共享登录态、偏好或 Core 数据目录。当前桌面发布层使用 `YundoCore` 文件名和云渡窗口/进程名，不把旧 Helper 带入新分支；源代码目录和上游模块名暂时保留，避免为了改内部名而触碰 Core ABI。构建入口 `scripts/build_install_run_macos_dev.sh` 会拒绝把 Hiddify 名称带入最终 macOS App 包。
 
 品牌验收以最终安装包为准：进程管理器、应用包目录、系统设置里的应用名、通知服务名、快捷方式和应用图标都必须显示云渡品牌；内部源码路径、协议模块名和许可证归属不属于用户产品界面，但不得被复制成用户可见的运行时文件名。
+
+macOS 的正式版和开发版使用不同且带版本后缀的特权 Helper 服务标识（当前均为 `.privileged-helper.v3`）。构建签名脚本必须从 App 的 `YundoPrivilegedHelperService` 读取并校验服务名，不能回退到旧的无版本服务名，以避免旧安装残留的 launchd 注册阻断隧道启动。
 
 桌面 Core 进程隔离和退出清理是应用生命周期边界，不改变 DNS、TUN、路由或代理实现：正式版继续使用既有 Core 通道，macOS 开发版使用独立端口 `17179`，避免接管正式版或旧 Helper 的 Core；桌面退出无论来自窗口、托盘还是 macOS 系统菜单，都必须先调用 Hiddify 原生停止接口并清理云渡连接状态，随后才允许进程退出。macOS 原生终止通过 `yundo.application.lifecycle` 与 Flutter 握手，不能只依赖 `onWindowClose`。
 
@@ -172,7 +176,7 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - 桌面端和移动端共享同一组四个主菜单，顺序固定为“主页、记录、规则、设置”；路由分支、NavigationRail、NavigationBar 和多语言菜单标题必须保持一一对应，避免再次出现 `selectedIndex` 越界红屏。
 - “规则”页面是面向普通用户的清单入口，只展示当前规则、访问方式（加速/直连/拦截）、来源（自定义/公共/本机）、规则版本、软件版本和本机最近成功保存规则包的时间。
 - 页面不再展示编译路由、Core 有效配置、规则库详情或原始 JSON；这些实现细节继续留在运行链路和问题诊断数据中，不进入普通用户界面。
-- 规则页面只读取现有规则包缓存和 Hiddify 原生 `rulesNotifierProvider`，不新增网络请求，不修改 DNS、路由、TUN、系统代理、Helper 或 Core 生命周期。
+- 规则页面读取现有规则清单缓存，并通过 Core 提供的本机 `/providers/rules` 只读接口查询规则集状态；该查询不触发网络规则更新，也不修改 DNS、路由、TUN、系统代理、Helper 或 Core 生命周期。
 - 设置页删除整块“加速与访问”分组；自定义网站管理继续从首页“加速模式”入口进入。记录不再作为设置页重复入口，统一使用主导航进入。
 - 该导航和规则页面位于共享 Flutter/Dart 路径，macOS、Windows、iOS、Android 必须同步保留实现和翻译。当前验收优先本机 macOS 双版本与 iOS Simulator；Windows/Android 继续由远程四端构建同步覆盖，实体设备验收另列清单。
 - 本轮构建策略：本机只优先构建和覆盖安装 macOS、iOS Simulator；远端提交后保持 Windows x64、Android Debug 与 Apple 远程入口可构建。不能因为本轮暂不验收 Windows/Android 而删除或平台化遗漏共享功能。
@@ -277,7 +281,8 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - 公共规则库由平台发布的 `sourceUrl` 作为唯一权威来源。用户不需要下载、替换或维护本地 SRS；客户端只在加速准备阶段按平台返回的 URL 使用远程规则，并在成功校验后由 Core 缓存。
 - 同名规则集采用“云渡来源优先”：同一个 tag 如果同时出现在 Hiddify 默认配置和云渡管理配置中，最终 Core 配置必须保留云渡 URL。缓存键同时包含 tag 和 URL 哈希，换源后不会把旧 Hiddify 缓存误当成云渡规则。
 - 客户端启动前会读取最终交给 Core 的配置，逐一核对公共规则的 tag、类型和 URL。实际来源与平台返回值不一致时，以 `Y-RULE-002` 失败关闭，并把期望来源、实际来源写入诊断日志，不继续带着未知规则加速。
-- 规则 manifest 的公共更新时间来自平台规则包发布记录（`publishedAt` / `publicRulesUpdatedAt`），不使用本机缓存时间伪装成规则库更新；规则包只有真正下载、校验并原子替换成功后才更新本地缓存状态。
+- 规则 manifest 的公共更新时间来自平台规则包发布记录（`publishedAt` / `publicRulesUpdatedAt`）；历史发布记录缺失发布时间时由服务端回退到该规则集创建时间，不使用每次检查或本机缓存时间伪装成规则库更新。
+- 客户端不再在“加速成功”时写入 `publicRulesLoadedAt`，避免把连接成功时间冒充 SRS 实际加载时间。规则中心优先读取 Core 的规则集状态；Core 状态暂不可用时，只有同版本的内置清单才提供 `bundledAt`（兼容旧包的 `generatedAt`）离线兜底，历史字段仅为兼容旧缓存保留。
 - 规则 manifest 额外携带公共规则来源指纹，覆盖规则内容、动作和 `sourceUrl`；同一发布版本更换远程来源时客户端会更新一次，来源未变时不会在每次加速时重复下载。
 - 根域回溯由 Core 内部变量 `yundoRootDomainFallbackEnabled` 控制，默认值为 `true`。它不是 App 设置项，也不由用户配置；研发排查时可以在 Core 内部切换为 `false`，重新构建即可关闭，后续无需改变产品 UI 或规则数据。
 - 回溯只在完整域名未命中时逐级检查可注册根域及其父域，例如 `support.weixin.qq.com` 依次检查 `weixin.qq.com`、`qq.com`；它不会凭域名后缀直接改变路由。全局模式由平台隧道层的明确 IPv4/IPv6 匹配规则覆盖全部公网流量，规则模式仍按用户规则、公共规则和最终出口执行。
@@ -310,3 +315,108 @@ macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装�
 - 云渡只通过 `/connections?yundo_exact_history=1` 读取精确历史；结果必须具有 `accelerated`、`direct`、`rejected` 之一。Dart 层不再从 `final`、selector、chain、规则名或目标 IP 猜测，缺少最终结果的旧格式行不会出现在精确记录页。
 - 内部编译开关 `YUNDO_EXACT_ROUTE_HISTORY` 默认开启；使用 `--dart-define=YUNDO_EXACT_ROUTE_HISTORY=false` 可让客户端回到原生连接接口。需要完全撤销 Core 修改时可从 `apply_yundo_core_patches.sh` 和四端 Core 构建脚本中省略 `0004`；两种开关必须成对使用，不能让旧 Core 配合精确客户端。
 - macOS 只监听特权 Helper 内 Core，Windows、iOS、Android 监听各自最终 Core。拒绝请求没有相反规则快捷操作，DNS 请求不进入访问明细，记录仍只在当前进程内存保存且不上传。
+
+### 4.26 访问记录详情字段（2026-08-07）
+
+- 访问记录详情直接展示 Core 已提供的 `metadata.destinationIP`、`destinationPort`、`sourceIP`、`sourcePort`、`type` 和 `network`，分别对应远程 IP、远程端口、来源 IP、来源端口、入口来源（如 `tun`）和网络类型。
+- 这项改动只扩展 Dart 数据模型、详情页和多语言文案，不修改 Core、sing-box 路由、TUN 或连接追踪逻辑。
+- 旧记录或平台未提供某个字段时隐藏对应行，不猜测来源和地址；详情页仍以 Core 的最终决策为准。
+
+### 4.27 规则中心统一列表与弹窗稳定性（2026-08-07）
+
+- 规则中心将我的规则与通用规则合并为一个列表。我的规则排在前面，因为它们优先于通用规则执行；每一行都显示规则来源、规则类型、访问方式和更新时间。
+- 规则中心支持按规则名称或内容搜索，并按加速、直连、拦截以及我的规则、通用规则快速筛选。列表首屏显示前 25 条，继续滚动时自动追加下一页。
+- 我的规则可以点击进入编辑和删除流程；通用规则可以点击查看只读详情，不允许直接修改。页面同时明确说明通用规则对所有账号生效，以及我的规则会跟随账号保存到云端。
+- 修复规则编辑/添加弹窗显示灰色空白的问题。原因是 `AlertDialog.actions` 的 `OverflowBar` 直接承载 `Spacer`，在部分桌面和移动端约束下导致弹窗子树布局异常；现在按钮统一放在单行 `Row` 中，保留删除、取消和保存操作。
+
+### 4.28 规则中心分页与用户规则更新时间（2026-08-07）
+
+- 规则中心使用单列表，首屏渲染25条，滚动接近底部后自动追加下一页，不再提供折叠/展开入口。
+- 我的规则仍进入编辑弹窗，删除按钮和二次确认逻辑保持不变；通用规则继续进入只读详情弹窗。
+- 规则包携带用户规则的 `updatedAt`，客户端优先使用修改时间，其次使用创建时间和本地规则包缓存时间，避免已加载规则显示为空时间。
+
+### 4.29 自定义规则保存不重载当前连接（2026-08-07）
+
+- 编辑规则时先比较标准化后的规则内容、规则类型和访问方式；没有发生变化时直接关闭弹窗，不调用保存接口、不刷新规则缓存，也不触碰当前连接。
+- 新增、修改或删除规则只写入账号云端并刷新规则页面展示，不调用 `reapplyIfConnected`，不重启或重载 Core/TUN；操作成功后提示“下次启动加速时生效”。
+- 规则变更在下一次启动加速时随连接方案重新生成并加载，避免编辑规则时影响正在使用的网络连接；该行为位于共享 Flutter/Dart 应用层，不改变 sing-box/Hiddify 的运行时规则热更新逻辑。
+
+### 4.30 节点地区列表缓存（2026-08-07）
+
+- 节点地区列表在登录后进入首页时预加载；同一登录会话内优先复用认证状态中的内存缓存，不因每次打开首页下拉框重复请求 `locations` 接口。
+- 下拉框只负责展示缓存并切换已加载的地区；缓存尚未就绪时才等待一次进行中的请求。控制器保留内部 `force` 刷新入口，供账号切换或明确刷新场景使用，不做定时轮询。
+
+### 4.31 当前节点延时展示（2026-08-07）
+
+- 首页显示当前实际活动节点的延时，复用 Hiddify 原生 `ActiveProxyDelayIndicator`、`activeProxyNotifierProvider`、核心 `urlTestDelay` 和现有 URLTest 调用。
+- 当前活动出口首次出现或重新连接后，展示组件主动调用一次现有 URLTest，避免等待 Hiddify 默认的长周期检测才出现首个延时；同一活动出口不会因为页面重绘重复触发。
+- 延时只代表当前已经选中的活动节点，不把后台探测机到节点的延时冒充为用户本机延时，也不为节点地区列表生成虚假的逐节点延时。
+- 原生 URLTest 的自动检测周期继续由 Hiddify/sing-box 配置控制；用户点击延时区域时使用现有的手动测速和节流逻辑。
+- 本次只增加首页展示层接入，不修改连接方案、核心进程、DNS 或规则匹配逻辑。macOS Helper 的系统 TUN 会排除配置中明确写成 IP 的代理服务器地址，避免核心探测自己的节点服务器时被同一个 TUN 捕获；节点填写域名时不在此处解析，避免引入新的 DNS 策略。
+
+### 4.32 App 恢复后的节点延时订阅（2026-08-07）
+
+- 桌面端 App 恢复时会重新初始化 Core gRPC 通道；原有 `activeProxyNotifierProvider` 为常驻数据流，但没有监听 Core 重启信号，导致它继续订阅已关闭的旧通道。此时 Core 已能测得当前节点延时，首页仍会一直显示“测试中”。
+- 当前节点数据流现在与连接状态流一样监听 `coreRestartSignalProvider`；连接启动前重绑通道和 macOS IPv4 兜底重启后的重绑也会明确发送该信号。Core 通道重建后会自动取消旧订阅并连接新通道，不修改 Hiddify URLTest 算法、测速周期、连接方案、DNS、路由或 sing-box 配置。
+- 新增回归测试，验证 Core 重启信号变化后当前节点数据流会重新订阅。该修复位于共享 Flutter/Riverpod 层：macOS 已复现并修复；Windows 使用相同桌面 Core 初始化路径，同因受影响并同源修复，等待实体机验证；iOS、Android 共享同一数据流重建行为，但移动端 Core 生命周期不同，需在 Simulator/真机继续验证。
+
+### 4.33 快速切换节点的探测恢复与延时占位（2026-08-07）
+
+- macOS 快速切换节点时，用户 Core 可能已经进入运行状态，但 SOCKS5 出口对字面量 IPv4 HTTP 目标的首次探测仍短暂命中 1.5 秒超时。此前会被直接判定为 `Y-NETWORK-001`；同一节点几秒后的完整重试又能成功，属于启动时序中的瞬时误判。
+- 保留“IPv4 未确认时不接管系统网络”的失败关闭原则。首次 IPv4 探测失败后等待 400 毫秒，仅复核 IPv4；复核成功后继续原有 IPv4 兜底/双栈流程，复核仍失败才终止。正常启动不增加探测次数，也不修改 Hiddify/sing-box 的 Core、TUN、路由或 DNS 实现。
+- 首页延时区域以真实连接状态为准：未加速时即使 Core 仍常驻或保留上一轮测速值，也固定显示 `-- ms`；加速测速中显示原有骨架动画，获得结果后显示实际延时。三个状态使用相同宽高，避免启停加速导致首页内容上下跳动。
+- 平台审计：恢复探测只在 `Platform.isMacOS` 的 Helper 接管前执行，Windows、iOS、Android 不进入该分支；延时占位位于共享 Flutter UI，四端同步生效，其他平台仍需对应实体设备或 Simulator 验收。
+
+### 4.34 App 恢复后的托管连接所有权同步（2026-08-08）
+
+- App 恢复或 Core 通道重建时，底层连接状态可能先短暂上报 `Disconnected`，随后才上报真实的 `Connected`。云渡必须监听后续状态与活动配置变化，不能只在 Controller 首次创建时恢复连接所有权，否则界面会把仍在工作的云渡隧道显示为未加速，用户再次点击后还会被 `Y-CONNECTION-001` 立即拒绝。
+- 恢复所有权必须同时满足三项证据：底层状态为 `Connected`、`startedByUser` 仍为真、当前活动配置 ID 为 `yundo-managed-profile`。任一证据缺失都保持未接管，避免误认其他 Hiddify 配置或其他连接工具。
+- 已确认属于云渡的活动连接再次收到加速请求时按幂等成功处理，不重复请求连接方案、不重启 Core、不改 TUN、DNS、路由或 Helper。若底层处于其他连接或过渡状态，诊断日志明确显示存在其他活动连接，不再错误显示“未发现正在运行的连接”。
+- 根因位于共享 Flutter Controller，macOS、Windows、iOS、Android 共用修复；平台原生隧道实现未修改。macOS 需回归 App 恢复及反复启停，iOS Simulator 需完成同源构建，Windows 和 Android 在同源提交形成后由 GitHub Actions 构建验证。
+
+### 4.35 当前节点延时的连接后即时刷新（2026-08-08）
+
+- 首页继续复用 Hiddify Core 的活动节点 URLTest 数据，不自建测速协议、不从后台节点列表读取延时，也不改变 sing-box 的自动测速周期。
+- 连接状态进入已加速、节点切换或 Core 通道重建后，客户端调用 Core 已有的 `UrlTestActive`；若 Core 尚未完成测速初始化，在约 10 秒的有界窗口内最多重试三次，收到带新测速时间戳的结果后立即停止。
+- 自动测速不触发震动；用户点击延时区域仍触发一次手动测速和轻触反馈。未加速时保持 `-- ms`，加速后测速中保持固定尺寸占位，结果到达后显示真实毫秒值。
+- 活动节点数据流不再用上一轮 Core 的缓存值预填，避免切换节点后把旧节点延时短暂显示成当前节点延时。该修改只位于共享 Dart/Core 调用层，不修改 DNS、路由、TUN、Helper、连接方案或测速算法。
+- macOS IPv4 兜底会在连接过程中重启用户 Core，旧的活动节点 gRPC 长连接会随之断开。客户端现在会对该数据流做有界重连，并在每次活动节点测速后读取一次当前活动出站快照；即使旧流在 Core 重启窗口内中断，新的延时结果也能直接写回首页，不再长期停留在“测试中”。
+- 正式版实机已完成新加坡、日本、美国及恢复新加坡的连续切换验证；每次切换后均恢复加速并显示新的真实毫秒值，最后恢复为新加坡。日志中的旧流中断仍会作为可诊断事件保留，但不会再阻断延时展示。
+
+### 4.36 Core 管理端口隔离与启动前状态对账（2026-08-08）
+
+- macOS 正式版、macOS 开发版以及 iOS/Android 移动端不再共用 Hiddify 旧的 `17078` 管理端口，分别使用独立端口。iOS Simulator 与 macOS App 同时运行时，不得连接到对方的 Core 管理服务或改变对方的连接状态。
+- 已确认旧实现可出现以下故障链：iOS Simulator 占用 `17078` 后，macOS 正式版的状态流连接到模拟器 Core；正式版用户 Core 仍监听 mixed 入站，但 App 错误显示未连接；再次加速时第二个 Core 绑定 `12334`，最终以 `Y-CORE-003 / address already in use` 失败。
+- macOS 启动新连接前增加状态对账。若当前 Core 管理服务确认仍有用户 Core 在运行，客户端先调用现有 Core 停止接口和 Helper 停止接口，确认 Core、TUN 与系统路由都已释放后再准备新连接；清理无法确认时以 `Y-CORE-005 / STALE_CORE_CLEANUP_FAILED` 失败关闭，不并行启动第二份 Core。
+- 端口隔离和状态对账只调整云渡应用层 Core 生命周期编排，不修改 sing-box 路由、DNS、规则、节点选择或隧道实现。Windows 采用独立桌面进程空间但继续接受同源端口隔离；iOS、Android 的前后台 Core 端口随 Flutter 传给现有原生服务。iOS Simulator 已完成同机并发验证，真实 iPhone、Android 和 Windows 仍需对应实体设备验证。
+- 本机构建 `4.1.2+202608132` 已完成 macOS 开发版/正式版签名覆盖和 iOS Simulator Debug 构建安装。正式版按覆盖前状态恢复加速并监听 `127.0.0.1:17178`，Simulator 同时启动后监听 `127.0.0.1:17278`；旧共享端口 `17078` 无监听，正式版仍保持 `utun7`、活动延时和 Google、百度、`servicewechat.com` HTTPS 连通。Android 仍待 CI 构建，Windows 仍待 CI 与实体设备验证。
+
+### 4.37 首页节点地区图标统一（2026-08-08）
+
+- 首页“加速模式”和“节点地区”使用相同的 `28 x 28` 图标槽，保证桌面端与移动端的图标尺寸、中心位置和文字起始位置一致。
+- 节点地区图标不再增加卡片、边框或阴影；“自动选择”的地球仪与国家或地区国旗使用相同边界，节点下拉菜单和移动端地区列表复用同一组件。
+- 该调整只修改共享 Flutter 展示层，不改变地区缓存、节点选择、连接重启或网络行为。
+- 本机构建 `4.1.2+202608133` 已完成 macOS 开发版/正式版签名覆盖以及 iOS Simulator Debug 构建安装。macOS 正式版实机界面已确认首页与地区下拉列表图标等大、对齐且无外层卡片，覆盖后按原状态恢复加速；iOS 共用同一 Flutter 组件并通过 `28 x 28` 尺寸测试，登录后首页视觉仍待 Simulator 登录态或真实 iPhone 验收。Windows 与 Android 共用该组件，仍待提交后由 CI 构建及对应平台验收。
+
+### 4.38 移动端品牌资源与启动流程统一（2026-08-08）
+
+- 应用内登录页、自动登录加载页、关于页和旧引导页统一通过 `YundoBrandLogo` 使用 `assets/images/app_icon.png`，不再分别引用独立 SVG。iOS 标准 `AppIcon.appiconset/Icon-1024.png` 与该文件保持字节一致，避免应用内 Logo 与系统图标继续分叉。
+- iOS 删除会覆盖标准 AppIcon 的 Icon Composer `AppIcon.icon`。旧资源曾对 Logo 做裁切和位移，导致主屏只显示蓝色块；工程现在只编译标准 `AppIcon.appiconset`。
+- iOS 原生 LaunchScreen 使用与 AppIcon 字节一致的云渡 Logo 和跟随浅色/深色模式的背景，不再显示旧 Hiddify `LaunchImage`。Flutter 引擎可用后立即切换到云渡自动登录加载页，显示同一 Logo、当前语言的软件名和正在登录状态；初始化完成后再进入登录页或主页。
+- 移动端初始化较快时补足约 `0.9` 秒的加载页展示时间，确保云渡 Logo、软件名和登录动画稳定可见；初始化本身超过该时间时不额外等待。
+- iOS 构建阶段根据开发版/正式版身份生成简体和繁体 `InfoPlist.strings`：开发版为“云渡开发版 / 雲渡開發版”，正式版为“云渡 / 雲渡”，其他系统语言继续使用 `Yundo Dev / Yundo`。Android 已有同等语言资源，本轮同时移除旧图形启动内容并复用 Flutter 加载页。
+- 跨平台审计：Logo 组件和加载页位于共享 Flutter 层，macOS、Windows、iOS、Android 同源生效；iOS 系统图标和系统显示名为本轮平台专项修复。macOS 需完成双版本构建安装回归，iOS Simulator 需验证主屏图标、中文显示名和启动过渡；Windows、Android 在同源提交后由 GitHub Actions 构建，实体设备继续按平台矩阵验收。
+
+### 4.39 用户名与密码规则统一（2026-08-08）
+
+- 新注册用户名为 `4-32` 位英文字母或数字，不再接受下划线。登录与临时密码完成入口继续兼容历史含下划线账号，避免旧用户被锁定，但客户端注册输入和服务端注册 DTO 都会拒绝新下划线用户名。
+- 新密码至少 `8` 位，并且必须同时包含大写字母、小写字母、数字和 ASCII 特殊字符；空格不计为特殊字符，仍保留最多 `72` 个 UTF-8 字节和拒绝控制字符的 bcrypt 边界。
+- 注册、临时密码完成和设置页改密复用同一客户端校验；服务端注册、临时密码完成和用户改密复用同一强度判断。登录只验证现有密码，不用新强度规则拒绝历史密码。
+- 用户可见提示和具体校验错误同步到全部现有语言资源。该实现位于共享 Flutter/Dart 和用户 API 路径，macOS、Windows、iOS、Android 同因受影响；不修改 Core、连接方案、DNS、路由、TUN 或平台原生网络实现。
+
+### 4.40 云渡法律入口统一（2026-08-08）
+
+- 注册页、关于页和旧引导页原先共用上游 `Constants` 中的 Hiddify 使用条款与隐私政策地址，导致云渡用户点击后进入 Hiddify 法律页面。
+- 两个统一入口现在固定指向公开 `yundoapp/nimbus-client` 仓库中已经存在的云渡使用条款与隐私说明版本；正式云渡官网法律页面发布后，只替换统一常量，不在各页面分别维护链接。
+- 新增常量回归测试，要求法律链接必须使用 HTTPS、属于云渡公开仓库、位于 `docs/legal`，并明确禁止回退到 `hiddify.com`。
+- 注册、关于和旧引导页均复用该常量，macOS、Windows、iOS、Android 四端同源修复；不修改 Hiddify/Sing-box Core、DNS、路由、TUN、Helper 或加速生命周期。

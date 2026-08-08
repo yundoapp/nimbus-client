@@ -1,0 +1,206 @@
+diff --git a/experimental/clashapi/ruleprovider.go b/experimental/clashapi/ruleprovider.go
+index 4a41085..f051c06 100644
+--- a/experimental/clashapi/ruleprovider.go
++++ b/experimental/clashapi/ruleprovider.go
+@@ -2,14 +2,31 @@ package clashapi
+ 
+ import (
+ 	"net/http"
++	"time"
+ 
+ 	"github.com/go-chi/chi/v5"
+ 	"github.com/go-chi/render"
++	"github.com/sagernet/sing-box/adapter"
+ )
+ 
+-func ruleProviderRouter() http.Handler {
++type ruleSetLister interface {
++	RuleSets() []adapter.RuleSet
++}
++
++type ruleSetTimestamp interface {
++	LastUpdated() time.Time
++}
++
++type ruleProviderStatus struct {
++	Name      string     `json:"name"`
++	UpdatedAt *time.Time `json:"updated_at,omitempty"`
++}
++
++func ruleProviderRouter(router adapter.Router) http.Handler {
+ 	r := chi.NewRouter()
+-	r.Get("/", getRuleProviders)
++	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
++		getRuleProviders(w, r, router)
++	})
+ 
+ 	r.Route("/{name}", func(r chi.Router) {
+ 		r.Use(parseProviderName, findRuleProviderByName)
+@@ -19,9 +36,22 @@ func ruleProviderRouter() http.Handler {
+ 	return r
+ }
+ 
+-func getRuleProviders(w http.ResponseWriter, r *http.Request) {
++func getRuleProviders(w http.ResponseWriter, r *http.Request, router adapter.Router) {
++	providers := make([]ruleProviderStatus, 0)
++	if lister, ok := router.(ruleSetLister); ok {
++		for _, ruleSet := range lister.RuleSets() {
++			provider := ruleProviderStatus{Name: ruleSet.Name()}
++			if timestamp, ok := ruleSet.(ruleSetTimestamp); ok {
++				updatedAt := timestamp.LastUpdated()
++				if !updatedAt.IsZero() {
++					provider.UpdatedAt = &updatedAt
++				}
++			}
++			providers = append(providers, provider)
++		}
++	}
+ 	render.JSON(w, r, render.M{
+-		"providers": []string{},
++		"providers": providers,
+ 	})
+ }
+ 
+diff --git a/experimental/clashapi/server.go b/experimental/clashapi/server.go
+index 4c683fb..ed4d59f 100644
+--- a/experimental/clashapi/server.go
++++ b/experimental/clashapi/server.go
+@@ -123,7 +123,7 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
+ 		r.Mount("/rules", ruleRouter(s.router))
+ 		r.Mount("/connections", connectionRouter(s.router, trafficManager))
+ 		r.Mount("/providers/proxies", proxyProviderRouter())
+-		r.Mount("/providers/rules", ruleProviderRouter())
++		r.Mount("/providers/rules", ruleProviderRouter(s.router))
+ 		r.Mount("/script", scriptRouter())
+ 		r.Mount("/profile", profileRouter())
+ 		r.Mount("/cache", cacheRouter(ctx))
+diff --git a/route/router.go b/route/router.go
+index 5c73cb1..768813f 100644
+--- a/route/router.go
++++ b/route/router.go
+@@ -194,6 +194,12 @@ func (r *Router) RuleSet(tag string) (adapter.RuleSet, bool) {
+ 	return ruleSet, loaded
+ }
+ 
++// RuleSets returns the configured rule sets for read-only observability.
++// The returned slice is a copy so callers cannot mutate router ownership.
++func (r *Router) RuleSets() []adapter.RuleSet {
++	return append([]adapter.RuleSet(nil), r.ruleSets...)
++}
++
+ func (r *Router) Rules() []adapter.Rule {
+ 	return r.rules
+ }
+diff --git a/route/rule/rule_set_remote.go b/route/rule/rule_set_remote.go
+index 582ee68..cb7065e 100644
+--- a/route/rule/rule_set_remote.go
++++ b/route/rule/rule_set_remote.go
+@@ -61,6 +61,7 @@ type RemoteRuleSet struct {
+ 	rules          []adapter.HeadlessRule
+ 	metadata       adapter.RuleSetMetadata
+ 	lastUpdated    time.Time
++	lastLoaded     time.Time
+ 	lastEtag       string
+ 	updateTicker   *time.Ticker
+ 	startupTicker  *time.Ticker //H
+@@ -93,6 +94,27 @@ func (s *RemoteRuleSet) Name() string {
+ 	return s.options.Tag
+ }
+ 
++// LastUpdated reports when the currently active rule-set snapshot was loaded.
++// It is observability only; update scheduling and remote loading remain in
++// the existing rule-set lifecycle.
++func (s *RemoteRuleSet) LastUpdated() time.Time {
++	s.access.RLock()
++	defer s.access.RUnlock()
++	return s.lastLoaded
++}
++
++func (s *RemoteRuleSet) setLastUpdated(updatedAt time.Time) {
++	s.access.Lock()
++	s.lastUpdated = updatedAt
++	s.access.Unlock()
++}
++
++func (s *RemoteRuleSet) setLastLoaded(loadedAt time.Time) {
++	s.access.Lock()
++	s.lastLoaded = loadedAt
++	s.access.Unlock()
++}
++
+ func (s *RemoteRuleSet) String() string {
+ 	return strings.Join(F.MapToString(s.rules), " ")
+ }
+@@ -116,13 +138,14 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.
+ 			if err != nil {
+ 				return E.Cause(err, "restore cached rule-set")
+ 			}
+-			s.lastUpdated = savedSet.LastUpdated
++			s.setLastUpdated(savedSet.LastUpdated)
++			s.setLastLoaded(savedSet.LastUpdated)
+ 			s.lastEtag = savedSet.LastEtag
+ 			// Keep lifecycle markers visible with the app's default warn log level.
+ 			s.logger.Warn("rule-set ", s.options.Tag, ": loaded from cache")
+ 		}
+ 	}
+-	if s.lastUpdated.IsZero() && s.options.RemoteOptions.FallbackPath != "" {
++	if s.LastUpdated().IsZero() && s.options.RemoteOptions.FallbackPath != "" {
+ 		fallbackPath := filemanager.BasePath(s.ctx, s.options.RemoteOptions.FallbackPath)
+ 		fallbackPath, _ = filepath.Abs(fallbackPath)
+ 		content, err := os.ReadFile(fallbackPath)
+@@ -131,9 +154,11 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.
+ 		} else if err = s.loadBytes(content); err != nil {
+ 			s.logger.Error("rule-set ", s.options.Tag, ": parse bundled fallback: ", err)
+ 		} else {
++			fallbackLoadedAt := time.Now()
++			s.setLastLoaded(fallbackLoadedAt)
+ 			// Mark the snapshot as usable now, but stale, so PostStart triggers
+ 			// an asynchronous refresh without blocking connection startup.
+-			s.lastUpdated = time.Now().Add(-s.updateInterval)
++			s.setLastUpdated(fallbackLoadedAt.Add(-s.updateInterval))
+ 			s.logger.Warn("rule-set ", s.options.Tag, ": loaded from bundled fallback")
+ 		}
+ 	}
+@@ -239,10 +264,10 @@ func (s *RemoteRuleSet) loadBytes(content []byte) error {
+ }
+ 
+ func (s *RemoteRuleSet) loopUpdate() {
+-	if time.Since(s.lastUpdated) > s.updateInterval {
++	if time.Since(s.LastUpdated()) > s.updateInterval {
+ 		s.updateOnce()
+ 	}
+-	for s.lastUpdated.IsZero() {
++	for s.LastUpdated().IsZero() {
+ 		select {
+ 		case <-s.ctx.Done():
+ 			return
+@@ -307,11 +332,12 @@ func (s *RemoteRuleSet) fetch(ctx context.Context, startContext *adapter.HTTPSta
+ 	switch response.StatusCode {
+ 	case http.StatusOK:
+ 	case http.StatusNotModified:
+-		s.lastUpdated = time.Now()
++		updatedAt := time.Now()
++		s.setLastUpdated(updatedAt)
+ 		if s.cacheFile != nil {
+ 			savedRuleSet := s.cacheFile.LoadRuleSet(s.yundoCacheTag())
+ 			if savedRuleSet != nil {
+-				savedRuleSet.LastUpdated = s.lastUpdated
++				savedRuleSet.LastUpdated = updatedAt
+ 				err = s.cacheFile.SaveRuleSet(s.yundoCacheTag(), savedRuleSet)
+ 				if err != nil {
+ 					s.logger.Error("save rule-set updated time: ", err)
+@@ -339,10 +365,12 @@ func (s *RemoteRuleSet) fetch(ctx context.Context, startContext *adapter.HTTPSta
+ 	if eTagHeader != "" {
+ 		s.lastEtag = eTagHeader
+ 	}
+-	s.lastUpdated = time.Now()
++	updatedAt := time.Now()
++	s.setLastUpdated(updatedAt)
++	s.setLastLoaded(updatedAt)
+ 	if s.cacheFile != nil {
+ 		err = s.cacheFile.SaveRuleSet(s.yundoCacheTag(), &adapter.SavedBinary{
+-			LastUpdated: s.lastUpdated,
++			LastUpdated: updatedAt,
+ 			Content:     content,
+ 			LastEtag:    s.lastEtag,
+ 		})

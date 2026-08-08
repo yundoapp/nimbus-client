@@ -8,7 +8,6 @@ import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_input_validation.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_route_preference_logic.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
-import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_access_icons.dart';
 import 'package:hiddify/features/nimbus/route_history/model/nimbus_route_history.dart';
 import 'package:hiddify/features/nimbus/route_history/notifier/nimbus_route_history_notifier.dart';
@@ -661,7 +660,13 @@ class _RouteHistoryDetailsBody extends ConsumerWidget {
               : entry.ruleDescription,
         ),
         if (entry.destinationIp.isNotEmpty)
-          _DetailRow(label: t.nimbus.routeHistory.address, value: entry.destinationIp),
+          _DetailRow(label: t.nimbus.routeHistory.remoteIp, value: entry.destinationIp),
+        if (entry.destinationPort.isNotEmpty)
+          _DetailRow(label: t.nimbus.routeHistory.remotePort, value: entry.destinationPort),
+        if (entry.sourceIp.isNotEmpty) _DetailRow(label: t.nimbus.routeHistory.sourceIp, value: entry.sourceIp),
+        if (entry.sourcePort.isNotEmpty) _DetailRow(label: t.nimbus.routeHistory.sourcePort, value: entry.sourcePort),
+        if (entry.inboundType.isNotEmpty)
+          _DetailRow(label: t.nimbus.routeHistory.inboundType, value: entry.inboundType.toUpperCase()),
         if (entry.network.isNotEmpty)
           _DetailRow(label: t.nimbus.routeHistory.network, value: entry.network.toUpperCase()),
       ],
@@ -778,9 +783,8 @@ Future<void> _addOppositeRoutePreference(
     } else {
       await repository.updateRoutePreference(session: session, id: resolution.existing!.id, type: requestedType);
     }
-    await ref.read(nimbusConnectionControllerProvider.notifier).reapplyIfConnected(userRulesOnly: true);
     if (context.mounted) {
-      _showMessage(context, t.nimbus.routeHistory.ruleAdded(domain: selectedDomain, category: requestedLabel));
+      _showMessage(context, t.nimbus.routePreferences.cloudSyncSaved);
     }
   } catch (error) {
     if (repository.isUnauthorized(error)) {

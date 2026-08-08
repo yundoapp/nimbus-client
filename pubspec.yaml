@@ -1,7 +1,7 @@
 name: hiddify
 description: Cross Platform Multi Protocol Proxy Frontend.
 publish_to: "none"
-version: 4.1.2+202608119
+version: 4.1.2+202608137
 
 environment:
   sdk: ^3.10.4
@@ -144,7 +144,6 @@ flutter:
   assets:
     # - assets/core/geoip.db
     # - assets/core/geosite.db
-    - assets/images/logo.svg
     - assets/images/app_icon.png
     - assets/images/tray_icon.ico
     - assets/images/tray_icon.png
@@ -183,12 +182,13 @@ flutter_gen:
     flutter_svg: true
 
 flutter_native_splash:
-  color: "#ffffff"
-  image: assets/images/source/ic_launcher_splash.png
-  android_gravity: center
+  color: "#FBF8FF"
+  color_dark: "#111318"
+  ios: false
+  web: false
   android_12:
-    color: "#ffffff"
-    image: assets/images/source/ic_launcher_foreground.png
+    color: "#FBF8FF"
+    color_dark: "#111318"
 
 ffigen:
   name: "HiddifyCoreNativeLibrary"

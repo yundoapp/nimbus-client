@@ -18,6 +18,7 @@ final nimbusRouteHistoryProvider = NotifierProvider<NimbusRouteHistoryNotifier, 
 );
 
 const bool nimbusExactRouteHistoryEnabled = bool.fromEnvironment('YUNDO_EXACT_ROUTE_HISTORY', defaultValue: true);
+const int nimbusRouteHistorySnapshotIntervalMilliseconds = 1000;
 
 class NimbusRouteHistoryState {
   const NimbusRouteHistoryState({this.entries = const [], this.isMonitoring = false});
@@ -47,6 +48,52 @@ class NimbusRouteHistoryControllerConfig {
 }
 
 typedef NimbusRouteHistoryMonitoringController = ({NimbusRouteHistoryControllerConfig config, bool tunnelLayer});
+
+/// Reads the authoritative traffic counters from the macOS tunnel Helper.
+///
+/// Direct traffic is handled by the privileged Helper, so the user Core's
+/// stats stream cannot represent all traffic on macOS. This stream is kept
+/// independent from route-history recording and can therefore be consumed by
+/// the stats feature without changing the recording preference.
+Stream<NimbusTunnelTrafficStats> watchNimbusMacOSTunnelTraffic(
+  File controllerConfigFile, {
+  required String appProcessName,
+}) async* {
+  const retryDelay = Duration(seconds: 1);
+  while (true) {
+    final controller = await loadNimbusRouteHistoryControllerConfig(controllerConfigFile);
+    if (controller == null) {
+      await Future<void>.delayed(retryDelay);
+      continue;
+    }
+
+    final helperController = nimbusRouteHistoryMonitoringControllers(
+      controller,
+      isMacOS: true,
+      appProcessName: appProcessName,
+    ).single.config;
+    WebSocket? socket;
+    try {
+      socket = await WebSocket.connect(helperController.webSocketUri.toString(), headers: helperController.headers);
+      await for (final message in socket) {
+        if (message is! String) continue;
+        try {
+          final decoded = jsonDecode(message);
+          if (decoded is! Map) continue;
+          final stats = parseNimbusTunnelTrafficStats(Map<String, dynamic>.from(decoded));
+          if (stats != null) yield stats;
+        } catch (_) {
+          // Ignore malformed local snapshots and keep the stream alive.
+        }
+      }
+    } catch (_) {
+      // The Helper is expected to be unavailable while acceleration is stopped.
+    } finally {
+      await socket?.close();
+    }
+    await Future<void>.delayed(retryDelay);
+  }
+}
 
 @visibleForTesting
 List<NimbusRouteHistoryMonitoringController> nimbusRouteHistoryMonitoringControllers(
@@ -89,7 +136,9 @@ NimbusRouteHistoryControllerConfig? parseNimbusRouteHistoryControllerConfig(
         host: sourceUri.host,
         port: sourceUri.port,
         path: '/connections',
-        queryParameters: exactHistory ? const {'yundo_exact_history': '1', 'interval': '250'} : null,
+        queryParameters: exactHistory
+            ? const {'yundo_exact_history': '1', 'interval': '$nimbusRouteHistorySnapshotIntervalMilliseconds'}
+            : null,
       ),
       secret: clashApi['secret']?.toString() ?? '',
     );

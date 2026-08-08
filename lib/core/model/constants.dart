@@ -10,8 +10,11 @@ abstract class Constants {
   static const githubLatestReleaseUrl = "https://github.com/hiddify/hiddify-app/releases/latest";
   static const appCastUrl = "https://raw.githubusercontent.com/hiddify/hiddify-next/main/appcast.xml";
   static const telegramChannelUrl = "https://t.me/hiddify";
-  static const privacyPolicyUrl = "https://hiddify.com/privacy-policy/";
-  static const termsAndConditionsUrl = "https://hiddify.com/terms/";
+  // 云渡正式法律页面上线前，固定到已公开且可审计的云渡文档版本。
+  static const privacyPolicyUrl =
+      "https://github.com/yundoapp/nimbus-client/blob/e88e023a03f502ffb4f1fb0174ec1defad9314cc/docs/legal/privacy-policy.md";
+  static const termsAndConditionsUrl =
+      "https://github.com/yundoapp/nimbus-client/blob/e88e023a03f502ffb4f1fb0174ec1defad9314cc/docs/legal/terms-of-service.md";
   static const cfWarpPrivacyPolicy = "https://www.cloudflare.com/application/privacypolicy/";
   static const cfWarpTermsOfService = "https://www.cloudflare.com/application/terms/";
 }

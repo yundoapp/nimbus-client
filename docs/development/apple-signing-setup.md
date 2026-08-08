@@ -18,7 +18,7 @@
 - `app.yundo.client`
 - `app.yundo.client.PacketTunnel`
 
-正式版 App ID 需要启用应用当前使用的 App Groups 与 Network Extension 能力；App Groups 应包含 `group.app.yundo.client`。如果需要远程签名开发版，再额外创建开发版的两个 Bundle ID，并启用对应的 `group.app.yundo.client.rebuild.dev`。
+正式版 App ID 需要启用应用当前使用的 App Groups、Personal VPN 与 Network Extension 能力；Network Extension 只启用实际使用的 `packet-tunnel-provider`，不要额外开启 App Proxy、DNS Proxy 或 Content Filter。App Groups 应包含 `group.app.yundo.client`。如果需要远程签名开发版，再额外创建开发版的两个 Bundle ID，并启用对应的 `group.app.yundo.client.rebuild.dev`。
 
 远程 iOS IPA 使用 App Store 分发签名，因此需要导出包含私钥的 `Apple Distribution` `.p12`。macOS 产物直接在 App 外分发，使用单独的 `Developer ID Application` `.p12`。对外版本必须启用 hardened runtime，并完成 Apple 公证和 stapling；本地开发版仍可以使用 Apple Development 身份，不得把它发给朋友。
 
@@ -84,7 +84,9 @@ scripts/check_macos_distribution_readiness.sh --strict \
 
 正式版至少需要在一台干净 macOS 用户环境和本机升级环境各验证一次：DMG 拖拽安装、首次启动、登录、启动/停止加速、浏览器访问、终端 `curl`、规则模式、全局模式、直连/拦截规则、退出后网络恢复、再次打开、诊断日志、语言切换、深色模式、后台辅助项目授权和升级覆盖。开发版与正式版都必须能在设置中打开诊断日志，且诊断内容遵循中文显示中文、其他语言显示英文的策略。
 
-iOS Simulator 可以使用 Xcode 登录的本机账号直接构建；真机/IPA 则需要本机已有相应 profile，或改用上面的远程签名流程。远程流程在无签名归档后，通过 `-allowProvisioningUpdates` 绑定 API Key 完成导出签名，profile 不需要进入仓库。
+iOS Simulator 可以使用 Xcode 登录的本机账号直接构建；真机/IPA 则需要本机已有相应 profile，或改用上面的远程签名流程。真机 Debug 构建必须使用开发版 Bundle ID、`Yundo Dev` 显示名和 Apple Development 身份，且主 App 与 Packet Tunnel 必须绑定同一个开发版 App Group。远程流程在无签名归档后，通过 `-allowProvisioningUpdates` 绑定 API Key 完成导出签名，profile 不需要进入仓库。
+
+iOS 客户端只支持标准竖屏。签名或真机调试时不得为了绕过工程报错恢复横屏方向，也不得为未使用的 Network Extension 类型扩大 entitlement；相关约束由 `test/ios/ios_branding_test.dart` 固化。
 
 ## 验证边界
 

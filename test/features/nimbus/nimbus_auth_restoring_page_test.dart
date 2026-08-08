@@ -22,6 +22,9 @@ void main() {
 
     expect(find.byKey(const Key('nimbusAuthRestoringLogo')), findsOneWidget);
     expect(find.byKey(const Key('nimbusAuthRestoringProgress')), findsOneWidget);
+    final logo = tester.widget<Image>(find.byKey(const Key('nimbusAuthRestoringLogo')));
+    expect(logo.image, isA<AssetImage>());
+    expect((logo.image as AssetImage).assetName, 'assets/images/app_icon.png');
     expect(find.text(t.common.devAppTitle), findsOneWidget);
     expect(find.text(t.nimbus.auth.signingIn), findsOneWidget);
     expect(find.byType(TextFormField), findsNothing);

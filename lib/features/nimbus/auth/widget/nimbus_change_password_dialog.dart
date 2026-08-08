@@ -7,6 +7,7 @@ import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_input_validation.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_auth_validation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class NimbusChangePasswordDialog extends HookConsumerWidget {
@@ -125,7 +126,7 @@ class NimbusChangePasswordDialog extends HookConsumerWidget {
               ),
             ),
             validator: (value) {
-              final validation = _validateNewPassword(t, value);
+              final validation = validateNimbusNewPassword(t, value);
               if (validation != null) return validation;
               if (value == currentPasswordController.text) {
                 return t.nimbus.changePassword.passwordMustDiffer;
@@ -224,15 +225,5 @@ final _passwordInputFormatters = <TextInputFormatter>[
 String? _validateCurrentPassword(Translations t, String? value) {
   if (value == null || value.isEmpty) return t.nimbus.auth.passwordRequired;
   if (!isNimbusPasswordWithinByteLimit(value)) return t.nimbus.auth.passwordTooLong;
-  return null;
-}
-
-String? _validateNewPassword(Translations t, String? value) {
-  final password = value ?? '';
-  if (password.length < 10) return t.nimbus.auth.passwordTooShort;
-  if (!isNimbusPasswordWithinByteLimit(password)) return t.nimbus.auth.passwordTooLong;
-  if (!RegExp('[A-Za-z]').hasMatch(password)) return t.nimbus.auth.passwordNeedsLetter;
-  if (!RegExp('[0-9]').hasMatch(password)) return t.nimbus.auth.passwordNeedsNumber;
-  if (!RegExp('[^A-Za-z0-9]').hasMatch(password)) return t.nimbus.auth.passwordNeedsSymbol;
   return null;
 }

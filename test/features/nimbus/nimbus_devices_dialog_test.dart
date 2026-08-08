@@ -70,4 +70,10 @@ void main() {
 
     expect(locationSection, isNot(contains('isLoading: true')));
   });
+
+  test('location loading reuses the session cache unless explicitly forced', () {
+    final source = File('lib/features/nimbus/auth/notifier/nimbus_auth_controller.dart').readAsStringSync();
+    expect(source, contains('Future<void> loadLocations({bool force = false})'));
+    expect(source, contains('if (!force && state.locations != null) return Future<void>.value();'));
+  });
 }

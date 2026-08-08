@@ -37,6 +37,61 @@ void main() {
     expect(attempts, {'1.1.1.1': 3, '2606:4700:4700::1111': 3});
   });
 
+  test('rechecks IPv4 after a transient failure without repeating IPv6', () async {
+    final attempts = <String, int>{};
+    final probe = MacOSNetworkCapabilityProbe(
+      retryDelay: Duration.zero,
+      ipv4RecoveryDelay: Duration.zero,
+      attempt:
+          ({
+            required uri,
+            required proxyHost,
+            required proxyPort,
+            required proxyUsername,
+            required proxyPassword,
+            required timeout,
+          }) async {
+            final count = (attempts[uri.host] ?? 0) + 1;
+            attempts[uri.host] = count;
+            if (uri.host == '1.1.1.1' && count == 3) return;
+            throw StateError('probe unavailable');
+          },
+    );
+
+    final capabilities = await probe.probeWithIpv4Recovery(proxyHost: '127.0.0.1', proxyPort: 12334);
+
+    expect(capabilities.ipv4Available, isTrue);
+    expect(capabilities.ipv6Available, isFalse);
+    expect(attempts, {'1.1.1.1': 3, '2606:4700:4700::1111': 2});
+  });
+
+  test('does not run IPv4 recovery after the initial probe succeeds', () async {
+    final attempts = <String, int>{};
+    final probe = MacOSNetworkCapabilityProbe(
+      maxAttempts: 1,
+      retryDelay: Duration.zero,
+      ipv4RecoveryDelay: Duration.zero,
+      attempt:
+          ({
+            required uri,
+            required proxyHost,
+            required proxyPort,
+            required proxyUsername,
+            required proxyPassword,
+            required timeout,
+          }) async {
+            attempts[uri.host] = (attempts[uri.host] ?? 0) + 1;
+            if (uri.host != '1.1.1.1') throw StateError('IPv6 unavailable');
+          },
+    );
+
+    final capabilities = await probe.probeWithIpv4Recovery(proxyHost: '127.0.0.1', proxyPort: 12334);
+
+    expect(capabilities.ipv4Available, isTrue);
+    expect(capabilities.ipv6Available, isFalse);
+    expect(attempts, {'1.1.1.1': 1, '2606:4700:4700::1111': 1});
+  });
+
   test('probes the same SOCKS5 IPv4 path used by the privileged tunnel', () async {
     final destinations = <String>[];
     final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);

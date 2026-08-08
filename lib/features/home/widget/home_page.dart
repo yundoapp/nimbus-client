@@ -14,6 +14,7 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dar
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_app_version_dialog.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_location_display.dart';
+import 'package:hiddify/features/proxy/active/active_proxy_delay_indicator.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -180,6 +181,7 @@ class HomePage extends HookConsumerWidget {
                             icon: Icons.rocket_launch_rounded,
                             onTap: showNoPlanDialog,
                           ),
+                        if (hasActivePlan) const ActiveProxyDelayIndicator(),
                         const Gap(16),
                         _HomeQuickControls(
                           rulesVersion: authState.me?.rules.publicRulesVersion,
@@ -839,6 +841,7 @@ class _LocationControlCard extends HookConsumerWidget {
     final locations = authState.locations?.items ?? [selectedLocation];
     final isLoadingLocations = useState(false);
     final theme = Theme.of(context);
+    final needsLocations = authState.locations == null;
 
     if (PlatformUtils.isMobile) {
       return _HomeControlCard(
@@ -851,6 +854,12 @@ class _LocationControlCard extends HookConsumerWidget {
         onTap: isSwitching || isLoadingLocations.value
             ? null
             : () async {
+                if (!needsLocations) {
+                  await Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute<void>(builder: (_) => const _NimbusLocationSelectionPage()));
+                  return;
+                }
                 isLoadingLocations.value = true;
                 try {
                   await ref.read(nimbusAuthControllerProvider.notifier).loadLocations();
@@ -921,6 +930,10 @@ class _LocationControlCard extends HookConsumerWidget {
               onTap: isSwitching || isLoadingLocations.value
                   ? null
                   : () async {
+                      if (!needsLocations) {
+                        controller.isOpen ? controller.close() : controller.open();
+                        return;
+                      }
                       isLoadingLocations.value = true;
                       try {
                         await ref.read(nimbusAuthControllerProvider.notifier).loadLocations();
@@ -1074,14 +1087,20 @@ class _HomeControlCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 children: [
-                  leading ??
-                      Icon(
-                        icon,
-                        size: 22,
-                        color: enabled
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.52),
-                      ),
+                  SizedBox.square(
+                    dimension: nimbusLocationIconSize,
+                    child: Center(
+                      child:
+                          leading ??
+                          Icon(
+                            icon,
+                            size: nimbusLocationIconSize,
+                            color: enabled
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.52),
+                          ),
+                    ),
+                  ),
                   const Gap(12),
                   Expanded(
                     child: Column(

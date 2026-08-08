@@ -7,6 +7,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:hiddify/core/analytics/analytics_controller.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/directories/directories_provider.dart';
+import 'package:hiddify/core/localization/locale_extensions.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/logger/logger.dart';
 import 'package:hiddify/core/logger/logger_controller.dart';
@@ -14,12 +15,15 @@ import 'package:hiddify/core/model/environment.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/core/preferences/preferences_migration.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
+import 'package:hiddify/core/theme/app_theme.dart';
+import 'package:hiddify/core/theme/app_theme_mode.dart';
 import 'package:hiddify/features/app/widget/app.dart';
 import 'package:hiddify/features/auto_start/notifier/auto_start_notifier.dart';
 import 'package:hiddify/features/chain/model/chain_enum.dart';
 import 'package:hiddify/features/chain/notifier/chain_profile_notifier.dart';
 
 import 'package:hiddify/features/log/data/log_data_providers.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_auth_restoring_page.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
@@ -40,8 +44,31 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
   WidgetsBinding.instance.platformDispatcher.onError = Logger.logPlatformDispatcherError;
 
   final stopWatch = Stopwatch()..start();
+  Stopwatch? mobileLoadingStopwatch;
 
   final container = ProviderContainer(overrides: [environmentProvider.overrideWithValue(env)]);
+
+  if (PlatformUtils.isMobile) {
+    final bootstrapLocale = AppLocaleUtils.findDeviceLocale();
+    final bootstrapTranslations = await bootstrapLocale.build();
+    final bootstrapTheme = AppTheme(AppThemeMode.system, bootstrapLocale.preferredFontFamily);
+    final appTitle = env == Environment.dev
+        ? bootstrapTranslations.common.devAppTitle
+        : bootstrapTranslations.common.appTitle;
+
+    runApp(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        locale: bootstrapLocale.flutterLocale,
+        supportedLocales: AppLocaleUtils.supportedLocales,
+        theme: bootstrapTheme.lightTheme(null),
+        darkTheme: bootstrapTheme.darkTheme(null),
+        home: NimbusAuthLoadingPage(appTitle: appTitle, status: bootstrapTranslations.nimbus.auth.signingIn),
+      ),
+    );
+    mobileLoadingStopwatch = Stopwatch()..start();
+    FlutterNativeSplash.remove();
+  }
 
   await _init("directories", () => container.read(appDirectoriesProvider.future));
   LoggerController.init(container.read(logPathResolverProvider).appFile().path);
@@ -120,6 +147,15 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
   Logger.bootstrap.info("bootstrap took [${stopWatch.elapsedMilliseconds}ms]");
   stopWatch.stop();
 
+  if (mobileLoadingStopwatch case final loadingStopwatch?) {
+    const minimumLoadingDuration = Duration(milliseconds: 900);
+    final remainingDuration = minimumLoadingDuration - loadingStopwatch.elapsed;
+    if (remainingDuration > Duration.zero) {
+      await Future<void>.delayed(remainingDuration);
+    }
+    loadingStopwatch.stop();
+  }
+
   runApp(
     ProviderScope(
       parent: container,
@@ -142,7 +178,7 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
     );
   }
 
-  if (!kIsWeb) {
+  if (!kIsWeb && !PlatformUtils.isMobile) {
     FlutterNativeSplash.remove();
   }
   // SentryFlutter.s(DateTime.now().toUtc());

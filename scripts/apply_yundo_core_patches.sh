@@ -10,6 +10,8 @@ rule_set_patch_file="${repo_root}/patches/hiddify-core/0002-rule-set-observabili
 observability_patch_file="${repo_root}/patches/hiddify-core/0003-connection-observability-and-actual-outbound.patch"
 exact_history_patch_file="${repo_root}/patches/hiddify-core/0004-exact-route-decision-history.patch"
 bundled_rule_set_patch_file="${repo_root}/patches/hiddify-core/0005-bundled-rule-set-fallback.patch"
+rule_set_status_patch_file="${repo_root}/patches/hiddify-core/0006-rule-set-status-api.patch"
+active_outbound_delay_patch_file="${repo_root}/patches/hiddify-core/0007-active-outbound-url-test.patch"
 sing_box_dir="${core_dir}/hiddify-sing-box"
 expected_commit="c9d6f0f00b2eda34e4fb71863e4e0a62b3e931a0"
 
@@ -24,6 +26,8 @@ fail() {
 [[ -f "${observability_patch_file}" ]] || fail "connection observability patch is missing"
 [[ -f "${exact_history_patch_file}" ]] || fail "exact route history patch is missing"
 [[ -f "${bundled_rule_set_patch_file}" ]] || fail "bundled rule-set fallback patch is missing"
+[[ -f "${rule_set_status_patch_file}" ]] || fail "rule-set status API patch is missing"
+[[ -f "${active_outbound_delay_patch_file}" ]] || fail "active outbound delay patch is missing"
 [[ -f "${sing_box_dir}/go.mod" ]] || fail "hiddify-sing-box submodule is not initialized"
 
 actual_commit="$(git -C "${core_dir}" rev-parse HEAD)"
@@ -60,4 +64,19 @@ if ! grep -Fq 'FallbackPath' "${sing_box_dir}/option/rule_set.go" \
   git -C "${sing_box_dir}" apply --check "${bundled_rule_set_patch_file}" \
     || fail "bundled rule-set fallback patch does not apply cleanly"
   git -C "${sing_box_dir}" apply "${bundled_rule_set_patch_file}"
+fi
+
+if ! grep -Fq 'func (r *Router) RuleSets()' "${sing_box_dir}/route/router.go" \
+  || ! grep -Fq 'func (s *RemoteRuleSet) LastUpdated()' "${sing_box_dir}/route/rule/rule_set_remote.go" \
+  || ! grep -Fq 'lastLoaded' "${sing_box_dir}/route/rule/rule_set_remote.go" \
+  || ! grep -Fq 'RuleSets() []adapter.RuleSet' "${sing_box_dir}/experimental/clashapi/ruleprovider.go"; then
+  git -C "${sing_box_dir}" apply --check "${rule_set_status_patch_file}" \
+    || fail "rule-set status API patch does not apply cleanly"
+  git -C "${sing_box_dir}" apply "${rule_set_status_patch_file}"
+fi
+
+if ! grep -Fq 'resolveSelectedOutboundTag' "${core_dir}/v2/hcore/proxy_info.go"; then
+  git -C "${core_dir}" apply --ignore-whitespace --check "${active_outbound_delay_patch_file}" \
+    || fail "active outbound delay patch does not apply cleanly"
+  git -C "${core_dir}" apply --ignore-whitespace "${active_outbound_delay_patch_file}"
 fi

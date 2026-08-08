@@ -20,6 +20,7 @@ import 'package:hiddify/features/nimbus/auth/notifier/nimbus_app_version_control
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
 import 'package:hiddify/features/nimbus/rules/notifier/nimbus_rules_state.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
+import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -65,8 +66,11 @@ bool shouldReapplyNimbusConnection({
 bool isNimbusOwnedConnection({required ConnectionStatus? connection, required bool connectedReported}) =>
     connection is Connected && connectedReported;
 
-bool shouldRestoreNimbusOwnership({required ConnectionStatus? connection, required bool startedByUser}) =>
-    startedByUser && connection is Connected;
+bool shouldRestoreNimbusOwnership({
+  required ConnectionStatus? connection,
+  required bool startedByUser,
+  required String? activeProfileId,
+}) => startedByUser && connection is Connected && activeProfileId == _managedProfileId;
 
 Future<NimbusRulesPackage> prepareNimbusRulesPackage({
   required NimbusRulesPackage? cached,
@@ -203,6 +207,12 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   NimbusConnectionState build() {
     ref.listen(connectionNotifierProvider, (_, next) {
       _handleConnectionStatus(next);
+      if (next.valueOrNull is Connected) {
+        unawaited(_restoreManagedConnectionOwnership(next.valueOrNull));
+      }
+    });
+    ref.listen(activeProfileProvider, (previous, next) {
+      unawaited(_restoreManagedConnectionOwnership(ref.read(connectionNotifierProvider).valueOrNull));
     });
     ref.listen(nimbusAuthControllerProvider, (_, next) {
       if (!next.isAuthenticated) unawaited(disconnect(reason: 'AUTH_SIGNED_OUT'));
@@ -212,8 +222,13 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     });
     final currentConnection = ref.read(connectionNotifierProvider).valueOrNull;
     final startedByUser = ref.read(Preferences.startedByUser);
+    final activeProfileId = ref.read(activeProfileProvider).valueOrNull?.id;
     return NimbusConnectionState(
-      connectedReported: shouldRestoreNimbusOwnership(connection: currentConnection, startedByUser: startedByUser),
+      connectedReported: shouldRestoreNimbusOwnership(
+        connection: currentConnection,
+        startedByUser: startedByUser,
+        activeProfileId: activeProfileId,
+      ),
     );
   }
 
@@ -295,8 +310,12 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   Future<bool> ensureStartupRecovery({required String reason, bool showErrors = false}) async {
     loggy.info('Hiddify startup recovery [$reason]');
     final current = ref.read(connectionNotifierProvider).valueOrNull;
-    if (current is Connected || current is Connecting || current is Disconnecting) {
-      return isNimbusOwnedConnection(connection: current, connectedReported: state.connectedReported);
+    if (current is Connected) {
+      if (isNimbusOwnedConnection(connection: current, connectedReported: state.connectedReported)) return true;
+      return _restoreManagedConnectionOwnership(current);
+    }
+    if (current is Connecting || current is Disconnecting) {
+      return false;
     }
     return true;
   }
@@ -318,25 +337,27 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     if (!startupReady) {
       diagnostics.failStep(
         NimbusAccelerationStepId.connectionState,
-        detail: _diagnosticsT.nimbus.diagnostics.detailNoActiveConnection,
+        detail: _diagnosticsT.nimbus.errors.otherConnectionActive,
       );
-      diagnostics.fail(
-        errorCode: 'Y-CONNECTION-001',
-        detail: _diagnosticsT.nimbus.diagnostics.detailNoActiveConnection,
-      );
+      diagnostics.fail(errorCode: 'Y-CONNECTION-001', detail: _diagnosticsT.nimbus.errors.otherConnectionActive);
       return;
     }
 
     final current = ref.read(connectionNotifierProvider).valueOrNull;
+    if (isNimbusOwnedConnection(connection: current, connectedReported: state.connectedReported)) {
+      diagnostics.completeStep(
+        NimbusAccelerationStepId.connectionState,
+        detail: _diagnosticsT.nimbus.diagnostics.detailAccelerationStarted,
+      );
+      diagnostics.complete(detail: _diagnosticsT.nimbus.diagnostics.detailAccelerationStarted);
+      return;
+    }
     if (current is Connected || current is Connecting || current is Disconnecting) {
       diagnostics.failStep(
         NimbusAccelerationStepId.connectionState,
-        detail: _diagnosticsT.nimbus.diagnostics.detailNoActiveConnection,
+        detail: _diagnosticsT.nimbus.errors.otherConnectionActive,
       );
-      diagnostics.fail(
-        errorCode: 'Y-CONNECTION-001',
-        detail: _diagnosticsT.nimbus.diagnostics.detailNoActiveConnection,
-      );
+      diagnostics.fail(errorCode: 'Y-CONNECTION-001', detail: _diagnosticsT.nimbus.errors.otherConnectionActive);
       if (showErrors) _fail(_t.nimbus.errors.connectFailed, code: 'Y-CONNECTION-001', stage: 'preflight');
       return;
     }
@@ -447,10 +468,9 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
         if (!usingRulesFallback) {
           throw const FormatException('rules package changed while preparing connection');
         }
-        // The plan is authoritative for the current account versions. Keep
-        // the last validated payload for this connection rather than blocking
-        // the network because a newer remote package could not be downloaded.
-        rulesPackage = rulesPackage.copyWith(manifest: plan.rulesManifest);
+        // Keep the manifest paired with the payload that will actually be
+        // applied. The plan describes the remote latest version, but replacing
+        // the cached manifest here would make the UI report an unloaded version.
       }
       diagnostics.completeStep(NimbusAccelerationStepId.rules, detail: _rulesLoadedDiagnostic(rulesPackage));
       diagnostics.completeStep(
@@ -641,7 +661,9 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
   }
 
   Future<NimbusRulesPackage> _prepareRulesPackageWithBundledFallback(NimbusAuthSession session) async {
-    final cached = _repository.readRulesPackage(session.user.id) ?? await readNimbusBundledRulesPackage();
+    final bundled = await readNimbusBundledRulesPackage();
+    var cached = _repository.readRulesPackage(session.user.id) ?? bundled;
+    if (cached != null && bundled != null) cached = cached.withFallbackPublicRulesMetadata(bundled);
     return prepareNimbusRulesPackage(
       cached: cached,
       fetchManifest: (localManifest) => _repository.fetchRulesManifest(session: session, localManifest: localManifest),
@@ -748,6 +770,28 @@ class NimbusConnectionController extends Notifier<NimbusConnectionState> with Ap
     if (connection is Disconnected && state.connectedReported) {
       state = state.copyWith(connectedReported: false, recoveryRequestId: state.recoveryRequestId + 1);
     }
+  }
+
+  Future<bool> _restoreManagedConnectionOwnership(ConnectionStatus? connection) async {
+    if (state.connectedReported || state.isPreparing || state.isDisconnecting || connection is! Connected) {
+      return state.connectedReported;
+    }
+    ProfileEntity? activeProfile;
+    try {
+      activeProfile = ref.read(activeProfileProvider).valueOrNull ?? await ref.read(activeProfileProvider.future);
+    } catch (error, stackTrace) {
+      loggy.warning('managed connection ownership restore deferred', error, stackTrace);
+      return false;
+    }
+    final shouldRestore = shouldRestoreNimbusOwnership(
+      connection: connection,
+      startedByUser: ref.read(Preferences.startedByUser),
+      activeProfileId: activeProfile?.id,
+    );
+    if (!shouldRestore) return false;
+    loggy.info('restoring managed connection ownership from persisted state');
+    state = state.copyWith(connectedReported: true, errorMessage: null, diagnostic: null);
+    return true;
   }
 
   void _markConnectionEstablished() {

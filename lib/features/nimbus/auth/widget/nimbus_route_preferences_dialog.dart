@@ -10,7 +10,6 @@ import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_input_validation.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_route_preference_logic.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
-import 'package:hiddify/features/nimbus/auth/notifier/nimbus_connection_controller.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_route_preferences_provider.dart';
 import 'package:hiddify/features/nimbus/auth/widget/nimbus_access_icons.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -102,14 +101,10 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
           await repository.updateRoutePreference(session: session, id: existing.id, type: selectedType.value);
         }
         ref.invalidate(nimbusRoutePreferencesProvider);
-        await ref.read(nimbusConnectionControllerProvider.notifier).reapplyIfConnected(userRulesOnly: true);
         await loadPreferences();
         inputController.clear();
         if (context.mounted) {
-          final message = existing == null
-              ? t.nimbus.routePreferences.cloudSyncSaved
-              : t.nimbus.routePreferences.switchSaved;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.nimbus.routePreferences.cloudSyncSaved)));
         }
       } catch (error) {
         if (repository.isUnauthorized(error)) {
@@ -142,8 +137,10 @@ class NimbusRoutePreferencesDialog extends HookConsumerWidget {
       try {
         await repository.deleteRoutePreference(session: session, id: preference.id);
         ref.invalidate(nimbusRoutePreferencesProvider);
-        await ref.read(nimbusConnectionControllerProvider.notifier).reapplyIfConnected(userRulesOnly: true);
         await loadPreferences();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.nimbus.routePreferences.cloudSyncSaved)));
+        }
       } catch (error) {
         if (repository.isUnauthorized(error)) {
           await ref.read(nimbusAuthControllerProvider.notifier).refreshAfterUnauthorized(session);
@@ -571,6 +568,15 @@ class NimbusRoutePreferenceEditorDialog extends HookConsumerWidget {
       }
       final session = ref.read(nimbusAuthControllerProvider).session;
       if (session == null) return;
+      final unchanged =
+          preference != null &&
+          preference!.type == selectedAction.value &&
+          preference!.targetType == selectedTargetType.value &&
+          normalizeNimbusRuleTarget(preference!.value, preference!.targetType) == normalized;
+      if (unchanged) {
+        if (context.mounted) Navigator.of(context).pop();
+        return;
+      }
       isSubmitting.value = true;
       error.value = null;
       try {
@@ -591,7 +597,6 @@ class NimbusRoutePreferenceEditorDialog extends HookConsumerWidget {
           );
         }
         ref.invalidate(nimbusRoutePreferencesProvider);
-        await ref.read(nimbusConnectionControllerProvider.notifier).reapplyIfConnected(userRulesOnly: true);
         if (context.mounted) Navigator.of(context).pop(true);
       } catch (exception) {
         if (repository.isUnauthorized(exception)) {
@@ -626,7 +631,6 @@ class NimbusRoutePreferenceEditorDialog extends HookConsumerWidget {
       try {
         await repository.deleteRoutePreference(session: session, id: current.id);
         ref.invalidate(nimbusRoutePreferencesProvider);
-        await ref.read(nimbusConnectionControllerProvider.notifier).reapplyIfConnected(userRulesOnly: true);
         if (context.mounted) Navigator.of(context).pop(true);
       } catch (exception) {
         if (repository.isUnauthorized(exception)) {
@@ -655,7 +659,7 @@ class NimbusRoutePreferenceEditorDialog extends HookConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               DropdownButtonFormField<String>(
-                value: selectedTargetType.value,
+                initialValue: selectedTargetType.value,
                 decoration: InputDecoration(labelText: t.nimbus.routePreferences.targetType),
                 items: [
                   for (final entry in targetTypes.entries)
@@ -738,20 +742,24 @@ class NimbusRoutePreferenceEditorDialog extends HookConsumerWidget {
         ),
       ),
       actions: [
-        if (editing)
-          TextButton.icon(
-            onPressed: disabled ? null : delete,
-            icon: const Icon(Icons.delete_outline_rounded),
-            label: Text(t.common.delete),
-          ),
-        const Spacer(),
-        TextButton(onPressed: disabled ? null : () => Navigator.of(context).pop(), child: Text(t.common.cancel)),
-        FilledButton.icon(
-          onPressed: disabled ? null : save,
-          icon: isSubmitting.value
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Icon(Icons.check_rounded),
-          label: Text(t.common.save),
+        Row(
+          children: [
+            if (editing)
+              TextButton.icon(
+                onPressed: disabled ? null : delete,
+                icon: const Icon(Icons.delete_outline_rounded),
+                label: Text(t.common.delete),
+              ),
+            const Spacer(),
+            TextButton(onPressed: disabled ? null : () => Navigator.of(context).pop(), child: Text(t.common.cancel)),
+            FilledButton.icon(
+              onPressed: disabled ? null : save,
+              icon: isSubmitting.value
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.check_rounded),
+              label: Text(t.common.save),
+            ),
+          ],
         ),
       ],
     );

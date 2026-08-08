@@ -193,6 +193,24 @@ void main() {
     expect(tunnelJson, contains('YundoPrivilegedHelper'));
   });
 
+  test('excludes literal proxy server addresses from the macOS system TUN', () {
+    final config = managedConfig();
+    final outbounds = config['outbounds'] as List<dynamic>;
+    (outbounds.firstWhere((outbound) => outbound['tag'] == 'private-node') as Map<String, dynamic>)['server'] =
+        '203.0.113.10';
+    outbounds.add({'type': 'trojan', 'tag': 'ipv6-node', 'server': '2001:db8::10'});
+
+    final prepared = splitMacOSTunnelConfig(
+      config,
+      appProcessName: 'Yundo Dev',
+      macOSDirectRouteRuleSetPath: bundledRuleSetPath,
+    );
+    final tunnelConfig = jsonDecode(prepared.tunnelConfig) as Map<String, dynamic>;
+    final tunnelInbound = (tunnelConfig['inbounds'] as List<dynamic>).single as Map<String, dynamic>;
+
+    expect(tunnelInbound['route_exclude_address'], ['2001:db8::10/128', '203.0.113.10/32']);
+  });
+
   test('keeps the macOS user core dual-stack before capability probing', () {
     final config = managedConfig();
     (config['dns'] as Map<String, dynamic>)['strategy'] = 'prefer_ipv4';

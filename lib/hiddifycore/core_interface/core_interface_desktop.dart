@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
@@ -80,7 +81,7 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
     }
   }
 
-  int _port = legacyDesktopCorePort;
+  int _port = yundoDesktopCorePort;
 
   int get port => _port;
   static String generateRandomPassword(int length) {
@@ -160,6 +161,44 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
 
   @override
   Future<void> refreshClients() => _refreshCoreClients();
+
+  @override
+  Future<String?> reconcileBeforeStart() async {
+    if (!Platform.isMacOS) return null;
+    try {
+      await refreshClients();
+      final current = await bgClient.coreInfoListener(Empty()).first.timeout(const Duration(milliseconds: 800));
+      if (current.coreState != CoreStates.STARTED) return null;
+
+      loggy.warning('found a running user core while preparing a new connection; stopping it first');
+      try {
+        await bgClient.stop(Empty());
+      } on GrpcError catch (error) {
+        final message = error.message?.toLowerCase() ?? '';
+        final expectedTermination = error.code == StatusCode.unknown && message.contains('http/2 error');
+        if (!expectedTermination) rethrow;
+      }
+      final platformStopped = await stop();
+      if (!platformStopped) {
+        return 'macOS stale acceleration resources could not be released before start';
+      }
+      await refreshClients();
+      if (!await waitForCoreStopped()) {
+        return 'macOS stale user core did not reach the stopped state before start';
+      }
+      loggy.info('stale macOS user core and tunnel were released before start');
+      return null;
+    } on TimeoutException {
+      // A stopped manager does not necessarily emit a state immediately. The
+      // normal start request remains authoritative in that case.
+      return null;
+    } on GrpcError catch (error) {
+      if (error.code == StatusCode.unavailable) return null;
+      return 'failed to reconcile the existing macOS user core: ${error.message ?? error.code}';
+    } catch (error) {
+      return 'failed to reconcile the existing macOS user core: $error';
+    }
+  }
 
   @override
   Future<CoreStates?> waitForCoreState({Duration timeout = const Duration(seconds: 5)}) async {
@@ -311,7 +350,7 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
         usedIpv4Fallback: false,
       );
     }
-    final capabilities = await _macOSNetworkCapabilityProbe.probe(
+    final capabilities = await _macOSNetworkCapabilityProbe.probeWithIpv4Recovery(
       proxyHost: socksHost,
       proxyPort: socksPort,
       proxyUsername: _preparedSocksUsername,

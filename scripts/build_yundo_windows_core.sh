@@ -16,6 +16,8 @@ rule_set_patch_file="${repo_root}/patches/hiddify-core/0002-rule-set-observabili
 observability_patch_file="${repo_root}/patches/hiddify-core/0003-connection-observability-and-actual-outbound.patch"
 exact_history_patch_file="${repo_root}/patches/hiddify-core/0004-exact-route-decision-history.patch"
 bundled_rule_set_patch_file="${repo_root}/patches/hiddify-core/0005-bundled-rule-set-fallback.patch"
+rule_set_status_patch_file="${repo_root}/patches/hiddify-core/0006-rule-set-status-api.patch"
+active_outbound_delay_patch_file="${repo_root}/patches/hiddify-core/0007-active-outbound-url-test.patch"
 go_bin="${GO_BIN:-$(command -v go || true)}"
 backup_dir=""
 strings_file=""
@@ -31,6 +33,12 @@ cleanup() {
     cp "${backup_dir}/Makefile" "${makefile}"
     cp "${backup_dir}/hiddify-cli.ico" "${core_dir}/assets/hiddify-cli.ico"
     rm -rf "${backup_dir}"
+  fi
+  if git -C "${core_dir}" apply --ignore-whitespace --reverse --check "${active_outbound_delay_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}" apply --ignore-whitespace --reverse "${active_outbound_delay_patch_file}"
+  fi
+  if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${rule_set_status_patch_file}" >/dev/null 2>&1; then
+    git -C "${core_dir}/hiddify-sing-box" apply --reverse "${rule_set_status_patch_file}"
   fi
   if git -C "${core_dir}/hiddify-sing-box" apply --reverse --check "${bundled_rule_set_patch_file}" >/dev/null 2>&1; then
     git -C "${core_dir}/hiddify-sing-box" apply --reverse "${bundled_rule_set_patch_file}"
@@ -118,4 +126,5 @@ printf 'ruleSetPatchSha256=%s\n' "$(sha256sum "${rule_set_patch_file}" | awk '{p
 printf 'connectionObservabilityPatchSha256=%s\n' "$(sha256sum "${observability_patch_file}" | awk '{print $1}')" >>"${output_dir}/build-metadata.txt"
 printf 'exactRouteHistoryPatchSha256=%s\n' "$(sha256sum "${exact_history_patch_file}" | awk '{print $1}')" >>"${output_dir}/build-metadata.txt"
 printf 'bundledRuleSetFallbackPatchSha256=%s\n' "$(sha256sum "${bundled_rule_set_patch_file}" | awk '{print $1}')" >>"${output_dir}/build-metadata.txt"
+printf 'ruleSetStatusApiPatchSha256=%s\n' "$(sha256sum "${rule_set_status_patch_file}" | awk '{print $1}')" >>"${output_dir}/build-metadata.txt"
 sha256sum "${output_dir}/YundoCore.dll" "${output_dir}/YundoCore.exe" "${output_dir}/libcronet.dll"

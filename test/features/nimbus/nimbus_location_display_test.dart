@@ -1,3 +1,5 @@
+import 'package:circle_flags/circle_flags.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
@@ -20,6 +22,26 @@ void main() {
       expect(nimbusLocationCountryCode('singapore'), 'sg');
       expect(nimbusLocationCountryCode('united_states'), 'us');
       expect(nimbusLocationCountryCode('auto'), isNull);
+    });
+
+    testWidgets('uses one icon size without a decorative card', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Row(
+            children: [
+              nimbusLocationFlag(const NimbusLocation(code: 'auto', displayName: '')),
+              nimbusLocationFlag(const NimbusLocation(code: 'singapore', displayName: 'Singapore')),
+            ],
+          ),
+        ),
+      );
+
+      final iconSizes = tester.getSize(find.byType(SizedBox).at(0));
+      final flagSize = tester.getSize(find.byType(CircleFlag));
+
+      expect(iconSizes, const Size.square(nimbusLocationIconSize));
+      expect(flagSize, const Size.square(nimbusLocationIconSize));
+      expect(find.byType(DecoratedBox), findsNothing);
     });
   });
 

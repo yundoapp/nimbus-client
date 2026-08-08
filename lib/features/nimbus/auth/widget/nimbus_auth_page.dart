@@ -7,7 +7,8 @@ import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_input_validation.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
-import 'package:hiddify/gen/assets.gen.dart';
+import 'package:hiddify/features/nimbus/auth/widget/nimbus_auth_validation.dart';
+import 'package:hiddify/features/nimbus/common/widget/yundo_brand_logo.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -91,7 +92,7 @@ class NimbusAuthPage extends HookConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Assets.images.logo.svg(width: 56, height: 56),
+                    const YundoBrandLogo(size: 56),
                     const Gap(16),
                     Text(
                       isRegister
@@ -117,14 +118,17 @@ class NimbusAuthPage extends HookConsumerWidget {
                       autofillHints: const [AutofillHints.username],
                       textInputAction: TextInputAction.next,
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9_]')),
+                        FilteringTextInputFormatter.allow(RegExp(isRegister ? '[A-Za-z0-9]' : '[A-Za-z0-9_]')),
                         LengthLimitingTextInputFormatter(32),
                       ],
                       decoration: InputDecoration(
                         labelText: t.nimbus.auth.username,
+                        helperText: isRegister ? t.nimbus.auth.usernameRequirements : null,
+                        helperMaxLines: 2,
+                        errorMaxLines: 2,
                         prefixIcon: const Icon(Icons.person_outline_rounded),
                       ),
-                      validator: (value) => _validateUsername(t, value),
+                      validator: (value) => validateNimbusUsername(t, value, allowLegacyUnderscore: !isRegister),
                     ),
                     const Gap(14),
                     TextFormField(
@@ -143,6 +147,9 @@ class NimbusAuthPage extends HookConsumerWidget {
                       },
                       decoration: InputDecoration(
                         labelText: isCompletingPasswordReset ? t.nimbus.auth.temporaryPassword : t.nimbus.auth.password,
+                        helperText: isRegister ? t.nimbus.auth.passwordRequirements : null,
+                        helperMaxLines: 2,
+                        errorMaxLines: 2,
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: IconButton(
                           tooltip: obscurePassword.value ? t.nimbus.auth.showPassword : t.nimbus.auth.hidePassword,
@@ -150,7 +157,8 @@ class NimbusAuthPage extends HookConsumerWidget {
                           icon: Icon(obscurePassword.value ? Icons.visibility_rounded : Icons.visibility_off_rounded),
                         ),
                       ),
-                      validator: (value) => isRegister ? _validateNewPassword(t, value) : _validatePassword(t, value),
+                      validator: (value) =>
+                          isRegister ? validateNimbusNewPassword(t, value) : _validatePassword(t, value),
                     ),
                     if (isCompletingPasswordReset) ...[
                       const Gap(14),
@@ -168,7 +176,7 @@ class NimbusAuthPage extends HookConsumerWidget {
                           prefixIcon: const Icon(Icons.password_rounded),
                         ),
                         validator: (value) {
-                          final validation = _validateNewPassword(t, value);
+                          final validation = validateNimbusNewPassword(t, value);
                           if (validation != null) return validation;
                           if (value == passwordController.text) return t.nimbus.auth.passwordMustDiffer;
                           return null;
@@ -301,26 +309,8 @@ class NimbusAuthPage extends HookConsumerWidget {
   }
 }
 
-String? _validateUsername(Translations t, String? value) {
-  final username = value?.trim() ?? '';
-  if (!RegExp(r'^[A-Za-z0-9_]{4,32}$').hasMatch(username)) {
-    return t.nimbus.auth.usernameInvalid;
-  }
-  return null;
-}
-
 String? _validatePassword(Translations t, String? value) {
   if (value == null || value.isEmpty) return t.nimbus.auth.passwordRequired;
   if (!isNimbusPasswordWithinByteLimit(value)) return t.nimbus.auth.passwordTooLong;
-  return null;
-}
-
-String? _validateNewPassword(Translations t, String? value) {
-  final password = value ?? '';
-  if (password.length < 10) return t.nimbus.auth.passwordTooShort;
-  if (!isNimbusPasswordWithinByteLimit(password)) return t.nimbus.auth.passwordTooLong;
-  if (!RegExp('[A-Za-z]').hasMatch(password)) return t.nimbus.auth.passwordNeedsLetter;
-  if (!RegExp('[0-9]').hasMatch(password)) return t.nimbus.auth.passwordNeedsNumber;
-  if (!RegExp('[^A-Za-z0-9]').hasMatch(password)) return t.nimbus.auth.passwordNeedsSymbol;
   return null;
 }

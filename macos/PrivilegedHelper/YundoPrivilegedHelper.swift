@@ -85,6 +85,7 @@ private final class TunnelConfigValidator {
     let allowedTunKeys: Set<String> = [
       "type", "tag", "address", "mtu", "auto_route", "strict_route", "stack",
       "endpoint_independent_nat", "sniff", "sniff_override_destination",
+      "route_exclude_address",
     ]
     guard
       Set(tun.keys).isSubset(of: allowedTunKeys),
@@ -92,6 +93,13 @@ private final class TunnelConfigValidator {
       tun["sniff_override_destination"] as? Bool == true
     else {
       throw HelperFailure.invalidConfiguration("unexpected TUN option")
+    }
+    if let routeExclusions = tun["route_exclude_address"] {
+      guard let routeExclusions = routeExclusions as? [String],
+        routeExclusions.allSatisfy(Self.isLiteralCIDR)
+      else {
+        throw HelperFailure.invalidConfiguration("invalid TUN route exclusion")
+      }
     }
 
     guard let outbounds = root["outbounds"] as? [[String: Any]], outbounds.count == 2 else {
@@ -166,6 +174,22 @@ private final class TunnelConfigValidator {
       throw HelperFailure.invalidConfiguration("route rule set references do not match definitions")
     }
     return data
+  }
+
+  private static func isLiteralCIDR(_ value: String) -> Bool {
+    let parts = value.split(separator: "/", omittingEmptySubsequences: true)
+    guard parts.count == 2, let prefix = Int(parts[1]) else { return false }
+
+    var ipv4 = in_addr()
+    if parts[0].withCString({ inet_pton(AF_INET, $0, &ipv4) }) == 1 {
+      return (0...32).contains(prefix)
+    }
+
+    var ipv6 = in6_addr()
+    if parts[0].withCString({ inet_pton(AF_INET6, $0, &ipv6) }) == 1 {
+      return (0...128).contains(prefix)
+    }
+    return false
   }
 
   private func validateExperimental(_ value: Any) throws {

@@ -1,7 +1,9 @@
+import 'package:circle_flags/circle_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
-import 'package:hiddify/features/proxy/active/ip_widget.dart';
+
+const nimbusLocationIconSize = 28.0;
 
 String nimbusLocationDisplayName(Translations translations, NimbusLocation location, String languageCode) {
   if (location.code == 'auto') return translations.nimbus.home.locationAuto;
@@ -24,31 +26,22 @@ String? nimbusLocationCountryCode(String locationCode) => switch (locationCode) 
   _ => null,
 };
 
-Widget nimbusLocationFlag(NimbusLocation location, {double size = 30}) {
+Widget nimbusLocationFlag(NimbusLocation location, {double size = nimbusLocationIconSize}) {
   return Builder(
     builder: (context) {
       final theme = Theme.of(context);
       final countryCode = nimbusLocationCountryCode(location.code);
-      final flag = countryCode == null
-          ? Icon(Icons.public_rounded, size: size, color: theme.colorScheme.primary)
-          : IPCountryFlag(countryCode: countryCode, size: size);
-      return Container(
-        width: size + 12,
-        height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface.withValues(alpha: 0.94),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.72)),
-          boxShadow: [
-            BoxShadow(
-              color: theme.colorScheme.shadow.withValues(alpha: 0.08),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
+      return ExcludeSemantics(
+        child: SizedBox.square(
+          dimension: size,
+          child: countryCode == null
+              ? Icon(Icons.public_rounded, size: size, color: theme.colorScheme.primary)
+              : CircleFlag(
+                  countryCode,
+                  size: size,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(size * 0.28)),
+                ),
         ),
-        child: flag,
       );
     },
   );

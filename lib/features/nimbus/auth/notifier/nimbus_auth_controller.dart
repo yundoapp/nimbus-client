@@ -268,7 +268,8 @@ class NimbusAuthController extends Notifier<NimbusAuthState> with AppLogger {
     }
   }
 
-  Future<void> loadLocations() {
+  Future<void> loadLocations({bool force = false}) {
+    if (!force && state.locations != null) return Future<void>.value();
     final active = _loadLocationsInFlight;
     if (active != null) return active;
 

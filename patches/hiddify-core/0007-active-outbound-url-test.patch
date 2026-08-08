@@ -1,0 +1,84 @@
+diff --git a/v2/hcore/commands.go b/v2/hcore/commands.go
+index 7b7b7aa..d1e2c3f 100644
+--- a/v2/hcore/commands.go
++++ b/v2/hcore/commands.go
+@@ -278,2 +278,3 @@ func (h *HiddifyInstance) UrlTestActive() (*hcommon.Response, error) {
+ 		now := selector.Now()
++		now = h.resolveSelectedOutboundTag(now)
+ 		if now == "" {
+diff --git a/v2/hcore/proxy_info.go b/v2/hcore/proxy_info.go
+index abfe172..efc88c1 100644
+--- a/v2/hcore/proxy_info.go
++++ b/v2/hcore/proxy_info.go
+@@ -135,6 +135,19 @@ func (h *HiddifyInstance) GetAllProxiesInfo(hismap map[string]*adapter.URLTestHi
+ 				continue
+ 			}
+ 			pinfo := outbounds_converted[itemTag]
++			if onlyGroupitems && group.Tag == config.OutboundSelectTag {
++				// The main selector may point to a balancer or another selector
++				// before reaching the actual node. URLTest records the result on
++				// that final outbound, while the UI displays the selected item of
++				// the main selector. Carry the read-only test result upward so the
++				// active-node indicator does not stay at zero for nested groups.
++				if selectedOutboundTag := h.resolveSelectedOutboundTag(itemTag); selectedOutboundTag != itemTag {
++					if selectedInfo := outbounds_converted[selectedOutboundTag]; selectedInfo != nil {
++						pinfo.UrlTestTime = selectedInfo.UrlTestTime
++						pinfo.UrlTestDelay = selectedInfo.UrlTestDelay
++					}
++				}
++			}
+ 			pinfo.IsSelected = itemTag == selectedTag
+ 			if onlyGroupitems && pinfo.GroupSelectedTagDisplay != nil && pinfo.TagDisplay != *pinfo.GroupSelectedTagDisplay {
+ 				pinfo.TagDisplay = pinfo.TagDisplay + " → " + *pinfo.GroupSelectedTagDisplay
+@@ -163,6 +176,51 @@ func (h *HiddifyInstance) GetAllProxiesInfo(hismap map[string]*adapter.URLTestHi
+ 	return &groups
+ }
+
++// resolveSelectedOutboundTag follows nested selector/balancer selections to
++// the concrete outbound whose URLTest result is authoritative. It is read-only
++// and deliberately bounded by cycle detection because malformed configurations
++// must never make proxy-info streaming loop forever.
++func (h *HiddifyInstance) resolveSelectedOutboundTag(tag string) string {
++	box := h.Box()
++	if box == nil {
++		return tag
++	}
++
++	visited := make(map[string]struct{})
++	for {
++		if _, seen := visited[tag]; seen {
++			return tag
++		}
++		visited[tag] = struct{}{}
++
++		outbound, loaded := box.Outbound().Outbound(tag)
++		if !loaded {
++			return tag
++		}
++		group, isGroup := outbound.(adapter.OutboundGroup)
++		if !isGroup {
++			return tag
++		}
++		next := group.Now()
++		if next == "" {
++			// A single-member balancer such as the connection plan's default
++			// balance group has no stable Now() value under round-robin. It is
++			// still unambiguous which concrete outbound supplies its URLTest
++			// result, so follow that only-member edge.
++			members := group.All()
++			if len(members) == 1 && members[0] != tag {
++				next = members[0]
++			} else {
++				return tag
++			}
++		}
++		if next == tag {
++			return tag
++		}
++		tag = next
++	}
++}
++
+ func TrimTagName(tag string) string {
+ 	return strings.Trim(strings.Split(tag, "§")[0], " ")
+ }

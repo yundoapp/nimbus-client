@@ -8,6 +8,7 @@ import 'package:hiddify/core/model/directories.dart';
 import 'package:hiddify/core/utils/laststeam.dart';
 import 'package:hiddify/hiddifycore/core_interface/core_interface.dart';
 import 'package:hiddify/hiddifycore/core_interface/mtls_channel_cred.dart';
+import 'package:hiddify/hiddifycore/core_port.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore_service.pbgrpc.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hello/hello.pb.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hello/hello_service.pbgrpc.dart';
@@ -28,8 +29,8 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
   late Uint8List serverPublicKey;
   static final cert = CryptoUtils.generateEcKeyPair();
 
-  static const portBack = 17079;
-  static const portFront = 17078;
+  static const portBack = yundoMobileCorePortBack;
+  static const portFront = yundoMobileCorePortFront;
 
   bool _isBgClientAvailable = false;
   bool _debug = false;

@@ -46,7 +46,6 @@ class HiddifyCoreService with InfraLogger {
   final logController = BehaviorSubject<List<LogMessage>>();
   final CallOptions? grpcOptions = null; //CallOptions(timeout: const Duration(milliseconds: 10000));
   final Map<String, StreamSubscription?> subscriptions = {};
-  List<OutboundGroup> latest = [];
 
   Future<void> init() async {
     await setup()
@@ -155,6 +154,17 @@ class HiddifyCoreService with InfraLogger {
       statusController.add(currentState = const CoreStatus.starting());
       diagnostics.startStep(NimbusAccelerationStepId.corePrepare, detail: t.nimbus.diagnostics.corePrepare);
       loggy.debug("starting");
+      final reconciliationError = await core.reconcileBeforeStart();
+      if (reconciliationError != null) {
+        diagnostics.failStep(
+          NimbusAccelerationStepId.corePrepare,
+          detail: reconciliationError,
+          errorCode: 'STALE_CORE_CLEANUP_FAILED',
+        );
+        diagnostics.fail(errorCode: 'Y-CORE-005', detail: reconciliationError);
+        statusController.add(currentState = const CoreStatus.stopped());
+        return left(ConnectionFailure.unexpected(reconciliationError));
+      }
       final background = await core.setupBackground(path, name);
       // macOS prepares a derived user-core config after adding the managed
       // public and account rule sets. Read tags from that effective config so
@@ -200,6 +210,7 @@ class HiddifyCoreService with InfraLogger {
       await stopListenSingle('bg');
       await core.refreshClients();
       await _refreshCoreListeners();
+      ref.read(coreRestartSignalProvider.notifier).restart();
       final useRawConfig = enableRawConfig || backgroundConfigPath != path;
       final coreRuleSetLogOffset = await _coreRuleSetLogLength();
       loggy.info('core start prepared (raw=$useRawConfig, macosPathRewritten=${backgroundConfigPath != path})');
@@ -575,6 +586,7 @@ class HiddifyCoreService with InfraLogger {
         );
       }
       await _refreshCoreListeners();
+      ref.read(coreRestartSignalProvider.notifier).restart();
     }
     return (errorMessage: null, usedIpv4Fallback: preparation.usedIpv4Fallback);
   }
@@ -769,17 +781,39 @@ class HiddifyCoreService with InfraLogger {
       return;
     }
 
-    try {
-      yield* core.bgClient
-          .mainOutboundsInfo(Empty())
-          .map((event) {
-            return latest = event.items.toList();
-          })
-          .startWith(latest);
-    } catch (e) {
-      loggy.error("error watching active groups: $e");
-      rethrow;
+    var retryCount = 0;
+    while (core.isInitialized()) {
+      try {
+        await for (final event in core.bgClient.mainOutboundsInfo(Empty())) {
+          retryCount = 0;
+          yield event.items.toList();
+        }
+        return;
+      } catch (e) {
+        if (!core.isInitialized() || retryCount >= 8) {
+          loggy.error("error watching active groups: $e");
+          rethrow;
+        }
+        retryCount++;
+        loggy.warning("active groups stream interrupted; reconnecting ($retryCount/8)", e);
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      }
     }
+  }
+
+  TaskEither<String, OutboundInfo?> getActiveProxySnapshot() {
+    return TaskEither(() async {
+      try {
+        final response = await core.bgClient.mainOutboundsInfo(Empty()).first.timeout(const Duration(seconds: 3));
+        if (response.items.isEmpty || response.items.first.items.isEmpty) {
+          return right(null);
+        }
+        return right(response.items.first.items.first);
+      } catch (e) {
+        loggy.error("error reading active outbound snapshot: $e");
+        rethrow;
+      }
+    });
   }
 
   //
@@ -823,6 +857,24 @@ class HiddifyCoreService with InfraLogger {
         return right(unit);
       } catch (e) {
         loggy.error("error in url test: $e");
+        rethrow;
+      }
+    });
+  }
+
+  TaskEither<String, Unit> urlTestActive() {
+    return TaskEither(() async {
+      loggy.debug("testing active outbound");
+      try {
+        final res = await core.bgClient.urlTestActive(
+          Empty(),
+          options: CallOptions(timeout: const Duration(seconds: 3)),
+        );
+        if (res.code != ResponseCode.OK) return left("${res.code} ${res.message}");
+
+        return right(unit);
+      } catch (e) {
+        loggy.error("error testing active outbound: $e");
         rethrow;
       }
     });

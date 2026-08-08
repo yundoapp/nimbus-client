@@ -3,7 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/environment.dart';
-import 'package:hiddify/gen/assets.gen.dart';
+import 'package:hiddify/features/nimbus/common/widget/yundo_brand_logo.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class NimbusAuthRestoringPage extends ConsumerWidget {
@@ -11,10 +11,23 @@ class NimbusAuthRestoringPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final t = ref.watch(translationsProvider).requireValue;
     final environment = ref.watch(environmentProvider);
     final appTitle = environment == Environment.dev ? t.common.devAppTitle : t.common.appTitle;
+
+    return NimbusAuthLoadingPage(appTitle: appTitle, status: t.nimbus.auth.signingIn);
+  }
+}
+
+class NimbusAuthLoadingPage extends StatelessWidget {
+  const NimbusAuthLoadingPage({super.key, required this.appTitle, required this.status});
+
+  final String appTitle;
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -29,18 +42,12 @@ class NimbusAuthRestoringPage extends ConsumerWidget {
                 child: Semantics(
                   container: true,
                   liveRegion: true,
-                  label: '$appTitle, ${t.nimbus.auth.signingIn}',
+                  label: '$appTitle, $status',
                   child: ExcludeSemantics(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Assets.images.appIcon.image(
-                          key: const Key('nimbusAuthRestoringLogo'),
-                          width: logoExtent,
-                          height: logoExtent,
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
-                        ),
+                        YundoBrandLogo(size: logoExtent, imageKey: const Key('nimbusAuthRestoringLogo')),
                         const Gap(24),
                         Text(
                           appTitle,
@@ -58,7 +65,7 @@ class NimbusAuthRestoringPage extends ConsumerWidget {
                         ),
                         const Gap(14),
                         Text(
-                          t.nimbus.auth.signingIn,
+                          status,
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                         ),

@@ -29,9 +29,38 @@ void main() {
     });
 
     test('restores ownership only for a persisted user-started connection', () {
-      expect(shouldRestoreNimbusOwnership(connection: const Connected(), startedByUser: true), isTrue);
-      expect(shouldRestoreNimbusOwnership(connection: const Connected(), startedByUser: false), isFalse);
-      expect(shouldRestoreNimbusOwnership(connection: const Disconnected(), startedByUser: true), isFalse);
+      expect(
+        shouldRestoreNimbusOwnership(
+          connection: const Connected(),
+          startedByUser: true,
+          activeProfileId: 'yundo-managed-profile',
+        ),
+        isTrue,
+      );
+      expect(
+        shouldRestoreNimbusOwnership(
+          connection: const Connected(),
+          startedByUser: false,
+          activeProfileId: 'yundo-managed-profile',
+        ),
+        isFalse,
+      );
+      expect(
+        shouldRestoreNimbusOwnership(
+          connection: const Connected(),
+          startedByUser: true,
+          activeProfileId: 'other-profile',
+        ),
+        isFalse,
+      );
+      expect(
+        shouldRestoreNimbusOwnership(
+          connection: const Disconnected(),
+          startedByUser: true,
+          activeProfileId: 'yundo-managed-profile',
+        ),
+        isFalse,
+      );
     });
 
     test('presents preparation as connecting before Nimbus ownership is reported', () {

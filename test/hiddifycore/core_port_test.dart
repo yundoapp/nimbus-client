@@ -6,7 +6,16 @@ void main() {
     expect(resolveDesktopCorePort('/data/app.yundo.client.rebuild.dev'), yundoDevDesktopCorePort);
   });
 
-  test('keeps the legacy core port for the formal app', () {
-    expect(resolveDesktopCorePort('/data/app.yundo.client'), legacyDesktopCorePort);
+  test('uses an isolated desktop core port for the formal app', () {
+    expect(resolveDesktopCorePort('/data/app.yundo.client'), yundoDesktopCorePort);
+  });
+
+  test('keeps desktop and mobile core manager ports isolated', () {
+    expect({
+      yundoDesktopCorePort,
+      yundoDevDesktopCorePort,
+      yundoMobileCorePortFront,
+      yundoMobileCorePortBack,
+    }, hasLength(4));
   });
 }
