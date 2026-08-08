@@ -272,7 +272,7 @@ private final class TunnelConfigValidator {
   }
 
   private var routeHistoryControllerAddress: String {
-    let port = BuildIdentity.appBundleIdentifier == "app.yundo.client.rebuild.dev" ? 16757 : 16758
+    let port = BuildIdentity.appBundleIdentifier == "app.yundo.client.dev" ? 16757 : 16758
     return "127.0.0.1:\(port)"
   }
 

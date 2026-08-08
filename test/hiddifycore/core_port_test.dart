@@ -3,7 +3,7 @@ import 'package:hiddify/hiddifycore/core_port.dart';
 
 void main() {
   test('uses an isolated desktop core port for the Yundo dev app', () {
-    expect(resolveDesktopCorePort('/data/app.yundo.client.rebuild.dev'), yundoDevDesktopCorePort);
+    expect(resolveDesktopCorePort('/data/app.yundo.client.dev'), yundoDevDesktopCorePort);
   });
 
   test('uses an isolated desktop core port for the formal app', () {

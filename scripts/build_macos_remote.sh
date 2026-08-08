@@ -23,7 +23,7 @@ case "${channel}" in
     flutter_mode="--debug"
     target="lib/main.dart"
     app_name="Yundo Dev"
-    bundle_id="app.yundo.client.rebuild.dev"
+    bundle_id="app.yundo.client.dev"
     api_base_url="${NIMBUS_API_BASE_URL:-http://127.0.0.1:4000/api/v1}"
     ;;
   prod)

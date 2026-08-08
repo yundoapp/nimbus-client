@@ -3,6 +3,6 @@
 
 #include "Base.xcconfig"
 
-BASE_BUNDLE_IDENTIFIER=app.yundo.client.rebuild.dev
-SERVICE_IDENTIFIER=app.yundo.client.rebuild.dev.service
+BASE_BUNDLE_IDENTIFIER=app.yundo.client.dev
+SERVICE_IDENTIFIER=app.yundo.client.dev.service
 APP_DISPLAY_NAME=Yundo Dev

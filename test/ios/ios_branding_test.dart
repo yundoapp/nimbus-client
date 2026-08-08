@@ -31,7 +31,8 @@ void main() {
 
       expect(infoPlist, contains('zh-Hans'));
       expect(infoPlist, contains('zh-Hant'));
-      expect(debugConfig, contains('BASE_BUNDLE_IDENTIFIER=app.yundo.client.rebuild.dev'));
+      expect(debugConfig, contains('BASE_BUNDLE_IDENTIFIER=app.yundo.client.dev'));
+      expect(debugConfig, isNot(contains('rebuild')));
       expect(debugConfig, contains('APP_DISPLAY_NAME=Yundo Dev'));
       expect(project, contains('Localize Yundo Display Name'));
       expect(localizationScript, contains('云渡开发版'));
@@ -40,12 +41,24 @@ void main() {
       expect(localizationScript, contains('雲渡'));
     });
 
+    test('registers Flutter plugins before custom handlers without force unwraps', () {
+      final appDelegate = File('ios/Runner/AppDelegate.swift').readAsStringSync();
+      final pluginRegistration = appDelegate.indexOf('GeneratedPluginRegistrant.register(with: self)');
+      final handlerRegistration = appDelegate.indexOf('        registerHandlers()');
+
+      expect(pluginRegistration, greaterThanOrEqualTo(0));
+      expect(handlerRegistration, greaterThan(pluginRegistration));
+      expect(appDelegate, isNot(contains('registrar(forPlugin: MethodHandler.name)!')));
+      expect(appDelegate, isNot(contains('registrar(forPlugin: PlatformMethodHandler.name)!')));
+      expect(appDelegate, isNot(contains('registrar(forPlugin: FileMethodHandler.name)!')));
+      expect(appDelegate, isNot(contains('registrar(forPlugin: StatusEventHandler.name)!')));
+      expect(appDelegate, isNot(contains('registrar(forPlugin: AlertsEventHandler.name)!')));
+    });
+
     test('keeps iOS portrait-only and requests only the Packet Tunnel capability', () {
       final infoPlist = File('ios/Runner/Info.plist').readAsStringSync();
       final appEntitlements = File('ios/Runner/Runner.entitlements').readAsStringSync();
-      final tunnelEntitlements = File(
-        'ios/HiddifyPacketTunnel/HiddifyPacketTunnel.entitlements',
-      ).readAsStringSync();
+      final tunnelEntitlements = File('ios/HiddifyPacketTunnel/HiddifyPacketTunnel.entitlements').readAsStringSync();
 
       expect(infoPlist, contains('UIInterfaceOrientationPortrait'));
       expect(infoPlist, isNot(contains('UIInterfaceOrientationLandscape')));

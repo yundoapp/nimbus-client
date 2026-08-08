@@ -14,7 +14,8 @@ import 'package:hiddify/features/nimbus/auth/model/nimbus_issue_report_sanitizer
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const nimbusApiBaseUrl = String.fromEnvironment('NIMBUS_API_BASE_URL', defaultValue: 'http://localhost:4000/api/v1');
+const nimbusProductionApiBaseUrl = 'https://api.yundo.app/api/v1';
+const nimbusApiBaseUrl = String.fromEnvironment('NIMBUS_API_BASE_URL', defaultValue: nimbusProductionApiBaseUrl);
 
 bool isNimbusUnsupportedPublicRulesSourceVersionError(Object error) {
   if (error is! DioException || error.response?.statusCode != 400) return false;

@@ -5,7 +5,7 @@
 | 用途 | App Bundle ID | Packet Tunnel Bundle ID |
 | --- | --- | --- |
 | 正式版 | `app.yundo.client` | `app.yundo.client.PacketTunnel` |
-| 开发版 | `app.yundo.client.rebuild.dev` | `app.yundo.client.rebuild.dev.PacketTunnel` |
+| 开发版 | `app.yundo.client.dev` | `app.yundo.client.dev.PacketTunnel` |
 
 当前 Apple Developer Team ID 为 `W684N2R45F`。iOS 工程的旧 Hiddify Team 和旧导出 profile 已移除，导出时由 `xcodebuild` 使用 App Store Connect API Key 自动处理 profile。
 
@@ -18,7 +18,7 @@
 - `app.yundo.client`
 - `app.yundo.client.PacketTunnel`
 
-正式版 App ID 需要启用应用当前使用的 App Groups、Personal VPN 与 Network Extension 能力；Network Extension 只启用实际使用的 `packet-tunnel-provider`，不要额外开启 App Proxy、DNS Proxy 或 Content Filter。App Groups 应包含 `group.app.yundo.client`。如果需要远程签名开发版，再额外创建开发版的两个 Bundle ID，并启用对应的 `group.app.yundo.client.rebuild.dev`。
+正式版 App ID 需要启用应用当前使用的 App Groups、Personal VPN 与 Network Extension 能力；Network Extension 只启用实际使用的 `packet-tunnel-provider`，不要额外开启 App Proxy、DNS Proxy 或 Content Filter。App Groups 应包含 `group.app.yundo.client`。开发版使用 `app.yundo.client.dev` 与 `app.yundo.client.dev.PacketTunnel`，并启用对应的 `group.app.yundo.client.dev`。
 
 远程 iOS IPA 使用 App Store 分发签名，因此需要导出包含私钥的 `Apple Distribution` `.p12`。macOS 产物直接在 App 外分发，使用单独的 `Developer ID Application` `.p12`。对外版本必须启用 hardened runtime，并完成 Apple 公证和 stapling；本地开发版仍可以使用 Apple Development 身份，不得把它发给朋友。
 
@@ -97,7 +97,12 @@ Apple Developer 计划开通后，仍需要在第一次远程构建前完成 App
 ### 2026-08-08 本机 iPhone Debug 签名与安装
 
 - Xcode 登录团队 `W684N2R45F` 后，通过 Apple Development 身份创建并使用 `Apple Development: dejian gan (975VAJC383)`；不导出证书私钥，不用于对外分发。
-- `xcodebuild` 使用 `-allowProvisioningUpdates -allowProvisioningDeviceRegistration` 自动生成开发 profile，主 App 与 Packet Tunnel 分别绑定开发版 Bundle ID `app.yundo.client.rebuild.dev` 和 `app.yundo.client.rebuild.dev.PacketTunnel`，两者均包含已配对 iPhone 的开发设备权限。
+- `xcodebuild` 使用 `-allowProvisioningUpdates -allowProvisioningDeviceRegistration` 自动生成开发 profile，主 App 与 Packet Tunnel 分别绑定开发版 Bundle ID `app.yundo.client.dev` 和 `app.yundo.client.dev.PacketTunnel`，两者均包含已配对 iPhone 的开发设备权限。
 - iPhone 16 Pro Max（iOS 26.5.2）已安装并启动 `Yundo Dev` `4.1.2+202608137`。`codesign --verify --deep --strict`、主 App/扩展 TeamIdentifier 和 embedded profile 校验通过。
 - 本地 Flutter 调试构建使用 Mac 局域网 API `http://192.168.1.223:4000/api/v1`；该地址从宿主机返回 API health `200`，不能在真机上使用 `127.0.0.1` 或 `localhost`。
 - 本节只证明开发签名、profile、安装和启动；首次系统 VPN 配置授权、Packet Tunnel 真实加速、停止恢复和前后台/锁屏/网络切换矩阵仍需在实体 iPhone 上完成，不得用 Simulator 或签名成功替代。
+
+### 2026-08-09 开发版标识与生产 API 默认值
+
+- 开发版 Bundle ID 已固定为 `app.yundo.client.dev` 与 `app.yundo.client.dev.PacketTunnel`，App Group 为 `group.app.yundo.client.dev`；旧的 `app.yundo.client.rebuild.dev` 不再使用。首次切换后应允许 Xcode 通过 `-allowProvisioningUpdates -allowProvisioningDeviceRegistration` 自动重建对应 profile。
+- 移动端 Debug 和 Release 默认使用 `https://api.yundo.app/api/v1`，只有受控本地测试才通过 `NIMBUS_API_BASE_URL` 覆盖；真机不允许把 `localhost` 或 `127.0.0.1` 当作默认 API。

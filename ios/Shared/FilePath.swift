@@ -16,9 +16,20 @@ public enum FilePath {
 public extension FilePath {
     static let groupName = "group.\(packageName)"
 
-    private static let defaultSharedDirectory: URL! = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: FilePath.groupName)
+    static let sharedDirectory: URL = {
+        if let sharedDirectory = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: FilePath.groupName
+        ) {
+            return sharedDirectory
+        }
 
-    static let sharedDirectory = defaultSharedDirectory!
+        // 本地 Debug profile 尚未拿到 App Group 能力时仍允许 App 启动；
+        // Packet Tunnel 构建仍必须使用已签名的 App Group 共享运行数据。
+        let fallback = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Yundo", isDirectory: true)
+        print("[Yundo] App Group unavailable: \(FilePath.groupName); using local fallback")
+        return fallback
+    }()
 
     static let cacheDirectory = sharedDirectory
         .appendingPathComponent("Library", isDirectory: true)

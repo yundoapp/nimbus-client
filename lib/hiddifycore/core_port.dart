@@ -4,7 +4,7 @@ const yundoMobileCorePortFront = 17278;
 const yundoMobileCorePortBack = 17279;
 
 int resolveDesktopCorePort(String baseDirectoryPath) {
-  if (baseDirectoryPath.contains('app.yundo.client.rebuild.dev')) {
+  if (baseDirectoryPath.contains('app.yundo.client.dev')) {
     return yundoDevDesktopCorePort;
   }
   return yundoDesktopCorePort;

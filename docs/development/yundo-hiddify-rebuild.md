@@ -55,7 +55,7 @@ Hiddify Core 校验 profile 时会使用临时输入文件生成完整运行配�
 
 本机 macOS Debug 版本 `202608033` 已使用本地 API 标准 profile 完成自动连接并进入 `CONNECTED`；该结果只证明 Hiddify profile 生命周期和本地连接闭环正常，不替代真实节点、微信开发者工具和四端网络矩阵验收。
 
-macOS Debug 已设置独立 Bundle ID `app.yundo.client.rebuild.dev` 和安装名 `Yundo Dev.app`，Release 使用 `app.yundo.client`；重建开发版与旧云渡开发版不共享登录态、偏好或 Core 数据目录。当前桌面发布层使用 `YundoCore` 文件名和云渡窗口/进程名，不把旧 Helper 带入新分支；源代码目录和上游模块名暂时保留，避免为了改内部名而触碰 Core ABI。构建入口 `scripts/build_install_run_macos_dev.sh` 会拒绝把 Hiddify 名称带入最终 macOS App 包。
+macOS Debug 已设置独立 Bundle ID `app.yundo.client.dev` 和安装名 `Yundo Dev.app`，Release 使用 `app.yundo.client`；开发版与正式版不共享登录态、偏好或 Core 数据目录。当前桌面发布层使用 `YundoCore` 文件名和云渡窗口/进程名，不把旧 Helper 带入新分支；源代码目录和上游模块名暂时保留，避免为了改内部名而触碰 Core ABI。构建入口 `scripts/build_install_run_macos_dev.sh` 会拒绝把 Hiddify 名称带入最终 macOS App 包。
 
 品牌验收以最终安装包为准：进程管理器、应用包目录、系统设置里的应用名、通知服务名、快捷方式和应用图标都必须显示云渡品牌；内部源码路径、协议模块名和许可证归属不属于用户产品界面，但不得被复制成用户可见的运行时文件名。
 
@@ -82,7 +82,7 @@ macOS 的正式版和开发版使用不同且带版本后缀的特权 Helper 服
 - 根因：桌面 `StatefulShellRoute` 有首页、可选配置、设置、日志、关于 4/5 个分支，但 `NavigationRail` 只生成首页、可选配置、设置 2/3 个目的地；进入日志或关于时 `currentIndex` 超出 `destinations` 范围，触发 Flutter `selectedIndex` 断言并显示红屏。
 - 修复：桌面导航目的地改为复用与 shell 分支完全相同的顺序，移动端继续只保留首页和设置；新增导航数量测试覆盖有无配置两种桌面状态和移动端状态。
 - commit `63bf5e5` 已完成完整 Flutter 测试（37 项）、本机 macOS 双版本构建安装、iOS Simulator Debug 构建，以及 GitHub Windows/Linux/Android 构建。安装版启动进程保持存活，系统日志未再出现 `NavigationRail`/`selectedIndex` 断言。
-- 本轮仍未完成人工逐页截图：Computer Use 对系统中遗留的旧同名 Bundle 映射错误，无法读取当前 `app.yundo.client.rebuild.dev` 窗口；这属于验收工具阻塞，不作为页面已人工验收的证据。
+- 本轮仍未完成人工逐页截图：Computer Use 对系统中遗留的旧同名 Bundle 映射错误，无法读取当前 `app.yundo.client.dev` 窗口；这属于验收工具阻塞，不作为页面已人工验收的证据。
 
 ## 5. 迁移顺序
 
@@ -167,7 +167,7 @@ macOS 的正式版和开发版使用不同且带版本后缀的特权 Helper 服
 
 ### 4.7 Apple 签名与远程构建（2026-08-03）
 
-- iOS 工程统一使用 Apple Team `W684N2R45F`；正式版主 App 和 Packet Tunnel 分别为 `app.yundo.client`、`app.yundo.client.PacketTunnel`，开发版分别追加 `.rebuild.dev`。工程中已清理旧 Hiddify Team、旧 Bundle ID 和旧 profile 名称。
+- iOS 工程统一使用 Apple Team `W684N2R45F`；正式版主 App 和 Packet Tunnel 分别为 `app.yundo.client`、`app.yundo.client.PacketTunnel`，开发版分别为 `app.yundo.client.dev`、`app.yundo.client.dev.PacketTunnel`。工程中已清理旧 Hiddify Team、旧 Bundle ID 和旧 profile 名称。
 - `scripts/build_macos_remote.sh` 负责远程 macOS Debug/Release 构建、Yundo Core 替换、重签、签名校验和 ZIP 产出，不覆盖 `/Applications`；本地 `scripts/build_install_run_macos_dev.sh` 继续负责快速构建、双版本覆盖安装和启动验收。
 - `scripts/build_ios_remote.sh` 负责 Flutter 框架准备、无签名 Xcode 设备归档、App Store Connect API Key 自动 profile 管理、IPA 导出和主 App/Packet Tunnel Bundle ID 校验；iOS 分发身份只在导出阶段通过 `exportOptions.plist` 选择 `Apple Distribution`，不让归档阶段依赖开发设备或覆盖 CocoaPods。`.github/workflows/apple-build.yml` 通过手动触发同时产出 macOS 开发版、macOS 正式版和 iOS 正式版 artifact。
 - Apple Developer 计划开通不等于远端已经具备签名材料；首次远程构建前必须按 `docs/development/apple-signing-setup.md` 配置 App ID 能力、证书、`.p12`、App Store Connect API Key 和 GitHub Secrets。配置完成后，commit `c1506ee` 已在 GitHub Actions run `30824938269` 通过 iOS IPA、macOS 开发版 ZIP 和 macOS 正式版 ZIP 的远程签名构建验证。
@@ -437,3 +437,11 @@ macOS 的正式版和开发版使用不同且带版本后缀的特权 Helper 服
 - iPhone 16 Pro Max（iOS 26.5.2）已开启开发者模式并通过 Xcode 配对；开发版主 App 与 Packet Tunnel 使用独立 Bundle ID，签名校验、profile 能力和真机安装启动均通过。应用显示名为“云渡开发版”，保持标准竖屏。
 - 真机调试使用 Mac 局域网 API `http://192.168.1.223:4000/api/v1`，宿主机与局域网地址的 `/health` 均返回 `200`。真机不得使用 `127.0.0.1`，它只指向手机自身。
 - 当前实体设备验收停在“手机端登录提交后点击加速并批准系统 VPN 配置”之前；VPN 授权、Packet Tunnel 连接/停止、网络恢复、锁屏/后台和 Wi-Fi/蜂窝切换仍是待完成证据，不能以真机 App 已安装或启动替代。
+
+### 4.43 iPhone 启动崩溃修复与移动端生产 API 默认值（2026-08-09）
+
+- 真机启动崩溃证据为 `Runner-2026-08-09-000509.ips`：`EXC_BREAKPOINT` 位于 `AppDelegate.registerHandlers()`，原因是自定义通道在 `GeneratedPluginRegistrant` 注册前强制解包空 registrar。现在先注册生成插件，再注册自定义通道；每个 registrar 均使用可选绑定，避免启动阶段直接触发 SIGTRAP。
+- `ios/Shared/FilePath.swift` 在本地签名 profile 暂无 App Group 能力时回退到应用支持目录，保证 App 可以启动；正式 Packet Tunnel 仍必须配置并签署对应 App Group，回退目录不作为真实加速验收证据。
+- 正式版使用 `app.yundo.client` / `app.yundo.client.PacketTunnel`，开发版使用 `app.yundo.client.dev` / `app.yundo.client.dev.PacketTunnel`，开发版 App Group 为 `group.app.yundo.client.dev`。旧的 `app.yundo.client.rebuild.dev` 标识已退役，不得出现在新构建、安装脚本或签名配置中。
+- iOS 与 Android 的开发版、正式版默认都连接生产 API `https://api.yundo.app/api/v1`，因此手机脱离电脑也能验证；`NIMBUS_API_BASE_URL` 仅作为受控本地测试覆盖项。macOS 开发脚本继续默认连接本机 API，避免改变现有桌面开发闭环。
+- 跨平台审计：生产 API 默认值位于共享 Dart 鉴权路径，macOS、Windows、iOS、Android 同源生效；Bundle ID 与 Helper/App Group 是平台配置差异，macOS 开发版 Helper 已同步使用 `app.yundo.client.dev`，Android 原有 `app.yundo.client.dev` 不变。真实 iPhone 的 Packet Tunnel 授权、加速/停止和前后台网络矩阵仍需实体设备验收。
