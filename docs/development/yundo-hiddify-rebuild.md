@@ -445,3 +445,8 @@ macOS 的正式版和开发版使用不同且带版本后缀的特权 Helper 服
 - 正式版使用 `app.yundo.client` / `app.yundo.client.PacketTunnel`，开发版使用 `app.yundo.client.dev` / `app.yundo.client.dev.PacketTunnel`，开发版 App Group 为 `group.app.yundo.client.dev`。旧的 `app.yundo.client.rebuild.dev` 标识已退役，不得出现在新构建、安装脚本或签名配置中。
 - iOS 与 Android 的开发版、正式版默认都连接生产 API `https://api.yundo.app/api/v1`，因此手机脱离电脑也能验证；`NIMBUS_API_BASE_URL` 仅作为受控本地测试覆盖项。macOS 开发脚本继续默认连接本机 API，避免改变现有桌面开发闭环。
 - 跨平台审计：生产 API 默认值位于共享 Dart 鉴权路径，macOS、Windows、iOS、Android 同源生效；Bundle ID 与 Helper/App Group 是平台配置差异，macOS 开发版 Helper 已同步使用 `app.yundo.client.dev`，Android 原有 `app.yundo.client.dev` 不变。真实 iPhone 的 Packet Tunnel 授权、加速/停止和前后台网络矩阵仍需实体设备验收。
+
+### 4.44 Windows/Android CI 构建触发边界（2026-08-09）
+
+- `develop` 的每次非文档 push 自动执行 Windows x64 与 Android Debug 构建，保证四端同一 commit 的构建基线不会因缺少 workflow dispatch 管理员权限而被跳过。
+- `workflow_dispatch` 仍保留 `build_windows` / `build_android` 开关，便于对指定 commit 单独重跑；普通 Pull Request 继续只运行共享测试和边界门禁，避免重复消耗构建资源。
