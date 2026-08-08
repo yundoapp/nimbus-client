@@ -10,7 +10,7 @@ device_id="${IOS_DEVICE_ID:-00008140-00163DEE1160801C}"
 simulator_id="${IOS_SIMULATOR_ID:-03D52C64-8BE2-41BC-B3A1-9DE2ADBC0912}"
 build_number="${YUNDO_LOCAL_BUILD_NUMBER:-$(awk -F+ '/^version: / { print $2; exit }' "${repo_root}/pubspec.yaml")}"
 simulator_api_base_url="${IOS_SIMULATOR_API_BASE_URL:-http://127.0.0.1:4000/api/v1}"
-device_api_base_url="${IOS_DEVICE_API_BASE_URL:-http://$(ipconfig getifaddr en0)/api/v1}"
+device_api_base_url="${IOS_DEVICE_API_BASE_URL:-http://$(ipconfig getifaddr en0):4000/api/v1}"
 production_api_base_url="${NIMBUS_PROD_API_BASE_URL:-https://api.yundo.app/api/v1}"
 dual_root="${IOS_DUAL_BUILD_DIR:-${repo_root}/build/ios/dual-${build_number}}"
 
