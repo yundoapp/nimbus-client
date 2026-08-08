@@ -61,12 +61,24 @@ build_simulator_dev() {
 }
 
 build_simulator_prod() {
-  flutter build ios --simulator --profile \
+  flutter build ios --simulator --debug \
     --target=lib/main_prod.dart \
     --build-number="${build_number}" \
     --dart-define="NIMBUS_API_BASE_URL=${production_api_base_url}"
+  xcodebuild \
+    -workspace ios/Runner.xcworkspace \
+    -scheme Runner \
+    -configuration Debug \
+    -sdk iphonesimulator \
+    -destination generic/platform=iOS\ Simulator \
+    -derivedDataPath "${dual_root}/simulator-prod-derived" \
+    BASE_BUNDLE_IDENTIFIER=app.yundo.client \
+    SERVICE_IDENTIFIER=app.yundo.client.service \
+    APP_DISPLAY_NAME=Yundo \
+    FLUTTER_BUILD_NUMBER="${build_number}" \
+    -quiet build
   local app_path="${dual_root}/Yundo-iOS-Simulator.app"
-  ditto build/ios/iphonesimulator/Runner.app "${app_path}"
+  ditto "${dual_root}/simulator-prod-derived/Build/Products/Debug-iphonesimulator/Runner.app" "${app_path}"
   [[ "$(plutil -extract CFBundleIdentifier raw -o - "${app_path}/Info.plist")" == app.yundo.client ]] \
     || fail "iOS Simulator 正式版 Bundle ID 不正确"
   install_simulator_app "${app_path}" app.yundo.client
