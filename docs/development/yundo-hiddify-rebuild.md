@@ -455,3 +455,10 @@ macOS 的正式版和开发版使用不同且带版本后缀的特权 Helper 服
 - 当前阶段优先 iOS 与 macOS 双版本真机/模拟器验收；Windows x64 与 Android Debug 不在普通 push 上自动构建，也不下载产物。
 - `workflow_dispatch` 仍保留 `build_windows` / `build_android` 开关，待 iOS/macOS 验收稳定后按需触发；普通 Pull Request 继续只运行共享测试和边界门禁。
 - 暂缓构建和下载只影响当前验收执行，不改变四端同源开发要求；任何共享 Flutter/Dart、API、认证、业务功能或平台适配变更，仍须同步检查 macOS、Windows、iOS、Android，并在同一提交中保持可构建、可测试的实现。
+
+### 4.45 iOS/macOS 双版本本机验收记录（2026-08-09）
+
+- `4.1.3+202608140`、commit `1fc925c` 已完成 macOS 开发版 `app.yundo.client.dev`/`Yundo Dev.app` Debug 与正式版 `app.yundo.client`/`Yundo.app` Release 的构建、签名、覆盖安装和状态恢复；正式版覆盖前运行且加速，覆盖后已恢复，开发版覆盖前未运行且保持未运行。
+- 同一提交已安装 iOS Simulator 的开发版和正式身份版；开发版使用本地 API，正式身份版使用生产 API。iPhone 已安装并启动开发版 Profile，使用 Mac 局域网本地 API，未发现本轮启动崩溃。
+- iPhone 正式版 Release 二进制已编译，但安装被 Xcode 的 `No Accounts` 以及缺少 `app.yundo.client` / `app.yundo.client.PacketTunnel` provisioning profiles 阻塞；在补齐同一付费开发者团队的账号、App ID、App Group、Packet Tunnel profile 和设备注册前，不得宣称正式版真机安装完成。
+- 本轮归档位于 `nimbus-client/client-builds/4.1.3-build202608140-1fc925c/`，已通过 `SHA256SUMS` 校验；Windows/Android 未构建、未下载，代码仍按四端同步规则维护。
