@@ -58,6 +58,13 @@ void main() {
       expect(appDelegate, isNot(contains('registrar(forPlugin: AlertsEventHandler.name)!')));
     });
 
+    test('pins app_links with the iOS debug registrar guard', () {
+      final lockfile = File('pubspec.lock').readAsStringSync();
+
+      expect(lockfile, contains('name: app_links'));
+      expect(lockfile, contains('version: "6.4.1"'));
+    });
+
     test('keeps iOS portrait-only and requests only the Packet Tunnel capability', () {
       final infoPlist = File('ios/Runner/Info.plist').readAsStringSync();
       final appEntitlements = File('ios/Runner/Runner.entitlements').readAsStringSync();
