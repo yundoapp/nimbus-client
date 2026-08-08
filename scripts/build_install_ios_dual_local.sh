@@ -61,7 +61,7 @@ build_simulator_dev() {
 }
 
 build_simulator_prod() {
-  flutter build ios --simulator --release \
+  flutter build ios --simulator --profile \
     --target=lib/main_prod.dart \
     --build-number="${build_number}" \
     --dart-define="NIMBUS_API_BASE_URL=${production_api_base_url}"
