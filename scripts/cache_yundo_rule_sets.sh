@@ -81,6 +81,25 @@ sha256_file() {
   fi
 }
 
+remote_package_is_older_than_snapshot() {
+  local manifest_file="$1"
+  local package_file="$2"
+  local current_updated_at candidate_updated_at
+  current_updated_at="$(jq -r '.publicRulesUpdatedAt // ""' "${manifest_file}")"
+  candidate_updated_at="$(jq -r '.manifest.publicRulesUpdatedAt // ""' "${package_file}")"
+  [[ -n "${current_updated_at}" ]] || return 1
+
+  jq -e -n \
+    --arg current "${current_updated_at}" \
+    --arg candidate "${candidate_updated_at}" '
+      def parsed_time:
+        try (sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) catch null;
+      ($current | parsed_time) as $currentTime |
+      ($candidate | parsed_time) as $candidateTime |
+      ($currentTime != null) and ($candidateTime == null or $candidateTime < $currentTime)
+    ' >/dev/null
+}
+
 for command_name in curl date find grep jq mktemp mv awk; do
   command -v "${command_name}" >/dev/null 2>&1 || {
     echo "Yundo rules: 缺少 ${command_name}" >&2
@@ -106,6 +125,15 @@ if ! jq -e '.manifest and (.publicRules | type == "array")' "${response_file}" >
     keep_existing_snapshot
     exit $?
   fi
+fi
+
+if [[ "${package_source_mode}" == "remote" ]] \
+  && [[ -s "${assets_dir}/manifest.json" ]] \
+  && remote_package_is_older_than_snapshot "${assets_dir}/manifest.json" "${response_file}"; then
+  current_version="$(jq -r '.publicRulesVersion // "-"' "${assets_dir}/manifest.json")"
+  candidate_version="$(jq -r '.manifest.publicRulesVersion // "-"' "${response_file}")"
+  log "远程规则包版本 ${candidate_version} 早于内置快照 ${current_version}，拒绝降级"
+  exit 0
 fi
 
 items_file="${work_dir}/rule-set-items.jsonl"
