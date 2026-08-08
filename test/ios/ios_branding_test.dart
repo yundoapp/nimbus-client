@@ -44,9 +44,12 @@ void main() {
     test('registers Flutter plugins before custom handlers without force unwraps', () {
       final appDelegate = File('ios/Runner/AppDelegate.swift').readAsStringSync();
       final pluginRegistration = appDelegate.indexOf('GeneratedPluginRegistrant.register(with: self)');
+      final superApplication = appDelegate.indexOf('let didFinishLaunching = super.application(');
       final handlerRegistration = appDelegate.indexOf('        registerHandlers()');
 
       expect(pluginRegistration, greaterThanOrEqualTo(0));
+      expect(superApplication, greaterThanOrEqualTo(0));
+      expect(pluginRegistration, greaterThan(superApplication));
       expect(handlerRegistration, greaterThan(pluginRegistration));
       expect(appDelegate, isNot(contains('registrar(forPlugin: MethodHandler.name)!')));
       expect(appDelegate, isNot(contains('registrar(forPlugin: PlatformMethodHandler.name)!')));

@@ -10,9 +10,13 @@ import Sentry
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         setupFileManager()
+        let didFinishLaunching = super.application(
+            application,
+            didFinishLaunchingWithOptions: launchOptions
+        )
         GeneratedPluginRegistrant.register(with: self)
         registerHandlers()
-        return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+        return didFinishLaunching
     }
     
     func setupFileManager() {
