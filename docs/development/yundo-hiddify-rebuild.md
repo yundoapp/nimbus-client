@@ -454,3 +454,4 @@ macOS 的正式版和开发版使用不同且带版本后缀的特权 Helper 服
 
 - 当前阶段优先 iOS 与 macOS 双版本真机/模拟器验收；Windows x64 与 Android Debug 不在普通 push 上自动构建，也不下载产物。
 - `workflow_dispatch` 仍保留 `build_windows` / `build_android` 开关，待 iOS/macOS 验收稳定后按需触发；普通 Pull Request 继续只运行共享测试和边界门禁。
+- 暂缓构建和下载只影响当前验收执行，不改变四端同源开发要求；任何共享 Flutter/Dart、API、认证、业务功能或平台适配变更，仍须同步检查 macOS、Windows、iOS、Android，并在同一提交中保持可构建、可测试的实现。
