@@ -3,8 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hiddify/features/nimbus/auth/data/nimbus_auth_repository.dart';
 
 void main() {
-  test('defaults mobile builds to the production API', () {
-    expect(nimbusApiBaseUrl, nimbusProductionApiBaseUrl);
-    expect(nimbusApiBaseUrl, startsWith('https://api.yundo.app/'));
+  test('uses the development API for local debug tests', () {
+    expect(nimbusApiBaseUrl, nimbusDevelopmentApiBaseUrl);
+    expect(nimbusApiBaseUrl, startsWith('http://127.0.0.1:4000/'));
   });
 }

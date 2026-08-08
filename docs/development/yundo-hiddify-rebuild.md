@@ -438,18 +438,19 @@ macOS 的正式版和开发版使用不同且带版本后缀的特权 Helper 服
 - 真机调试使用 Mac 局域网 API `http://192.168.1.223:4000/api/v1`，宿主机与局域网地址的 `/health` 均返回 `200`。真机不得使用 `127.0.0.1`，它只指向手机自身。
 - 当前实体设备验收停在“手机端登录提交后点击加速并批准系统 VPN 配置”之前；VPN 授权、Packet Tunnel 连接/停止、网络恢复、锁屏/后台和 Wi-Fi/蜂窝切换仍是待完成证据，不能以真机 App 已安装或启动替代。
 
-### 4.43 iPhone 启动崩溃修复与移动端生产 API 默认值（2026-08-09）
+### 4.43 iPhone 启动崩溃修复与开发/正式 API 分流（2026-08-09）
 
 - 真机启动崩溃证据为 `Runner-2026-08-09-000509.ips`：`EXC_BREAKPOINT` 位于 `AppDelegate.registerHandlers()`，原因是自定义通道在 `GeneratedPluginRegistrant` 注册前强制解包空 registrar。现在先注册生成插件，再注册自定义通道；每个 registrar 均使用可选绑定，避免启动阶段直接触发 SIGTRAP。
 - 旧顺序修复在真实 iPhone 上继续暴露 `Runner-2026-08-09-004905.ips` / `004908.ips`：`EXC_BAD_ACCESS/SIGSEGV` 位于 `AppLinksIosPlugin.register`。最终启动顺序改为先完成 `FlutterAppDelegate.super.application`，再注册生成插件和云渡自定义通道；Simulator 与真机均需按该顺序验证。
 - 根因为锁定的 `app_links 6.4.0` 在 Flutter Debug 真机启动时对空 registrar 直接调用 `messenger()`。依赖已升级并锁定到 `app_links 6.4.1`，使用其 iOS Debug registrar 保护；Pod 依赖与启动测试同步更新。
 - `app_links 6.4.1` 保护后，真机继续在 `InAppReviewPlugin.register` 暴露同一空 registrar 边界；生成插件和云渡自定义通道现改为 `super.application` 返回后的下一轮主线程异步注册，覆盖全部 Swift 插件。
+- 异步注册后，直接从主屏启动 Debug 包仍在 Flutter `VSyncClient` 初始化处崩溃；该路径需要 Flutter 调试 runner，不能作为脱离电脑的真机安装包。真机开发版改用 Profile 构建并保留 `app.yundo.client.dev`，正式版使用 Release 构建和 `app.yundo.client`。
 - `ios/Shared/FilePath.swift` 在本地签名 profile 暂无 App Group 能力时回退到应用支持目录，保证 App 可以启动；正式 Packet Tunnel 仍必须配置并签署对应 App Group，回退目录不作为真实加速验收证据。
 - 正式版使用 `app.yundo.client` / `app.yundo.client.PacketTunnel`，开发版使用 `app.yundo.client.dev` / `app.yundo.client.dev.PacketTunnel`，开发版 App Group 为 `group.app.yundo.client.dev`。旧的 `app.yundo.client.rebuild.dev` 标识已退役，不得出现在新构建、安装脚本或签名配置中。
-- iOS 与 Android 的开发版、正式版默认都连接生产 API `https://api.yundo.app/api/v1`，因此手机脱离电脑也能验证；`NIMBUS_API_BASE_URL` 仅作为受控本地测试覆盖项。macOS 开发脚本继续默认连接本机 API，避免改变现有桌面开发闭环。
+- 开发版（Debug/Profile、`Yundo Dev`）只连接本地 API，默认 `http://127.0.0.1:4000/api/v1`，真机通过构建参数注入 Mac 局域网地址；正式版（Release、`Yundo`）只连接生产 API `https://api.yundo.app/api/v1`。`NIMBUS_API_BASE_URL` 仅由对应构建脚本显式注入，不允许开发版回退到生产 API。
 - 跨平台审计：生产 API 默认值位于共享 Dart 鉴权路径，macOS、Windows、iOS、Android 同源生效；Bundle ID 与 Helper/App Group 是平台配置差异，macOS 开发版 Helper 已同步使用 `app.yundo.client.dev`，Android 原有 `app.yundo.client.dev` 不变。真实 iPhone 的 Packet Tunnel 授权、加速/停止和前后台网络矩阵仍需实体设备验收。
 
 ### 4.44 Windows/Android CI 构建触发边界（2026-08-09）
 
-- `develop` 的每次非文档 push 自动执行 Windows x64 与 Android Debug 构建，保证四端同一 commit 的构建基线不会因缺少 workflow dispatch 管理员权限而被跳过。
-- `workflow_dispatch` 仍保留 `build_windows` / `build_android` 开关，便于对指定 commit 单独重跑；普通 Pull Request 继续只运行共享测试和边界门禁，避免重复消耗构建资源。
+- 当前阶段优先 iOS 与 macOS 双版本真机/模拟器验收；Windows x64 与 Android Debug 不在普通 push 上自动构建，也不下载产物。
+- `workflow_dispatch` 仍保留 `build_windows` / `build_android` 开关，待 iOS/macOS 验收稳定后按需触发；普通 Pull Request 继续只运行共享测试和边界门禁。

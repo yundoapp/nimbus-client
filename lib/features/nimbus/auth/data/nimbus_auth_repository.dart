@@ -15,7 +15,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const nimbusProductionApiBaseUrl = 'https://api.yundo.app/api/v1';
-const nimbusApiBaseUrl = String.fromEnvironment('NIMBUS_API_BASE_URL', defaultValue: nimbusProductionApiBaseUrl);
+const nimbusDevelopmentApiBaseUrl = 'http://127.0.0.1:4000/api/v1';
+const nimbusApiBaseUrl = String.fromEnvironment(
+  'NIMBUS_API_BASE_URL',
+  defaultValue: kDebugMode ? nimbusDevelopmentApiBaseUrl : nimbusProductionApiBaseUrl,
+);
 
 bool isNimbusUnsupportedPublicRulesSourceVersionError(Object error) {
   if (error is! DioException || error.response?.statusCode != 400) return false;

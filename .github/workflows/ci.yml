@@ -61,7 +61,7 @@ jobs:
           flutter test
 
   windows-core:
-    if: ${{ github.event_name == 'push' || inputs.build_windows == true }}
+    if: ${{ inputs.build_windows == true }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -85,7 +85,7 @@ jobs:
           retention-days: 7
 
   windows:
-    if: ${{ github.event_name == 'push' || inputs.build_windows == true }}
+    if: ${{ inputs.build_windows == true }}
     needs: [test, windows-core]
     runs-on: windows-latest
     permissions:
@@ -135,7 +135,7 @@ jobs:
           retention-days: 7
 
   android-core:
-    if: ${{ github.event_name == 'push' || inputs.build_android == true }}
+    if: ${{ inputs.build_android == true }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -166,7 +166,7 @@ jobs:
           retention-days: 7
 
   android:
-    if: ${{ github.event_name == 'push' || inputs.build_android == true }}
+    if: ${{ inputs.build_android == true }}
     needs: [test, android-core]
     runs-on: ubuntu-latest
     permissions:

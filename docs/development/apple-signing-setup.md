@@ -105,4 +105,4 @@ Apple Developer 计划开通后，仍需要在第一次远程构建前完成 App
 ### 2026-08-09 开发版标识与生产 API 默认值
 
 - 开发版 Bundle ID 已固定为 `app.yundo.client.dev` 与 `app.yundo.client.dev.PacketTunnel`，App Group 为 `group.app.yundo.client.dev`；旧的 `app.yundo.client.rebuild.dev` 不再使用。首次切换后应允许 Xcode 通过 `-allowProvisioningUpdates -allowProvisioningDeviceRegistration` 自动重建对应 profile。
-- 移动端 Debug 和 Release 默认使用 `https://api.yundo.app/api/v1`，只有受控本地测试才通过 `NIMBUS_API_BASE_URL` 覆盖；真机不允许把 `localhost` 或 `127.0.0.1` 当作默认 API。
+- 开发版 Debug/Profile 只使用本地 API；iOS 真机通过构建参数注入 Mac 局域网地址，Simulator 使用宿主机回环地址。正式版 Release 只使用 `https://api.yundo.app/api/v1`。构建脚本必须显式传入 `NIMBUS_API_BASE_URL`，避免开发版误连生产。
