@@ -14,8 +14,14 @@ import Sentry
             application,
             didFinishLaunchingWithOptions: launchOptions
         )
-        GeneratedPluginRegistrant.register(with: self)
-        registerHandlers()
+        // Flutter's registrar is populated after the delegate callback returns on a
+        // directly launched Debug device build. Register plugins on the next main-loop
+        // turn so Swift plugins do not receive a null registrar.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            GeneratedPluginRegistrant.register(with: self)
+            self.registerHandlers()
+        }
         return didFinishLaunching
     }
     

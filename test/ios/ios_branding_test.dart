@@ -45,12 +45,15 @@ void main() {
       final appDelegate = File('ios/Runner/AppDelegate.swift').readAsStringSync();
       final pluginRegistration = appDelegate.indexOf('GeneratedPluginRegistrant.register(with: self)');
       final superApplication = appDelegate.indexOf('let didFinishLaunching = super.application(');
-      final handlerRegistration = appDelegate.indexOf('        registerHandlers()');
+      final handlerRegistration = appDelegate.indexOf('            self.registerHandlers()');
+      final deferredRegistration = appDelegate.indexOf('DispatchQueue.main.async');
 
       expect(pluginRegistration, greaterThanOrEqualTo(0));
       expect(superApplication, greaterThanOrEqualTo(0));
       expect(pluginRegistration, greaterThan(superApplication));
       expect(handlerRegistration, greaterThan(pluginRegistration));
+      expect(deferredRegistration, greaterThan(superApplication));
+      expect(deferredRegistration, lessThan(pluginRegistration));
       expect(appDelegate, isNot(contains('registrar(forPlugin: MethodHandler.name)!')));
       expect(appDelegate, isNot(contains('registrar(forPlugin: PlatformMethodHandler.name)!')));
       expect(appDelegate, isNot(contains('registrar(forPlugin: FileMethodHandler.name)!')));
