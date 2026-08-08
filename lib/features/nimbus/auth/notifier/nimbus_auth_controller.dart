@@ -62,6 +62,7 @@ class NimbusAuthController extends Notifier<NimbusAuthState> with AppLogger {
 
   NimbusAuthRepository get _repository => ref.read(nimbusAuthRepositoryProvider);
   Translations get _t => ref.read(translationsProvider).requireValue;
+  NimbusAuthSession? get currentSession => state.session;
 
   String _describeError(Object error) => _repository.describeError(error, _t);
 

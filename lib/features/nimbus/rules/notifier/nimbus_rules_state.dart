@@ -7,6 +7,7 @@ import 'package:hiddify/features/nimbus/auth/data/nimbus_bundled_rules.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_auth_models.dart';
 import 'package:hiddify/features/nimbus/auth/model/nimbus_rules_config.dart';
 import 'package:hiddify/features/nimbus/auth/notifier/nimbus_auth_controller.dart';
+import 'package:hiddify/features/nimbus/auth/notifier/nimbus_authenticated_read.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path/path.dart' as p;
 
@@ -35,10 +36,17 @@ final nimbusRulesPackageProvider = FutureProvider.autoDispose<NimbusRulesPackage
   if (session == null) return null;
 
   final repository = ref.read(nimbusAuthRepositoryProvider);
+  final authController = ref.read(nimbusAuthControllerProvider.notifier);
   final bundled = await readNimbusBundledRulesPackage();
   final cached = repository.readRulesPackage(session.user.id);
   try {
-    var package = await repository.fetchRulesPackage(session);
+    var package = await runNimbusAuthenticatedRead(
+      session: session,
+      request: repository.fetchRulesPackage,
+      isUnauthorized: repository.isUnauthorized,
+      refreshAfterUnauthorized: authController.refreshAfterUnauthorized,
+      currentSession: () => authController.currentSession,
+    );
     if (bundled != null) package = package.withFallbackPublicRulesMetadata(bundled);
     if (package.manifest.configVersion != nimbusRulesConfigVersion) {
       throw FormatException('unsupported rules config version: ${package.manifest.configVersion}');
