@@ -430,3 +430,10 @@ macOS 的正式版和开发版使用不同且带版本后缀的特权 Helper 服
 - 规则页可以从账号级缓存展示“我的规则”，但编辑需要带规则 ID 的最新账号数据。access token 过期时，旧实现的规则包和规则列表读取直接返回 `401 AUTH_INVALID_TOKEN`；页面继续显示缓存，点击条目则只能提示重试。
 - 规则包和账号规则列表现在共用一次性鉴权读取恢复：首次 `401` 后复用认证控制器刷新会话，仅当 access token 确实更新时重试原请求一次；其他错误、刷新未完成或第二次请求失败均不循环重试。refresh token 同样失效时沿用现有安全退出流程，不继续用过期会话执行编辑。
 - 该修复位于共享 Flutter/Riverpod 与多语言资源层，macOS、Windows、iOS、Android 同因受影响并同源修复；不修改规则优先级、规则内容、Core、DNS、路由、TUN、Helper 或当前加速连接。macOS 需验证安装版语言切换和缓存规则编辑，iOS Simulator 需完成同源构建，Windows 与 Android 由同一提交的 GitHub Actions 构建后继续实体设备验收。
+
+### 4.42 iPhone 真机签名安装基线（2026-08-08）
+
+- 客户端 `b84f8c5a29c172e4e699397e328ce3c332b16fb8`、版本 `4.1.2+202608137` 已完成 macOS、iOS Simulator、Windows x64 和 Android Debug 四端同源构建归档；本机 Apple Development 团队为 `W684N2R45F`。
+- iPhone 16 Pro Max（iOS 26.5.2）已开启开发者模式并通过 Xcode 配对；开发版主 App 与 Packet Tunnel 使用独立 Bundle ID，签名校验、profile 能力和真机安装启动均通过。应用显示名为“云渡开发版”，保持标准竖屏。
+- 真机调试使用 Mac 局域网 API `http://192.168.1.223:4000/api/v1`，宿主机与局域网地址的 `/health` 均返回 `200`。真机不得使用 `127.0.0.1`，它只指向手机自身。
+- 当前实体设备验收停在“手机端登录提交后点击加速并批准系统 VPN 配置”之前；VPN 授权、Packet Tunnel 连接/停止、网络恢复、锁屏/后台和 Wi-Fi/蜂窝切换仍是待完成证据，不能以真机 App 已安装或启动替代。

@@ -93,3 +93,11 @@ iOS 客户端只支持标准竖屏。签名或真机调试时不得为了绕过�
 Apple Developer 计划开通后，仍需要在第一次远程构建前完成 App ID、能力、证书、API Key 和 GitHub Secrets 配置。没有这些 Secrets 时，工作流应明确失败，不能把“源码编译成功”误报为“签名构建完成”。
 
 2026-08-03 已在 commit `c1506ee` 完成远程验证：GitHub Actions run `30824938269` 的 iOS IPA、macOS 开发版 ZIP 和 macOS 正式版 ZIP 均成功产出。该验证覆盖证书导入、App Store Connect API Key、自动 profile 管理、导出签名和产物校验。
+
+### 2026-08-08 本机 iPhone Debug 签名与安装
+
+- Xcode 登录团队 `W684N2R45F` 后，通过 Apple Development 身份创建并使用 `Apple Development: dejian gan (975VAJC383)`；不导出证书私钥，不用于对外分发。
+- `xcodebuild` 使用 `-allowProvisioningUpdates -allowProvisioningDeviceRegistration` 自动生成开发 profile，主 App 与 Packet Tunnel 分别绑定开发版 Bundle ID `app.yundo.client.rebuild.dev` 和 `app.yundo.client.rebuild.dev.PacketTunnel`，两者均包含已配对 iPhone 的开发设备权限。
+- iPhone 16 Pro Max（iOS 26.5.2）已安装并启动 `Yundo Dev` `4.1.2+202608137`。`codesign --verify --deep --strict`、主 App/扩展 TeamIdentifier 和 embedded profile 校验通过。
+- 本地 Flutter 调试构建使用 Mac 局域网 API `http://192.168.1.223:4000/api/v1`；该地址从宿主机返回 API health `200`，不能在真机上使用 `127.0.0.1` 或 `localhost`。
+- 本节只证明开发签名、profile、安装和启动；首次系统 VPN 配置授权、Packet Tunnel 真实加速、停止恢复和前后台/锁屏/网络切换矩阵仍需在实体 iPhone 上完成，不得用 Simulator 或签名成功替代。
