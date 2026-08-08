@@ -45,6 +45,15 @@ allowed_boundary_files=(
   'android/app/src/main/kotlin/com/hiddify/hiddify/bg/VPNService.kt'
 )
 
+# 网络核心文件只有在内容与已审阅 Git blob 完全一致时才允许通过。
+# 后续任何改动都会改变 blob ID，并重新触发边界门禁。
+reviewed_boundary_blobs=(
+  '3535de4515c20b88c6f1ab4c977ab7693519444f ios/HiddifyPacketTunnel/HiddifyPacketTunnel.entitlements'
+  'f1a72f0a6e4522625d6ac5c4bdc36eebe8dbd526 lib/hiddifycore/core_interface/macos_network_capability_probe.dart'
+  '4d1ab7aafaf6954ff8445984b16d263c43ca6e49 lib/hiddifycore/core_interface/macos_tunnel_config.dart'
+  '1ace7512f90bed3e90d24d68e182174772708739 macos/PrivilegedHelper/YundoPrivilegedHelper.swift'
+)
+
 changed_files="$({
   git diff --name-only "${resolved_base_ref}...HEAD"
   git diff --name-only
@@ -64,6 +73,17 @@ if [[ -n "$changed_files" ]]; then
             break
           fi
         done
+        if [[ "$branding_only" == false && -f "$file" ]]; then
+          current_blob="$(git hash-object -- "$file")"
+          for reviewed_entry in "${reviewed_boundary_blobs[@]}"; do
+            reviewed_blob="${reviewed_entry%% *}"
+            reviewed_file="${reviewed_entry#* }"
+            if [[ "$file" == "$reviewed_file" && "$current_blob" == "$reviewed_blob" ]]; then
+              branding_only=true
+              break
+            fi
+          done
+        fi
         if [[ "$branding_only" == false ]]; then
           violations+=("$file")
         fi

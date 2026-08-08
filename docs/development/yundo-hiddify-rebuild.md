@@ -115,6 +115,7 @@ macOS 的正式版和开发版使用不同且带版本后缀的特权 Helper 服
 ## 6. 每个迁移提交的验收门槛
 
 - 变更文件通过 `scripts/check_yundo_hiddify_boundary.sh`。
+- 确需修改受保护网络文件时，只允许把已完成跨平台审计和定向测试的最终内容以 Git blob 精确哈希登记到边界脚本；路径级放行不能用于网络行为变更。文件后续发生任何变化时，门禁必须重新失败并重新审阅。
 - UI 改动保留现有页面层级、菜单结构和多语言要求。
 - 连接相关改动必须有 Profile/规则 fixture 和失败路径测试。
 - 影响客户端运行的改动必须基于同一 commit 完成四端构建基线。
@@ -405,6 +406,7 @@ macOS 的正式版和开发版使用不同且带版本后缀的特权 Helper 服
 - iOS 原生 LaunchScreen 使用与 AppIcon 字节一致的云渡 Logo 和跟随浅色/深色模式的背景，不再显示旧 Hiddify `LaunchImage`。Flutter 引擎可用后立即切换到云渡自动登录加载页，显示同一 Logo、当前语言的软件名和正在登录状态；初始化完成后再进入登录页或主页。
 - 移动端初始化较快时补足约 `0.9` 秒的加载页展示时间，确保云渡 Logo、软件名和登录动画稳定可见；初始化本身超过该时间时不额外等待。
 - iOS 构建阶段根据开发版/正式版身份生成简体和繁体 `InfoPlist.strings`：开发版为“云渡开发版 / 雲渡開發版”，正式版为“云渡 / 雲渡”，其他系统语言继续使用 `Yundo Dev / Yundo`。Android 已有同等语言资源，本轮同时移除旧图形启动内容并复用 Flutter 加载页。
+- iOS 主 App 与扩展只声明实际使用的 `packet-tunnel-provider`，删除 App Proxy、DNS Proxy 与 Content Filter entitlement；移动端方向锁定为标准竖屏，并由 iOS 品牌测试固定开发版身份、显示名、方向和最小权限边界。
 - 跨平台审计：Logo 组件和加载页位于共享 Flutter 层，macOS、Windows、iOS、Android 同源生效；iOS 系统图标和系统显示名为本轮平台专项修复。macOS 需完成双版本构建安装回归，iOS Simulator 需验证主屏图标、中文显示名和启动过渡；Windows、Android 在同源提交后由 GitHub Actions 构建，实体设备继续按平台矩阵验收。
 
 ### 4.39 用户名与密码规则统一（2026-08-08）
